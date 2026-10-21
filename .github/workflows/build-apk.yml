@@ -30,6 +30,7 @@ jobs:
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
       # ৪. গ্র্যাডল র‍্যাপার ফাইল মিসিং থাকলে তা স্বয়ংক্রিয়ভাবে তৈরি ও কনফিগার করা
+      # ৪. ফিক্সড গ্র্যাডল ৮.৭ র‍্যাপার কনফিগারেশন এবং জেনারেশন (স্টেবল ভার্সন)
       - name: Setup Gradle Wrapper Properly
         run: |
           TARGET_DIR="."
@@ -40,19 +41,15 @@ jobs:
           cd "$TARGET_DIR"
           mkdir -p gradle/wrapper
           
-          # gradle-wrapper.properties ফাইল না থাকলে তৈরি করা
-          if [ ! -f "gradle/wrapper/gradle-wrapper.properties" ]; then
-            echo "distributionBase=GRADLE_USER_HOME" > gradle/wrapper/gradle-wrapper.properties
-            echo "distributionPath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
-            echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.4-bin.zip" >> gradle/wrapper/gradle-wrapper.properties
-            echo "zipStoreBase=GRADLE_USER_HOME" >> gradle/wrapper/gradle-wrapper.properties
-            echo "zipStorePath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
-          fi
+          # Gradle 8.7 প্রোপার্টিজ ফাইল সেট করা (যা সব অ্যান্ড্রয়েড প্রজেক্টে নিখুঁতভাবে কাজ করে)
+          echo "distributionBase=GRADLE_USER_HOME" > gradle/wrapper/gradle-wrapper.properties
+          echo "distributionPath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
+          echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-bin.zip" >> gradle/wrapper/gradle-wrapper.properties
+          echo "zipStoreBase=GRADLE_USER_HOME" >> gradle/wrapper/gradle-wrapper.properties
+          echo "zipStorePath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
           
-          # gradlew না থাকলে গ্র্যাডল র‍্যাপার বাইনারি জেনারেট করা
-          if [ ! -f "gradlew" ]; then
-            gradle wrapper --gradle-version 8.4
-          fi
+          # নির্দিষ্ট করে Gradle 8.7 র‍্যাপার বাইনারি জেনারেট করা
+          gradle wrapper --gradle-version 8.7 --distribution-type bin
           
           # এক্সিকিউট পারমিশন নিশ্চিত করা
           chmod +x gradlew
