@@ -25,7 +25,7 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
-    # ৩. অ্যান্ড্রয়েড এসডিকে লাইসেন্সগুলো স্বয়ংক্রিয়ভাবে এক্সেপ্ট বা অনুমোদন করানো
+    # ৩. অ্যান্ড্রয়েড এসডিকে লাইসেন্সগুলো স্বয়ংক্রিয়ভাবে অনুমোদন করানো
     - name: Accept Android SDK Licenses
       run: |
         export ANDROID_HOME=$ANDROID_SDK_ROOT
@@ -35,7 +35,7 @@ jobs:
         echo "84831b4009041f6a626245041a5482f5ec3a42fa" >> $ANDROID_SDK_ROOT/licenses/android-sdk-license
         yes | sdkmanager --licenses || true
 
-    # ৪. রুট বা সাব-ফোল্ডারের গ্র্যাডল র‍্যাপার ফাইলে এক্সিকিউট পারমিশন (Executable Permission) দেওয়া
+    # ৪. গ্র্যাডল র‍্যাপার ফাইলে এক্সিকিউট পারমিশন দেওয়া
     - name: Grant Execute Permission for Gradlew
       run: |
         if [ -f "gradlew" ]; then
@@ -45,38 +45,22 @@ jobs:
           chmod +x AimShot_Project/gradlew
         fi
 
-    # ৫. সঠিক ডিরেক্টরি চেক করে ডিবাগ এপিকে (Debug APK) বিল্ড করা
+    # ৫. সঠিক ডিরেক্টরিতে ঢুকে Gradle 8.4 র‍্যাপার নিশ্চিত করে ডিবাগ এপিকে (Debug APK) বিল্ড করা
     - name: Build Debug APK
       run: |
-        if [ -f "settings.gradle" ] && [ -f "gradlew" ]; then
-          echo "Building from root directory..."
-          ./gradlew assembleDebug --stacktrace
-        elif [ -d "AimShot_Project" ]; then
-          echo "Building from AimShot_Project directory using global gradle..."
-          cd AimShot_Project
-          if [ -f "gradlew" ]; then
-            chmod +x ./gradlew
-            ./gradlew assembleDebug --stacktrace
-          else
-            gradle wrapper || true
-            if [ -f "gradlew" ]; then
-              chmod +x ./gradlew
-              ./gradlew assembleDebug --stacktrace
-            else
-              gradle assembleDebug --stacktrace
-            fi
-          fi
-        else
-          gradle assembleDebug --stacktrace
+        cd AimShot_Project
+        if [ ! -f "gradlew" ]; then
+          echo "Generating Gradle wrapper with version 8.4..."
+          gradle wrapper --gradle-version 8.4
         fi
+        chmod +x ./gradlew
+        ./gradlew assembleDebug --stacktrace
 
-    # ৬. বিল্ড হওয়া এপিকে ফাইলটিকে গিটহাব আর্কিটেক্ট হিসেবে আপলোড করা যাতে ডাউনলোড করা যায়
+    # ৬. বিল্ড হওয়া এপিকে ফাইলটিকে গিটহাব আর্কিটেক্ট হিসেবে আপলোড করা
     - name: Upload Debug APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: app-debug
         path: |
-          app/build/outputs/apk/debug/*.apk
           AimShot_Project/app/build/outputs/apk/debug/*.apk
-          AimShot-Engine-v1.0.0.apk
         if-no-files-found: warn
