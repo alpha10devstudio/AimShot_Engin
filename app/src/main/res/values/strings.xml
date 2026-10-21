@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AimShot Engine</string>
+    <string name="slogan">Sharper Aim • Better Game • Higher You</string>
+    <string name="pro_gaming_toolkit">Pro Gaming Toolkit</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_premium">Premium</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Home Screen -->
+    <string name="supported_games">Supported Games</string>
+    <string name="view_all">View All</string>
+    <string name="you_are_not_logged_in">You are not logged in</string>
+    <string name="login_desc">Login to access premium features and full tools.</string>
+    <string name="login_now">Login Now</string>
+
+    <!-- Verification Dialog -->
+    <string name="login_dialog_title">Login to AimShot Engine</string>
+    <string name="login_dialog_subtitle">Enter your verification key to continue</string>
+    <string name="paste_key_hint">Paste Verification Key</string>
+    <string name="btn_login">Login</string>
+    <string name="how_to_get_key">How to get your key?</string>
+    <string name="step_1">1. Purchase from authorized seller</string>
+    <string name="step_2">2. Get your unique verification key</string>
+    <string name="step_3">3. Paste the key and login</string>
+    <string name="action_close">Close</string>
+    <string name="err_empty_key">Verification key cannot be empty.</string>
+    <string name="err_invalid_key">Invalid or expired verification key.</string>
+    <string name="service_not_configured">Verification service is not configured yet. Running offline demo check.</string>
+
+    <!-- Premium Screen -->
+    <string name="premium_status">Premium Status</string>
+    <string name="status_active">Active</string>
+    <string name="status_expired">Expired</string>
+    <string name="status_free">Free / Not Activated</string>
+    <string name="expires_in">Expires In</string>
+    <string name="premium_features_unlocked">Premium Features Unlocked</string>
+    <string name="membership_details">Membership Details</string>
+    <string name="plan_type">Plan Type</string>
+    <string name="start_date">Start Date</string>
+    <string name="expiry_date">Expiry Date</string>
+    <string name="days_remaining">Days Remaining</string>
+    <string name="btn_upgrade_renew">Upgrade / Renew</string>
+
+    <!-- Seller Contact -->
+    <string name="seller_contact">Seller Contact</string>
+    <string name="official_seller">Official Seller</string>
+    <string name="seller_name">AimShot Shop</string>
+    <string name="status_online">Online</string>
+    <string name="trusted_verified">Trusted &amp; Verified</string>
+    <string name="contact_whatsapp">+880 1700 111222</string>
+    <string name="contact_telegram">@aimshot_support</string>
+    <string name="contact_email">aimshot@support.com</string>
+    <string name="badge_fast_response">Fast Response</string>
+    <string name="badge_secure_payment">Secure Payment</string>
+    <string name="badge_trusted">100% Trusted</string>
+    <string name="btn_contact_now">Contact Now</string>
+
+    <!-- Device Information -->
+    <string name="device_information">Device Information</string>
+    <string name="device_id">Device ID</string>
+    <string name="action_copy">Copy</string>
+    <string name="device_id_copied">Device ID copied to clipboard</string>
+    <string name="lbl_android_version">Android Version</string>
+    <string name="lbl_model">Model</string>
+    <string name="lbl_brand">Brand</string>
+    <string name="lbl_total_ram">Total RAM</string>
+    <string name="lbl_screen_resolution">Screen Resolution</string>
+    <string name="lbl_cpu">CPU</string>
+    <string name="device_binding_notice">This Device ID is used for license verification and device binding.</string>
+    <string name="keep_device_id_safe">Keep your Device ID safe</string>
+    <string name="keep_device_id_safe_sub">Do not share it with anyone except the official seller.</string>
+
+    <!-- Settings -->
+    <string name="settings">Settings</string>
+    <string name="setting_theme">App Theme</string>
+    <string name="setting_theme_desc">Dark Mode</string>
+    <string name="setting_language">Language</string>
+    <string name="setting_language_desc">English</string>
+    <string name="setting_notifications">Notifications</string>
+    <string name="setting_haptic">Haptic Feedback</string>
+    <string name="setting_privacy">Privacy &amp; Security</string>
+    <string name="setting_help">Help &amp; Support</string>
+    <string name="setting_about">About App</string>
+    <string name="app_version">v1.0.0</string>
+    <string name="btn_logout">Log Out</string>
+    <string name="logout_confirmation">Are you sure you want to log out? Your active session will be cleared.</string>
+
+    <!-- Activation Keys -->
+    <string name="get_activation_key">Get Activation Key</string>
+    <string name="btn_get_free_key">Get Free Key</string>
+    <string name="btn_get_paid_key">Get Paid Key</string>
+    <string name="free_key_url">https://aimshotengine.com/free-key</string>
+
+    <!-- Games -->
+    <string name="game_carrom">Carrom Disc Pool</string>
+    <string name="game_carrom_desc">Auto Aim • Guideline • Smooth Control</string>
+    <string name="game_8ball">8 Ball Pool</string>
+    <string name="game_8ball_desc">Long Line • Accurate Angle • Safe</string>
+    <string name="status_locked">Locked</string>
+    <string name="status_unlocked">Active</string>
+</resources>

@@ -91,4 +91,18 @@
     <string name="app_version">v1.0.0</string>
     <string name="btn_logout">Log Out</string>
     <string name="logout_confirmation">Are you sure you want to log out? Your active session will be cleared.</string>
+
+    <!-- Activation Keys -->
+    <string name="get_activation_key">Get Activation Key</string>
+    <string name="btn_get_free_key">Get Free Key</string>
+    <string name="btn_get_paid_key">Get Paid Key</string>
+    <string name="free_key_url">https://aimshotengine.com/free-key</string>
+
+    <!-- Games -->
+    <string name="game_carrom">Carrom Disc Pool</string>
+    <string name="game_carrom_desc">Auto Aim • Guideline • Smooth Control</string>
+    <string name="game_8ball">8 Ball Pool</string>
+    <string name="game_8ball_desc">Long Line • Accurate Angle • Safe</string>
+    <string name="status_locked">Locked</string>
+    <string name="status_unlocked">Active</string>
 </resources>

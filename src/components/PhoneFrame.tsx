@@ -94,7 +94,10 @@ export const PhoneFrame: React.FC<PhoneFrameProps> = ({
                   <div className="absolute inset-0 bg-[#39B9FF]/25 blur-sm rounded-full" />
                 )}
               </div>
-              <span className="text-[10px] font-bold mt-1 tracking-wider">Home</span>
+              <span className="text-[10px] font-bold mt-0.5 tracking-wider">Home</span>
+              {currentTab === 'home' && currentScreen === 'home' && (
+                <div className="w-1.5 h-1.5 rounded-full bg-[#39B9FF] shadow-[0_0_8px_#39B9FF] mt-0.5" />
+              )}
             </button>
 
             {/* Nav Item 2: Premium */}
@@ -118,7 +121,10 @@ export const PhoneFrame: React.FC<PhoneFrameProps> = ({
                   <div className="absolute inset-0 bg-[#39B9FF]/25 blur-sm rounded-full" />
                 )}
               </div>
-              <span className="text-[10px] font-bold mt-1 tracking-wider">Premium</span>
+              <span className="text-[10px] font-bold mt-0.5 tracking-wider">Premium</span>
+              {currentTab === 'premium' && currentScreen === 'premium' && (
+                <div className="w-1.5 h-1.5 rounded-full bg-[#39B9FF] shadow-[0_0_8px_#39B9FF] mt-0.5" />
+              )}
             </button>
 
             {/* Nav Item 3: Settings */}
@@ -136,7 +142,10 @@ export const PhoneFrame: React.FC<PhoneFrameProps> = ({
                   <div className="absolute inset-0 bg-[#39B9FF]/25 blur-sm rounded-full" />
                 )}
               </div>
-              <span className="text-[10px] font-bold mt-1 tracking-wider">Settings</span>
+              <span className="text-[10px] font-bold mt-0.5 tracking-wider">Settings</span>
+              {currentTab === 'settings' && currentScreen === 'settings' && (
+                <div className="w-1.5 h-1.5 rounded-full bg-[#39B9FF] shadow-[0_0_8px_#39B9FF] mt-0.5" />
+              )}
             </button>
           </div>
         )}

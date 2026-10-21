@@ -8,13 +8,13 @@
 
     <application
         android:allowBackup="false"
-        android:icon="@drawable/ic_aimshot_logo"
+        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@drawable/ic_aimshot_logo"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.AimShotEngine">
 
-        <!-- Splash Activity: First screen displaying tactical reticle & loading -->
+        <!-- Splash Activity: Application entry launcher -->
         <activity
             android:name=".SplashActivity"
             android:exported="true"
@@ -26,35 +26,35 @@
             </intent-filter>
         </activity>
 
-        <!-- Main Activity: Home dashboard with bottom navigation -->
+        <!-- Main Dashboard Activity -->
         <activity
             android:name=".MainActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.AimShotEngine.NoActionBar" />
 
-        <!-- Supported Games Screen: Detailed list and features -->
+        <!-- Supported Games Activity -->
         <activity
             android:name=".SupportedGamesActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.AimShotEngine.NoActionBar" />
 
-        <!-- Seller Contact Screen: Verified sellers & direct communications -->
+        <!-- Official Seller Channels Activity -->
         <activity
             android:name=".SellerContactActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.AimShotEngine.NoActionBar" />
 
-        <!-- Device Information Screen: Device ID and specs -->
+        <!-- Device Diagnostics Activity -->
         <activity
             android:name=".DeviceInfoActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.AimShotEngine.NoActionBar" />
 
-        <!-- Settings Screen: Preferences, theme, and logout -->
+        <!-- Settings & Configuration Activity -->
         <activity
             android:name=".SettingsActivity"
             android:exported="false"

@@ -1,0 +1,42 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
+  <!-- Outer Tactical Reticle Circle -->
+  <path
+      android:pathData="M48,6 A42,42 0 1,0 48,90 A42,42 0 1,0 48,6 Z"
+      android:strokeWidth="2.5"
+      android:strokeColor="#39B9FF"
+      android:fillColor="#00000000"/>
+  <!-- Crosshair Hash Marks (North, South, East, West) -->
+  <path
+      android:pathData="M48,2 L48,16"
+      android:strokeWidth="3.5"
+      android:strokeColor="#39B9FF"/>
+  <path
+      android:pathData="M48,80 L48,94"
+      android:strokeWidth="3.5"
+      android:strokeColor="#39B9FF"/>
+  <path
+      android:pathData="M2,48 L16,48"
+      android:strokeWidth="3.5"
+      android:strokeColor="#39B9FF"/>
+  <path
+      android:pathData="M80,48 L94,48"
+      android:strokeWidth="3.5"
+      android:strokeColor="#39B9FF"/>
+  <!-- Tactical Center Chevron / Arrow Up -->
+  <path
+      android:pathData="M48,24 L68,60 L54,60 L48,48 L42,60 L28,60 Z"
+      android:fillColor="#39B9FF"/>
+  <!-- Inner Arrow Accent -->
+  <path
+      android:pathData="M48,36 L58,54 L52,54 L48,46 L44,54 L38,54 Z"
+      android:fillColor="#111B2A"/>
+  <!-- Bottom Target Anchor Line -->
+  <path
+      android:pathData="M38,68 L58,68"
+      android:strokeWidth="3"
+      android:strokeColor="#39B9FF"/>
+</vector>

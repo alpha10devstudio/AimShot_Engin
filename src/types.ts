@@ -28,6 +28,8 @@ export interface Game {
   verified: boolean;
   iconBg: string;
   badgeText?: string;
+  isActive?: boolean;
+  locked?: boolean;
 }
 
 export interface SellerContact {

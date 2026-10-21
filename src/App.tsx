@@ -91,6 +91,27 @@ export default function App() {
     showToast(`${game.name} profile active: ${game.features}`);
   };
 
+  const handleDownloadApk = async () => {
+    showToast('Preparing AimShot Engine APK download...');
+    try {
+      const response = await fetch('/AimShot-Engine-v1.0.0.apk');
+      if (!response.ok) throw new Error('Failed to fetch APK binary');
+      const blob = await response.blob();
+      const apkBlob = new Blob([blob], { type: 'application/vnd.android.package-archive' });
+      const downloadUrl = window.URL.createObjectURL(apkBlob);
+      const tempLink = document.createElement('a');
+      tempLink.href = downloadUrl;
+      tempLink.download = 'AimShot-Engine-v1.0.0.apk';
+      document.body.appendChild(tempLink);
+      tempLink.click();
+      document.body.removeChild(tempLink);
+      setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 8000);
+      showToast('APK Downloaded! Open with Android Package Installer.');
+    } catch (e) {
+      window.location.href = '/AimShot-Engine-v1.0.0.apk';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#070B12] text-[#F4F7FC] flex flex-col font-sans selection:bg-[#39B9FF]/30">
       {/* Top Application Control & Navigation Bar */}
@@ -160,16 +181,14 @@ export default function App() {
         {/* Action Group: Download APK & Test Key */}
         <div className="flex items-center gap-2">
           {/* Prominent Direct APK Download Button */}
-          <a
-            href="/AimShot-Engine-v1.0.0.apk"
-            download="AimShot-Engine-v1.0.0.apk"
-            onClick={() => showToast('Starting AimShot-Engine-v1.0.0.apk download...')}
-            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#49DCA0] to-[#20C97F] hover:opacity-90 text-[#0B0F17] text-xs font-extrabold flex items-center gap-1.5 transition-all shadow-[0_0_12px_rgba(73,220,160,0.35)] cursor-pointer"
+          <button
+            onClick={handleDownloadApk}
+            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#49DCA0] to-[#20C97F] hover:opacity-90 text-[#0B0F17] text-xs font-extrabold flex items-center gap-1.5 transition-all shadow-[0_0_12px_rgba(73,220,160,0.35)] cursor-pointer active:scale-95"
             title="Download built APK package"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Download APK</span>
-          </a>
+          </button>
 
           {/* Quick Test Key */}
           {membership.isLoggedIn ? (
@@ -369,6 +388,7 @@ export default function App() {
                   onLogout={handleLogout}
                   onOpenDeviceInfo={() => setCurrentScreen('device_info')}
                   onOpenSellerContact={() => setCurrentScreen('seller_contact')}
+                  onDownloadApk={handleDownloadApk}
                   onShowToast={showToast}
                 />
               )}
@@ -452,6 +472,7 @@ export default function App() {
                     onLogout={handleLogout}
                     onOpenDeviceInfo={() => setCurrentScreen('device_info')}
                     onOpenSellerContact={() => setCurrentScreen('seller_contact')}
+                    onDownloadApk={handleDownloadApk}
                     onShowToast={showToast}
                   />
                 )}

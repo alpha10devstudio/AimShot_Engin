@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_gravity="center"
+    android:layout_margin="24dp"
+    android:background="@drawable/bg_dialog_card"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <!-- Header Icon -->
+    <ImageView
+        android:id="@+id/iv_dialog_info_icon"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="12dp"
+        android:contentDescription="@string/app_name"
+        android:src="@drawable/ic_aimshot_logo" />
+
+    <!-- Dialog Title -->
+    <TextView
+        android:id="@+id/tv_dialog_info_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:text="Privacy &amp; Security"
+        android:textColor="@color/text_primary"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <!-- Dialog Body Message -->
+    <TextView
+        android:id="@+id/tv_dialog_info_message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="20dp"
+        android:lineSpacingExtra="3dp"
+        android:text="AimShot Engine guarantees privacy and security."
+        android:textColor="@color/text_secondary"
+        android:textSize="13sp" />
+
+    <!-- Action Button -->
+    <Button
+        android:id="@+id/btn_dialog_info_positive"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="@drawable/bg_button_accent"
+        android:elevation="0dp"
+        android:stateListAnimator="@null"
+        android:text="Understood"
+        android:textAllCaps="false"
+        android:textColor="@color/bg_main"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+</LinearLayout>

@@ -18,6 +18,7 @@ interface SettingsScreenProps {
   onLogout: () => void;
   onOpenDeviceInfo: () => void;
   onOpenSellerContact: () => void;
+  onDownloadApk?: () => void;
   onShowToast: (message: string) => void;
 }
 
@@ -26,6 +27,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   onLogout,
   onOpenDeviceInfo,
   onOpenSellerContact,
+  onDownloadApk,
   onShowToast
 }) => {
   const [darkMode, setDarkMode] = useState(true);
@@ -135,11 +137,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         </div>
 
         {/* Download APK File */}
-        <a
-          href="/AimShot-Engine-v1.0.0.apk"
-          download="AimShot-Engine-v1.0.0.apk"
-          onClick={() => onShowToast('Downloading AimShot Engine APK...')}
-          className="p-3.5 rounded-2xl bg-gradient-to-r from-[#14283D] to-[#111B2A] border border-[#39B9FF]/50 hover:border-[#39B9FF] transition-all flex items-center justify-between cursor-pointer group shadow-[0_0_12px_rgba(57,185,255,0.15)]"
+        <button
+          onClick={() => {
+            if (onDownloadApk) {
+              onDownloadApk();
+            }
+          }}
+          className="w-full text-left p-3.5 rounded-2xl bg-gradient-to-r from-[#14283D] to-[#111B2A] border border-[#39B9FF]/50 hover:border-[#39B9FF] transition-all flex items-center justify-between cursor-pointer group shadow-[0_0_12px_rgba(57,185,255,0.15)]"
         >
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-[#39B9FF]/20 flex items-center justify-center text-[#39B9FF]">
@@ -157,7 +161,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           <span className="text-[11px] px-2.5 py-1 rounded-lg bg-[#39B9FF] text-[#0B0F17] font-bold">
             Download
           </span>
-        </a>
+        </button>
 
         {/* Device Information */}
         <div

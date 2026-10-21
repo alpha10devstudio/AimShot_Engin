@@ -53,6 +53,20 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
         initViews();
         setupNavigation();
         navigateToTab(Tab.HOME);
+        handleIncomingIntent(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleIncomingIntent(intent);
+    }
+
+    private void handleIncomingIntent(Intent intent) {
+        if (intent != null && "PREMIUM".equals(intent.getStringExtra("TARGET_TAB"))) {
+            navigateToTab(Tab.PREMIUM);
+        }
     }
 
     @Override
@@ -157,13 +171,34 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
             }
         });
 
+        // Home Carousel Setup with Indicators
+        final android.widget.ViewFlipper flipper = homeView.findViewById(R.id.home_carousel_flipper);
+        final ImageView dot1 = homeView.findViewById(R.id.dot_1);
+        final ImageView dot2 = homeView.findViewById(R.id.dot_2);
+        if (flipper != null && dot1 != null && dot2 != null) {
+            int c1 = getResources().getIdentifier("carousel_img_1", "drawable", getPackageName());
+            if (c1 != 0) {
+                ImageView iv1 = homeView.findViewById(R.id.iv_carousel_1);
+                if (iv1 != null) iv1.setImageResource(c1);
+            }
+            int c2 = getResources().getIdentifier("carousel_img_2", "drawable", getPackageName());
+            if (c2 != 0) {
+                ImageView iv2 = homeView.findViewById(R.id.iv_carousel_2);
+                if (iv2 != null) iv2.setImageResource(c2);
+            }
+        }
+
         // Game Grid
         RecyclerView rvGrid = homeView.findViewById(R.id.rv_games_grid);
         rvGrid.setLayoutManager(new GridLayoutManager(this, 4));
         GameGridAdapter adapter = new GameGridAdapter(GameRepository.getInstance().getAllGames(), new GameGridAdapter.OnGameClickListener() {
             @Override
             public void onGameClick(GameItem item) {
-                Toast.makeText(MainActivity.this, item.getName() + " selected", Toast.LENGTH_SHORT).show();
+                if (item.isActive()) {
+                    Toast.makeText(MainActivity.this, "Aim Assist Ready for " + item.getName(), Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(MainActivity.this, item.getName() + " is currently locked / Pro Key required", Toast.LENGTH_SHORT).show();
+                }
             }
         });
         rvGrid.setAdapter(adapter);
@@ -225,6 +260,34 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
                 startActivity(new Intent(MainActivity.this, SellerContactActivity.class));
             }
         });
+
+        // Get Free Key button
+        View btnFreeKey = premiumView.findViewById(R.id.btn_get_free_key);
+        if (btnFreeKey != null) {
+            btnFreeKey.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    try {
+                        String url = getString(R.string.free_key_url);
+                        android.content.Intent browserIntent = new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url));
+                        startActivity(browserIntent);
+                    } catch (Exception e) {
+                        Toast.makeText(MainActivity.this, "Opening Free Key Portal", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+        }
+
+        // Get Paid Key button
+        View btnPaidKey = premiumView.findViewById(R.id.btn_get_paid_key);
+        if (btnPaidKey != null) {
+            btnPaidKey.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    startActivity(new Intent(MainActivity.this, SellerContactActivity.class));
+                }
+            });
+        }
 
         populatePremiumData(premiumView);
     }

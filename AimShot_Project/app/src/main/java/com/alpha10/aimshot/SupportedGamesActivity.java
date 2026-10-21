@@ -58,9 +58,15 @@ public class SupportedGamesActivity extends AppCompatActivity {
         adapter = new GameListAdapter(allGames, new GameListAdapter.OnGameActionListener() {
             @Override
             public void onGameSelected(GameItem item) {
-                Toast.makeText(SupportedGamesActivity.this,
-                        item.getName() + " tools active: " + item.getFeatureSummary(),
-                        Toast.LENGTH_SHORT).show();
+                if (item.isActive()) {
+                    Toast.makeText(SupportedGamesActivity.this,
+                            item.getName() + " tools active: " + item.getFeatureSummary(),
+                            Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(SupportedGamesActivity.this,
+                            item.getName() + " is currently locked / Pro Key required",
+                            Toast.LENGTH_SHORT).show();
+                }
             }
         });
         rvGames.setAdapter(adapter);

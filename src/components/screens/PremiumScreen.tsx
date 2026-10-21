@@ -1,5 +1,5 @@
 import React from 'react';
-import { Crown, Settings, CheckCircle2 } from 'lucide-react';
+import { Crown, Settings, CheckCircle2, Key, ShoppingBag, ExternalLink } from 'lucide-react';
 import { TacticalReticleLogo } from '../TacticalReticleLogo';
 import { MembershipState } from '../../types';
 
@@ -15,6 +15,10 @@ export const PremiumScreen: React.FC<PremiumScreenProps> = ({
   onUpgradeRenew
 }) => {
   const isActive = membership.status === 'active';
+
+  const handleOpenFreeKey = () => {
+    window.open('https://aimshotengine.com/free-key', '_blank');
+  };
 
   return (
     <div className="w-full h-full flex flex-col bg-[#0B0F17] overflow-y-auto px-4 py-3 select-none">
@@ -101,8 +105,36 @@ export const PremiumScreen: React.FC<PremiumScreenProps> = ({
         </div>
       </div>
 
+      {/* Get Activation Key Section (Requirement C) */}
+      <div className="w-full bg-[#111B2A] rounded-2xl p-4 mb-4 border border-[#1C2B42]">
+        <div className="flex items-center gap-2 mb-3">
+          <Key className="w-4 h-4 text-[#39B9FF]" />
+          <h3 className="text-sm font-bold text-white tracking-wide">Get Activation Key</h3>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2.5">
+          {/* Free Key Button */}
+          <button
+            onClick={handleOpenFreeKey}
+            className="flex items-center justify-center gap-2 py-3 px-2 rounded-xl bg-[#0B0F17] border border-[#39B9FF]/40 hover:border-[#39B9FF] text-white hover:text-[#39B9FF] transition-all group active:scale-[0.98]"
+          >
+            <ExternalLink className="w-4 h-4 text-[#39B9FF] group-hover:scale-110 transition-transform" />
+            <span className="text-xs font-bold">Get Free Key</span>
+          </button>
+
+          {/* Paid Key Button */}
+          <button
+            onClick={onUpgradeRenew}
+            className="flex items-center justify-center gap-2 py-3 px-2 rounded-xl bg-[#0B0F17] border border-[#F59E0B]/40 hover:border-[#F59E0B] text-white hover:text-[#F59E0B] transition-all group active:scale-[0.98]"
+          >
+            <ShoppingBag className="w-4 h-4 text-[#F59E0B] group-hover:scale-110 transition-transform" />
+            <span className="text-xs font-bold">Get Paid Key</span>
+          </button>
+        </div>
+      </div>
+
       {/* Membership Details Card matching Screen 4 */}
-      <div className="w-full bg-[#111B2A] rounded-2xl p-4 mb-5 border border-[#1C2B42]">
+      <div className="w-full bg-[#111B2A] rounded-2xl p-4 mb-4 border border-[#1C2B42]">
         <h3 className="text-sm font-bold text-white mb-3 tracking-wide">Membership Details</h3>
 
         <div className="divide-y divide-[#1C2B42]/50 text-xs">
@@ -133,7 +165,7 @@ export const PremiumScreen: React.FC<PremiumScreenProps> = ({
       {/* Upgrade / Renew Button with Gold Outline matching Screen 4 */}
       <button
         onClick={onUpgradeRenew}
-        className="w-full py-3 rounded-xl bg-transparent border-2 border-[#F59E0B] text-[#F59E0B] hover:bg-[#F59E0B]/10 active:scale-[0.98] font-bold text-sm tracking-wide transition-all shadow-[0_0_12px_rgba(245,158,11,0.15)] flex items-center justify-center gap-2"
+        className="w-full py-3 rounded-xl bg-transparent border-2 border-[#F59E0B] text-[#F59E0B] hover:bg-[#F59E0B]/10 active:scale-[0.98] font-bold text-sm tracking-wide transition-all shadow-[0_0_12px_rgba(245,158,11,0.15)] flex items-center justify-center gap-2 mb-2"
       >
         <span>Upgrade / Renew</span>
       </button>

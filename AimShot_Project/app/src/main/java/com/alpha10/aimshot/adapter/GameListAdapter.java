@@ -1,5 +1,6 @@
 package com.alpha10.aimshot.adapter;
 
+import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,6 +18,8 @@ import java.util.List;
 
 /**
  * Adapter for displaying detailed game cards on the Supported Games activity.
+ * Supports dynamic icon lookup from res/drawable (PNG or XML) with fallback to ic_aimshot_logo.
+ * Applies 0.45f alpha on locked games (8 Ball Pool, PUBG, etc.) and 1.0f on Carrom Disc Pool.
  */
 public class GameListAdapter extends RecyclerView.Adapter<GameListAdapter.ViewHolder> {
 
@@ -47,10 +50,32 @@ public class GameListAdapter extends RecyclerView.Adapter<GameListAdapter.ViewHo
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         final GameItem item = gameList.get(position);
+        Context context = holder.itemView.getContext();
+
         holder.tvGameName.setText(item.getName());
         holder.tvGameFeatures.setText(item.getFeatureSummary());
-        holder.ivGameIcon.setImageResource(item.getIconResId());
-        holder.ivGameCheck.setVisibility(item.isVerified() ? View.VISIBLE : View.GONE);
+
+        // Dynamic resource resolution
+        int resolvedResId = 0;
+        if (item.getDrawableName() != null && !item.getDrawableName().isEmpty()) {
+            resolvedResId = context.getResources().getIdentifier(item.getDrawableName(), "drawable", context.getPackageName());
+        }
+        if (resolvedResId != 0) {
+            holder.ivGameIcon.setImageResource(resolvedResId);
+        } else if (item.getIconResId() != 0) {
+            holder.ivGameIcon.setImageResource(item.getIconResId());
+        } else {
+            holder.ivGameIcon.setImageResource(R.drawable.ic_aimshot_logo);
+        }
+
+        // Active vs locked presentation
+        if (item.isActive()) {
+            holder.itemView.setAlpha(1.0f);
+            holder.ivGameCheck.setVisibility(View.VISIBLE);
+        } else {
+            holder.itemView.setAlpha(0.45f);
+            holder.ivGameCheck.setVisibility(View.GONE);
+        }
 
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
