@@ -46,11 +46,21 @@ jobs:
         if [ -f "settings.gradle" ] && [ -f "gradlew" ]; then
           echo "Building from root directory..."
           ./gradlew assembleDebug --stacktrace
-        elif [ -d "AimShot_Project" ] && [ -f "AimShot_Project/settings.gradle" ]; then
-          echo "Building from AimShot_Project directory..."
+        elif [ -d "AimShot_Project" ]; then
+          echo "Building from AimShot_Project directory using global gradle..."
           cd AimShot_Project
-          chmod +x ./gradlew || true
-          ./gradlew assembleDebug --stacktrace
+          if [ -f "gradlew" ]; then
+            chmod +x ./gradlew
+            ./gradlew assembleDebug --stacktrace
+          else
+            gradle wrapper || true
+            if [ -f "gradlew" ]; then
+              chmod +x ./gradlew
+              ./gradlew assembleDebug --stacktrace
+            else
+              gradle assembleDebug --stacktrace
+            fi
+          fi
         else
           gradle assembleDebug --stacktrace
         fi
