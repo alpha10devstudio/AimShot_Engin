@@ -69,10 +69,18 @@ public class SettingsActivity extends AppCompatActivity {
         tvLanguageDesc = findViewById(R.id.tv_language_desc);
 
         // Populate saved states
-        tvNotificationsStatus.setText(isNotificationsOn ? "On" : "Off");
-        tvHapticStatus.setText(isHapticOn ? "On" : "Off");
-        tvLanguageDesc.setText(prefs.getString(KEY_LANG, "English"));
-        switchTheme.setChecked(prefs.getBoolean(KEY_DARK_MODE, true));
+        if (tvNotificationsStatus != null) {
+            tvNotificationsStatus.setText(isNotificationsOn ? "On" : "Off");
+        }
+        if (tvHapticStatus != null) {
+            tvHapticStatus.setText(isHapticOn ? "On" : "Off");
+        }
+        if (tvLanguageDesc != null) {
+            tvLanguageDesc.setText(prefs.getString(KEY_LANG, "English"));
+        }
+        if (switchTheme != null) {
+            switchTheme.setChecked(prefs.getBoolean(KEY_DARK_MODE, true));
+        }
 
         // Bottom Navigation Bar
         View navHome = findViewById(R.id.settings_nav_home);
@@ -182,7 +190,9 @@ public class SettingsActivity extends AppCompatActivity {
         builder.setItems(languages, (dialog, which) -> {
             String selected = languages[which];
             prefs.edit().putString(KEY_LANG, selected).apply();
-            tvLanguageDesc.setText(selected);
+            if (tvLanguageDesc != null) {
+                tvLanguageDesc.setText(selected);
+            }
             Toast.makeText(SettingsActivity.this, "Language set to " + selected, Toast.LENGTH_SHORT).show();
             triggerHapticFeedback();
         });

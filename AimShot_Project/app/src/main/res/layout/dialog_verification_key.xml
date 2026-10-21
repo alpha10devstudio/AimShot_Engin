@@ -3,15 +3,15 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_gravity="center"
-    android:layout_margin="24dp"
-    android:background="@drawable/bg_tactical_card_glow"
+    android:layout_margin="20dp"
+    android:background="@drawable/bg_dialog_card"
     android:orientation="vertical"
-    android:padding="24dp">
+    android:padding="20dp">
 
     <!-- Header with Reticle Icon -->
     <ImageView
-        android:layout_width="48dp"
-        android:layout_height="48dp"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
         android:layout_gravity="center_horizontal"
         android:layout_marginBottom="12dp"
         android:contentDescription="@string/app_name"

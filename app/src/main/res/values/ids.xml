@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Explicit ID declarations to ensure 100% build safety across Gradle versions -->
+    <item name="tv_language_desc" type="id" />
+    <item name="tv_theme_desc" type="id" />
+    <item name="settings_nav_home" type="id" />
+    <item name="settings_nav_premium" type="id" />
+    <item name="settings_nav_settings" type="id" />
+    <item name="btn_get_free_key" type="id" />
+    <item name="btn_get_paid_key" type="id" />
+    <item name="home_carousel_flipper" type="id" />
+    <item name="dot_1" type="id" />
+    <item name="dot_2" type="id" />
+    <item name="iv_carousel_1" type="id" />
+    <item name="iv_carousel_2" type="id" />
+</resources>

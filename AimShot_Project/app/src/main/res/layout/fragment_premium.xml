@@ -149,7 +149,6 @@
                 android:textSize="12sp" />
 
             <!-- Remaining Time Display -->
-            <!-- Remaining Time Display -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
