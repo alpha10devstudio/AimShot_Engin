@@ -24,7 +24,7 @@
     <style name="Theme.AimShotEngine.Dialog" parent="Theme.MaterialComponents.Dialog">
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowIsFloating">true</item>
-        <item name="android:windowDimEnabled">true</item>
-        <item name="android:windowDimAmount">0.7</item>
+        <item name="windowDimEnabled">true</item>
+        <item name="windowDimAmount">0.7</item>
     </style>
 </resources>
