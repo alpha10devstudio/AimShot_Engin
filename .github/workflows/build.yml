@@ -35,25 +35,29 @@ jobs:
         echo "84831b4009041f6a626245041a5482f5ec3a42fa" >> $ANDROID_SDK_ROOT/licenses/android-sdk-license
         yes | sdkmanager --licenses || true
 
-    # ৪. গ্র্যাডল র‍্যাপার ফাইলে এক্সিকিউট পারমিশন দেওয়া
-    - name: Grant Execute Permission for Gradlew
+    # ৪. সঠিকভাবে gradle-wrapper.properties ফাইলটি তৈরি এবং গ্র্যাডল র‍্যাপার সেটআপ করা
+    - name: Setup Gradle Wrapper Properly
       run: |
-        if [ -f "gradlew" ]; then
-          chmod +x gradlew
-        fi
-        if [ -f "AimShot_Project/gradlew" ]; then
-          chmod +x AimShot_Project/gradlew
-        fi
+        cd AimShot_Project
+        mkdir -p gradle/wrapper
+        
+        # সঠিক gradle-wrapper.properties ফাইলটি নিজে থেকে তৈরি করে দিচ্ছি
+        echo "distributionBase=GRADLE_USER_HOME" > gradle/wrapper/gradle-wrapper.properties
+        echo "distributionPath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
+        echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.4-bin.zip" >> gradle/wrapper/gradle-wrapper.properties
+        echo "zipStoreBase=GRADLE_USER_HOME" >> gradle/wrapper/gradle-wrapper.properties
+        echo "zipStorePath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
+        
+        # গ্র্যাডল র‍্যাপার বাইনারি জেনারেট করা
+        gradle wrapper --gradle-version 8.4
+        
+        # এক্সিকিউট পারমিশন নিশ্চিত করা
+        chmod +x gradlew
 
-    # ৫. সঠিক ডিরেক্টরিতে ঢুকে Gradle 8.4 র‍্যাপার নিশ্চিত করে ডিবাগ এপিকে (Debug APK) বিল্ড করা
+    # ৫. ডিবাগ এপিকে (Debug APK) বিল্ড করা
     - name: Build Debug APK
       run: |
         cd AimShot_Project
-        if [ ! -f "gradlew" ]; then
-          echo "Generating Gradle wrapper with version 8.4..."
-          gradle wrapper --gradle-version 8.4
-        fi
-        chmod +x ./gradlew
         ./gradlew assembleDebug --stacktrace
 
     # ৬. বিল্ড হওয়া এপিকে ফাইলটিকে গিটহাব আর্কিটেক্ট হিসেবে আপলোড করা
