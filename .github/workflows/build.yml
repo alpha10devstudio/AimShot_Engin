@@ -23,11 +23,14 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
-      with:
-        cmdline-tools-version: '11076708'
-        accept-android-sdk-licenses: true
+    - name: Accept Android SDK Licenses
+      run: |
+        export ANDROID_HOME=$ANDROID_SDK_ROOT
+        mkdir -p $ANDROID_SDK_ROOT/licenses
+        echo "24330f8a81638363azd8c51923485f541240c492" > $ANDROID_SDK_ROOT/licenses/android-sdk-license
+        echo "d56f5187479451eabf01fb78af6dfcb131a648b0" >> $ANDROID_SDK_ROOT/licenses/android-sdk-license
+        echo "84831b4009041f6a626245041a5482f5ec3a42fa" >> $ANDROID_SDK_ROOT/licenses/android-sdk-license
+        yes | sdkmanager --licenses || true
 
     - name: Grant Execute Permission for Gradlew
       run: |
