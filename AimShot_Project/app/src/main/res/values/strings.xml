@@ -57,6 +57,10 @@
     <string name="badge_secure_payment">Secure Payment</string>
     <string name="badge_trusted">100% Trusted</string>
     <string name="btn_contact_now">Contact Now</string>
+    <!-- নতুন -->
+    <string name="whatsapp">WhatsApp</string>
+    <string name="telegram">Telegram</string>
+    <string name="email">Email</string>
 
     <!-- Device Information -->
     <string name="device_information">Device Information</string>
