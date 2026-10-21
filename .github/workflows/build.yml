@@ -13,9 +13,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    # ১. গিটহাব থেকে প্রজেক্টের সোর্স কোড ডাউনলোড বা চেকআউট করা
     - name: Checkout Repository
       uses: actions/checkout@v4
 
+    # ২. অ্যান্ড্রয়েড বিল্ডের জন্য প্রয়োজনীয় জাভা (JDK 17) এনভায়রনমেন্ট সেটআপ করা
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
@@ -23,6 +25,7 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
+    # ৩. অ্যান্ড্রয়েড এসডিকে লাইসেন্সগুলো স্বয়ংক্রিয়ভাবে এক্সেপ্ট বা অনুমোদন করানো
     - name: Accept Android SDK Licenses
       run: |
         export ANDROID_HOME=$ANDROID_SDK_ROOT
@@ -32,6 +35,7 @@ jobs:
         echo "84831b4009041f6a626245041a5482f5ec3a42fa" >> $ANDROID_SDK_ROOT/licenses/android-sdk-license
         yes | sdkmanager --licenses || true
 
+    # ৪. রুট বা সাব-ফোল্ডারের গ্র্যাডল র‍্যাপার ফাইলে এক্সিকিউট পারমিশন (Executable Permission) দেওয়া
     - name: Grant Execute Permission for Gradlew
       run: |
         if [ -f "gradlew" ]; then
@@ -41,6 +45,7 @@ jobs:
           chmod +x AimShot_Project/gradlew
         fi
 
+    # ৫. সঠিক ডিরেক্টরি চেক করে ডিবাগ এপিকে (Debug APK) বিল্ড করা
     - name: Build Debug APK
       run: |
         if [ -f "settings.gradle" ] && [ -f "gradlew" ]; then
@@ -65,6 +70,7 @@ jobs:
           gradle assembleDebug --stacktrace
         fi
 
+    # ৬. বিল্ড হওয়া এপিকে ফাইলটিকে গিটহাব আর্কিটেক্ট হিসেবে আপলোড করা যাতে ডাউনলোড করা যায়
     - name: Upload Debug APK Artifact
       uses: actions/upload-artifact@v4
       with:
