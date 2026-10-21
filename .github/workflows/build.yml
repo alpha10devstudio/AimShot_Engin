@@ -9,10 +9,11 @@ on:
 
 jobs:
   build:
+    name: Build APK on Ubuntu Runner
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout the Repository
+    - name: Checkout Repository
       uses: actions/checkout@v4
 
     - name: Set up JDK 17
@@ -20,33 +21,40 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
+        cache: gradle
 
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v3
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
 
     - name: Grant Execute Permission for Gradlew
       run: |
-        if [ ! -f gradlew ]; then
-          echo "gradlew not found, generating wrapper..."
-          gradle wrapper
+        if [ -f "gradlew" ]; then
+          chmod +x gradlew
         fi
-        chmod +x gradlew
+        if [ -f "AimShot_Project/gradlew" ]; then
+          chmod +x AimShot_Project/gradlew
+        fi
 
-    - name: Prepare Debug Keystore
+    - name: Build Debug APK
       run: |
-        if [ -f debug.keystore.base64 ]; then
-          echo "Decoding debug.keystore from base64..."
-          base64 -d debug.keystore.base64 > debug.keystore
+        if [ -f "settings.gradle" ] && [ -f "gradlew" ]; then
+          echo "Building from root directory..."
+          ./gradlew assembleDebug --stacktrace
+        elif [ -d "AimShot_Project" ] && [ -f "AimShot_Project/settings.gradle" ]; then
+          echo "Building from AimShot_Project directory..."
+          cd AimShot_Project
+          chmod +x ./gradlew || true
+          ./gradlew assembleDebug --stacktrace
         else
-          echo "debug.keystore.base64 not found, generating a new debug keystore..."
-          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          gradle assembleDebug --stacktrace
         fi
-
-    - name: Build Debug APK with R8
-      run: ./gradlew assembleDebug
 
     - name: Upload Debug APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: app-debug
-        path: app/build/outputs/apk/debug/app-debug.apk
+        path: |
+          app/build/outputs/apk/debug/*.apk
+          AimShot_Project/app/build/outputs/apk/debug/*.apk
+          AimShot-Engine-v1.0.0.apk
+        if-no-files-found: warn
