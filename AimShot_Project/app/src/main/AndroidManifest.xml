@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.alpha10.aimshot">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Essential permissions only: network for license verification, vibrate for tactical haptic feedback -->
     <uses-permission android:name="android.permission.INTERNET" />
