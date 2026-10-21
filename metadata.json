@@ -1,0 +1,6 @@
+{
+  "name": "AimShot Engine",
+  "description": "AimShot Engine - Pro Gaming Toolkit & Tactical License Verification App for Android (Java & Native XML). Sharper Aim • Better Game • Higher You.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
