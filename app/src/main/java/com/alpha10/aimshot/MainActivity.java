@@ -36,6 +36,7 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
 
     private FrameLayout fragmentContainer;
     private View navBtnHome, navBtnPremium, navBtnSettings;
+    private View navDotHome, navDotPremium, navDotSettings;
     private ImageView ivNavHome, ivNavPremium, ivNavSettings;
     private TextView tvNavHome, tvNavPremium, tvNavSettings;
 
@@ -91,6 +92,10 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
         tvNavHome = findViewById(R.id.tv_nav_home);
         tvNavPremium = findViewById(R.id.tv_nav_premium);
         tvNavSettings = findViewById(R.id.tv_nav_settings);
+
+        navDotHome = findViewById(R.id.nav_dot_home);
+        navDotPremium = findViewById(R.id.nav_dot_premium);
+        navDotSettings = findViewById(R.id.nav_dot_settings);
     }
 
     private void setupNavigation() {
@@ -139,14 +144,17 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
         // Home
         ivNavHome.setColorFilter(currentTab == Tab.HOME ? colorActive : colorInactive);
         tvNavHome.setTextColor(currentTab == Tab.HOME ? colorActive : colorInactive);
+        if (navDotHome != null) navDotHome.setVisibility(currentTab == Tab.HOME ? View.VISIBLE : View.INVISIBLE);
 
         // Premium
         ivNavPremium.setColorFilter(currentTab == Tab.PREMIUM ? colorActive : colorInactive);
         tvNavPremium.setTextColor(currentTab == Tab.PREMIUM ? colorActive : colorInactive);
+        if (navDotPremium != null) navDotPremium.setVisibility(currentTab == Tab.PREMIUM ? View.VISIBLE : View.INVISIBLE);
 
         // Settings
-        ivNavSettings.setColorFilter(colorInactive);
-        tvNavSettings.setTextColor(colorInactive);
+        ivNavSettings.setColorFilter(currentTab == Tab.SETTINGS ? colorActive : colorInactive);
+        tvNavSettings.setTextColor(currentTab == Tab.SETTINGS ? colorActive : colorInactive);
+        if (navDotSettings != null) navDotSettings.setVisibility(currentTab == Tab.SETTINGS ? View.VISIBLE : View.INVISIBLE);
     }
 
     private void renderHomeScreen() {
@@ -243,14 +251,16 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
         View premiumView = LayoutInflater.from(this).inflate(R.layout.fragment_premium, fragmentContainer, false);
         fragmentContainer.addView(premiumView);
 
-        // Settings icon on top-right
-        View btnSettings = premiumView.findViewById(R.id.btn_premium_settings);
-        btnSettings.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(MainActivity.this, SettingsActivity.class));
-            }
-        });
+        // Notification icon on top-right (opens seller & notifications)
+        View btnNotifications = premiumView.findViewById(R.id.btn_premium_notifications);
+        if (btnNotifications != null) {
+            btnNotifications.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    startActivity(new Intent(MainActivity.this, SellerContactActivity.class));
+                }
+            });
+        }
 
         // Upgrade / Renew button
         View btnRenew = premiumView.findViewById(R.id.btn_upgrade_renew);

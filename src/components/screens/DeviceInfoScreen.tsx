@@ -1,17 +1,24 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Cpu, Copy, Check, Info } from 'lucide-react';
 import { DEFAULT_DEVICE_SPECS } from '../../data/mockData';
+import { AppTheme } from '../../types';
+import { Translations } from '../../data/translations';
 
 interface DeviceInfoScreenProps {
+  theme: AppTheme;
+  t: Translations;
   onBack: () => void;
   onShowToast: (message: string) => void;
 }
 
 export const DeviceInfoScreen: React.FC<DeviceInfoScreenProps> = ({
+  theme,
+  t,
   onBack,
   onShowToast
 }) => {
   const [copied, setCopied] = useState(false);
+  const isDark = theme === 'dark';
   const specs = DEFAULT_DEVICE_SPECS;
 
   const handleCopy = () => {
@@ -22,27 +29,47 @@ export const DeviceInfoScreen: React.FC<DeviceInfoScreenProps> = ({
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-[#0B0F17] overflow-y-auto px-4 py-3 select-none">
-      {/* Top Action Bar matching Screen 7 */}
+    <div
+      className={`w-full h-full flex flex-col overflow-y-auto px-4 py-3 select-none transition-colors duration-200 ${
+        isDark ? 'bg-[#0B0F17] text-[#F4F7FC]' : 'bg-[#F1F5F9] text-[#0F172A]'
+      }`}
+    >
+      {/* Top Action Bar */}
       <div className="flex items-center gap-2 mb-4 pt-1">
         <button
           onClick={onBack}
-          className="w-9 h-9 rounded-xl bg-[#111B2A] border border-[#1C2B42] flex items-center justify-center text-white hover:text-[#39B9FF] transition-colors"
+          className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
+            isDark
+              ? 'bg-[#111B2A] border border-[#1C2B42] text-white hover:text-[#39B9FF]'
+              : 'bg-white border border-[#CBD5E1] text-[#0F172A] hover:text-[#0284C7] shadow-xs'
+          }`}
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h2 className="text-base font-bold text-white tracking-wide">Device Information</h2>
+        <h2 className={`text-base font-bold tracking-wide ${isDark ? 'text-white' : 'text-[#0F172A]'}`}>
+          {t.deviceInformation}
+        </h2>
       </div>
 
-      {/* Device ID Card matching Screen 7 */}
-      <div className="w-full bg-[#111B2A] rounded-2xl p-4 mb-4 border border-[#39B9FF]/50 shadow-[0_0_15px_rgba(57,185,255,0.15)]">
-        <div className="flex items-center gap-2 text-xs text-[#8D9BB0] mb-2.5">
+      {/* Device ID Card */}
+      <div
+        className={`w-full rounded-2xl p-4 mb-4 border transition-all ${
+          isDark
+            ? 'bg-[#111B2A] border-[#39B9FF]/50 shadow-[0_0_15px_rgba(57,185,255,0.15)]'
+            : 'bg-white border-[#39B9FF]/40 shadow-xs'
+        }`}
+      >
+        <div className={`flex items-center gap-2 text-xs mb-2.5 ${isDark ? 'text-[#8D9BB0]' : 'text-[#64748B]'}`}>
           <Cpu className="w-4 h-4 text-[#39B9FF]" />
-          <span>Device ID</span>
+          <span>{t.deviceId}</span>
         </div>
 
         <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-bold text-white font-mono tracking-wider truncate">
+          <span
+            className={`text-sm font-bold font-mono tracking-wider truncate ${
+              isDark ? 'text-white' : 'text-[#0F172A]'
+            }`}
+          >
             {specs.deviceId}
           </span>
 
@@ -56,54 +83,53 @@ export const DeviceInfoScreen: React.FC<DeviceInfoScreenProps> = ({
         </div>
       </div>
 
-      {/* Device Hardware Specs Card matching Screen 7 */}
-      <div className="w-full bg-[#111B2A] rounded-2xl p-4 mb-4 border border-[#1C2B42]">
-        <div className="divide-y divide-[#1C2B42]/50 text-xs">
+      {/* Device Hardware Specs Card */}
+      <div
+        className={`w-full rounded-2xl p-4 mb-4 border transition-all ${
+          isDark ? 'bg-[#111B2A] border-[#1C2B42]' : 'bg-white border-[#CBD5E1] shadow-xs'
+        }`}
+      >
+        <div className={`divide-y text-xs ${isDark ? 'divide-[#1C2B42]/50' : 'divide-[#E2E8F0]'}`}>
           <div className="flex justify-between py-2.5">
-            <span className="text-[#8D9BB0]">Android Version</span>
-            <span className="text-white font-medium">{specs.androidVersion}</span>
+            <span className={isDark ? 'text-[#8D9BB0]' : 'text-[#64748B]'}>{t.androidVersion}</span>
+            <span className={`font-medium ${isDark ? 'text-white' : 'text-[#0F172A]'}`}>{specs.androidVersion}</span>
           </div>
 
           <div className="flex justify-between py-2.5">
-            <span className="text-[#8D9BB0]">Model</span>
-            <span className="text-white font-medium">{specs.model}</span>
+            <span className={isDark ? 'text-[#8D9BB0]' : 'text-[#64748B]'}>{t.deviceModel}</span>
+            <span className={`font-medium ${isDark ? 'text-white' : 'text-[#0F172A]'}`}>{specs.brand} {specs.model}</span>
           </div>
 
           <div className="flex justify-between py-2.5">
-            <span className="text-[#8D9BB0]">Brand</span>
-            <span className="text-white font-medium">{specs.brand}</span>
+            <span className={isDark ? 'text-[#8D9BB0]' : 'text-[#64748B]'}>{t.systemRam}</span>
+            <span className={`font-medium ${isDark ? 'text-white' : 'text-[#0F172A]'}`}>{specs.totalRam}</span>
           </div>
 
           <div className="flex justify-between py-2.5">
-            <span className="text-[#8D9BB0]">Total RAM</span>
-            <span className="text-white font-medium">{specs.totalRam}</span>
+            <span className={isDark ? 'text-[#8D9BB0]' : 'text-[#64748B]'}>{t.resolution}</span>
+            <span className={`font-medium font-mono ${isDark ? 'text-white' : 'text-[#0F172A]'}`}>{specs.screenResolution}</span>
           </div>
 
           <div className="flex justify-between py-2.5">
-            <span className="text-[#8D9BB0]">Screen Resolution</span>
-            <span className="text-white font-medium font-mono">{specs.screenResolution}</span>
-          </div>
-
-          <div className="flex justify-between py-2.5">
-            <span className="text-[#8D9BB0]">CPU</span>
-            <span className="text-white font-medium">{specs.cpu}</span>
+            <span className={isDark ? 'text-[#8D9BB0]' : 'text-[#64748B]'}>{t.processor}</span>
+            <span className={`font-medium ${isDark ? 'text-white' : 'text-[#0F172A]'}`}>{specs.cpu}</span>
           </div>
         </div>
 
-        <p className="text-[11px] text-[#55657E] mt-3 leading-relaxed border-t border-[#1C2B42]/50 pt-2.5">
-          This Device ID is used for license verification and device binding.
+        <p className={`text-[11px] mt-3 leading-relaxed border-t pt-2.5 ${isDark ? 'text-[#55657E] border-[#1C2B42]/50' : 'text-[#94A3B8] border-[#E2E8F0]'}`}>
+          This Device ID is used for license verification and hardware binding.
         </p>
       </div>
 
-      {/* Keep your Device ID safe Box matching Screen 7 */}
+      {/* Keep your Device ID safe Box */}
       <div className="w-full rounded-2xl bg-[#39B9FF]/10 border border-[#39B9FF]/25 p-3.5 flex items-start gap-3">
         <div className="w-6 h-6 rounded-lg bg-[#39B9FF]/20 flex items-center justify-center text-[#39B9FF] shrink-0 mt-0.5">
           <Info className="w-4 h-4" />
         </div>
         <div className="flex flex-col">
           <span className="text-xs font-bold text-[#39B9FF]">Keep your Device ID safe</span>
-          <span className="text-[11px] text-[#8D9BB0] mt-0.5 leading-snug">
-            Do not share it with anyone except the official seller.
+          <span className={`text-[11px] mt-0.5 leading-snug ${isDark ? 'text-[#8D9BB0]' : 'text-[#64748B]'}`}>
+            Do not share it with anyone except the authorized seller.
           </span>
         </div>
       </div>

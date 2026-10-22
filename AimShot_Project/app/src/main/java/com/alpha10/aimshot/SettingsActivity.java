@@ -190,7 +190,7 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void showLanguageSelectionDialog() {
-        final String[] languages = {"English", "বাংলা (Bengali)", "हिन्दी (Hindi)", "Español (Spanish)", "العربية (Arabic)"};
+        final String[] languages = {"English", "বাংলা (Bengali)", "हिन्दी (Hindi)"};
         AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.Theme_AimShotEngine_Dialog);
         builder.setTitle("Select Language");
         builder.setItems(languages, (dialog, which) -> {

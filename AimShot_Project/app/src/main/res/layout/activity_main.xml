@@ -48,6 +48,15 @@
                 android:text="@string/nav_home"
                 android:textColor="@color/accent_primary"
                 android:textSize="11sp" />
+
+            <!-- Active Indicator Dot -->
+            <View
+                android:id="@+id/nav_dot_home"
+                android:layout_width="5dp"
+                android:layout_height="5dp"
+                android:layout_marginTop="2dp"
+                android:background="@drawable/bg_nav_dot_active"
+                android:visibility="visible" />
         </LinearLayout>
 
         <!-- Nav Item 2: Premium -->
@@ -76,6 +85,15 @@
                 android:text="@string/nav_premium"
                 android:textColor="@color/nav_inactive"
                 android:textSize="11sp" />
+
+            <!-- Active Indicator Dot -->
+            <View
+                android:id="@+id/nav_dot_premium"
+                android:layout_width="5dp"
+                android:layout_height="5dp"
+                android:layout_marginTop="2dp"
+                android:background="@drawable/bg_nav_dot_active"
+                android:visibility="invisible" />
         </LinearLayout>
 
         <!-- Nav Item 3: Settings -->
@@ -104,6 +122,15 @@
                 android:text="@string/nav_settings"
                 android:textColor="@color/nav_inactive"
                 android:textSize="11sp" />
+
+            <!-- Active Indicator Dot -->
+            <View
+                android:id="@+id/nav_dot_settings"
+                android:layout_width="5dp"
+                android:layout_height="5dp"
+                android:layout_marginTop="2dp"
+                android:background="@drawable/bg_nav_dot_active"
+                android:visibility="invisible" />
         </LinearLayout>
 
     </LinearLayout>

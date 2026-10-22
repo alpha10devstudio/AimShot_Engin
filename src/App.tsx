@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Smartphone,
   Code,
@@ -7,7 +7,9 @@ import {
   KeyRound,
   CheckCircle2,
   Download,
-  Maximize2
+  AlertCircle,
+  Play,
+  X
 } from 'lucide-react';
 import { PhoneFrame, DevicePreset } from './components/PhoneFrame';
 import { SplashScreen } from './components/screens/SplashScreen';
@@ -19,7 +21,9 @@ import { SellerContactScreen } from './components/screens/SellerContactScreen';
 import { DeviceInfoScreen } from './components/screens/DeviceInfoScreen';
 import { SettingsScreen } from './components/screens/SettingsScreen';
 import { CodeExplorer } from './components/CodeExplorer';
-import { ScreenId, BottomTab, MembershipState, Game } from './types';
+import { ScreenId, BottomTab, MembershipState, Game, AppTheme } from './types';
+import { SUPPORTED_GAMES } from './data/mockData';
+import { Language, TRANSLATIONS } from './data/translations';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenId>('home');
@@ -29,21 +33,67 @@ export default function App() {
   const [devicePreset, setDevicePreset] = useState<DevicePreset>('standard');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Membership state starting as authentic Free / Logged Out
-  const [membership, setMembership] = useState<MembershipState>({
-    isLoggedIn: false,
-    status: 'free',
-    planType: 'Free / Not Activated',
-    startDate: '--',
-    expiryDate: '--',
-    daysRemaining: 0,
-    featuresUnlocked: false,
-    boundDeviceId: 'AS-7F3E-9C4D-2A8B-6E1F'
+  // App Theme state: 'dark' (tactical cyber) or 'light' (clean slate)
+  const [theme, setTheme] = useState<AppTheme>(() => {
+    const saved = localStorage.getItem('aimshot_theme');
+    return (saved === 'light' || saved === 'dark') ? saved : 'dark';
   });
+
+  // App Language state: strictly 'en', 'bn', or 'hi'
+  const [language, setLanguage] = useState<Language>(() => {
+    const saved = localStorage.getItem('aimshot_lang');
+    return (saved === 'bn' || saved === 'hi' || saved === 'en') ? saved : 'en';
+  });
+
+  // Currently selected game (default Carrom Disc Pool)
+  const [selectedGame, setSelectedGame] = useState<Game>(SUPPORTED_GAMES[0]);
+
+  // Active game launch session overlay
+  const [launchingGameSession, setLaunchingGameSession] = useState<{
+    game: Game;
+    status: 'initializing' | 'injecting' | 'running';
+  } | null>(null);
+
+  // Active membership state starting as Free / Logged Out
+  const [membership, setMembership] = useState<MembershipState>(() => {
+    const saved = localStorage.getItem('aimshot_membership');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        // fallback
+      }
+    }
+    return {
+      isLoggedIn: false,
+      status: 'free',
+      planType: 'Free / Not Activated',
+      startDate: '--',
+      expiryDate: '--',
+      daysRemaining: 0,
+      featuresUnlocked: false,
+      boundDeviceId: 'AIM-8839-4491-BC99'
+    };
+  });
+
+  // Save state changes
+  useEffect(() => {
+    localStorage.setItem('aimshot_theme', theme);
+  }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem('aimshot_lang', language);
+  }, [language]);
+
+  useEffect(() => {
+    localStorage.setItem('aimshot_membership', JSON.stringify(membership));
+  }, [membership]);
+
+  const t = TRANSLATIONS[language];
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    setTimeout(() => setToastMessage(null), 3200);
   };
 
   const handleTabChange = (tab: BottomTab) => {
@@ -57,8 +107,16 @@ export default function App() {
     }
   };
 
+  const handleToggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
+  const handleChangeLanguage = (newLang: Language) => {
+    setLanguage(newLang);
+  };
+
   const handleLoginSuccess = (key: string) => {
-    setMembership({
+    const newMembership: MembershipState = {
       isLoggedIn: true,
       status: 'active',
       planType: 'Monthly Premium',
@@ -66,13 +124,14 @@ export default function App() {
       expiryDate: '25 Apr 2025',
       daysRemaining: 18,
       featuresUnlocked: true,
-      boundDeviceId: 'AS-7F3E-9C4D-2A8B-6E1F'
-    });
-    showToast('Key Verified! Premium active: 18 Days remaining.');
+      boundDeviceId: 'AIM-8839-4491-BC99'
+    };
+    setMembership(newMembership);
+    showToast(t.keyVerified);
   };
 
   const handleLogout = () => {
-    setMembership({
+    const resetMembership: MembershipState = {
       isLoggedIn: false,
       status: 'free',
       planType: 'Free / Not Activated',
@@ -80,15 +139,47 @@ export default function App() {
       expiryDate: '--',
       daysRemaining: 0,
       featuresUnlocked: false,
-      boundDeviceId: 'AS-7F3E-9C4D-2A8B-6E1F'
-    });
+      boundDeviceId: 'AIM-8839-4491-BC99'
+    };
+    setMembership(resetMembership);
     setCurrentScreen('home');
     setCurrentTab('home');
-    showToast('Session cleared. Logged out.');
+    showToast(t.sessionCleared);
   };
 
   const handleSelectGame = (game: Game) => {
-    showToast(`${game.name} profile active: ${game.features}`);
+    setSelectedGame(game);
+    showToast(`${game.name}: ${game.features}`);
+  };
+
+  const handleLaunchGame = (game: Game) => {
+    // If user is logged in, initiate launch
+    if (!membership.isLoggedIn) {
+      setIsLoginModalOpen(true);
+      return;
+    }
+
+    setLaunchingGameSession({
+      game,
+      status: 'initializing'
+    });
+
+    // Step 1: Initialize touch guidelines
+    setTimeout(() => {
+      setLaunchingGameSession({
+        game,
+        status: 'injecting'
+      });
+    }, 900);
+
+    // Step 2: Running state
+    setTimeout(() => {
+      setLaunchingGameSession({
+        game,
+        status: 'running'
+      });
+      showToast(`${t.gameLaunchedSuccess} ${game.name}`);
+    }, 2000);
   };
 
   const handleDownloadApk = async () => {
@@ -107,34 +198,58 @@ export default function App() {
       document.body.removeChild(tempLink);
       setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 8000);
       showToast('APK Downloaded! Open with Android Package Installer.');
-    } catch (e) {
+    } catch {
       window.location.href = '/AimShot-Engine-v1.0.0.apk';
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#070B12] text-[#F4F7FC] flex flex-col font-sans selection:bg-[#39B9FF]/30">
+    <div
+      className={`min-h-screen flex flex-col font-sans transition-colors duration-200 ${
+        theme === 'dark' ? 'bg-[#070B12] text-[#F4F7FC]' : 'bg-[#E2E8F0] text-[#0F172A]'
+      }`}
+    >
       {/* Top Application Control & Navigation Bar */}
-      <header className="h-16 px-3 sm:px-6 md:px-8 bg-[#0B0F17] border-b border-[#1C2B42] flex items-center justify-between shrink-0 z-50">
+      <header
+        className={`h-16 px-3 sm:px-6 md:px-8 border-b flex items-center justify-between shrink-0 z-50 transition-colors ${
+          theme === 'dark'
+            ? 'bg-[#0B0F17] border-[#1C2B42]'
+            : 'bg-white border-[#CBD5E1] shadow-xs'
+        }`}
+      >
         <div className="flex items-center gap-2.5">
           <div className="flex items-baseline gap-1.5 font-bold text-base sm:text-lg tracking-wider">
-            <span className="text-white">AimShot</span>
+            <span className={theme === 'dark' ? 'text-white' : 'text-[#0F172A]'}>AimShot</span>
             <span className="text-[#39B9FF] drop-shadow-[0_0_8px_rgba(57,185,255,0.6)]">ENGINE</span>
           </div>
 
-          <span className="hidden lg:inline-block px-2.5 py-0.5 rounded-full bg-[#111B2A] border border-[#39B9FF]/30 text-[11px] font-mono text-[#39B9FF]">
+          <span
+            className={`hidden lg:inline-block px-2.5 py-0.5 rounded-full border text-[11px] font-mono ${
+              theme === 'dark'
+                ? 'bg-[#111B2A] border-[#39B9FF]/30 text-[#39B9FF]'
+                : 'bg-[#E0F2FE] border-[#39B9FF]/40 text-[#0284C7]'
+            }`}
+          >
             com.alpha10.aimshot
           </span>
         </div>
 
         {/* View Switcher Tabs */}
-        <div className="flex items-center gap-1 bg-[#111B2A] p-1 rounded-xl border border-[#1C2B42]">
+        <div
+          className={`flex items-center gap-1 p-1 rounded-xl border ${
+            theme === 'dark'
+              ? 'bg-[#111B2A] border-[#1C2B42]'
+              : 'bg-[#F1F5F9] border-[#CBD5E1]'
+          }`}
+        >
           <button
             onClick={() => setViewMode('phone')}
             className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
               viewMode === 'phone'
                 ? 'bg-[#39B9FF] text-[#0B0F17] shadow-[0_0_10px_rgba(57,185,255,0.3)]'
-                : 'text-[#8D9BB0] hover:text-white'
+                : theme === 'dark'
+                ? 'text-[#8D9BB0] hover:text-white'
+                : 'text-[#64748B] hover:text-[#0F172A]'
             }`}
           >
             <Smartphone className="w-3.5 h-3.5" />
@@ -146,7 +261,9 @@ export default function App() {
             className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
               viewMode === 'split'
                 ? 'bg-[#39B9FF] text-[#0B0F17] shadow-[0_0_10px_rgba(57,185,255,0.3)]'
-                : 'text-[#8D9BB0] hover:text-white'
+                : theme === 'dark'
+                ? 'text-[#8D9BB0] hover:text-white'
+                : 'text-[#64748B] hover:text-[#0F172A]'
             }`}
           >
             <Sparkles className="w-3.5 h-3.5" />
@@ -158,7 +275,9 @@ export default function App() {
             className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
               viewMode === 'code'
                 ? 'bg-[#39B9FF] text-[#0B0F17] shadow-[0_0_10px_rgba(57,185,255,0.3)]'
-                : 'text-[#8D9BB0] hover:text-white'
+                : theme === 'dark'
+                ? 'text-[#8D9BB0] hover:text-white'
+                : 'text-[#64748B] hover:text-[#0F172A]'
             }`}
           >
             <Code className="w-3.5 h-3.5" />
@@ -170,7 +289,9 @@ export default function App() {
             className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
               viewMode === 'mockup'
                 ? 'bg-[#39B9FF] text-[#0B0F17] shadow-[0_0_10px_rgba(57,185,255,0.3)]'
-                : 'text-[#8D9BB0] hover:text-white'
+                : theme === 'dark'
+                ? 'text-[#8D9BB0] hover:text-white'
+                : 'text-[#64748B] hover:text-[#0F172A]'
             }`}
           >
             <ImageIcon className="w-3.5 h-3.5" />
@@ -190,18 +311,22 @@ export default function App() {
             <span>Download APK</span>
           </button>
 
-          {/* Quick Test Key */}
+          {/* Quick Test Key Toggle */}
           {membership.isLoggedIn ? (
             <button
               onClick={handleLogout}
               className="px-2.5 py-1.5 rounded-xl bg-red-950/40 border border-red-500/40 text-red-400 hover:bg-red-900/30 text-xs font-bold transition-all cursor-pointer"
             >
-              Reset
+              Log Out
             </button>
           ) : (
             <button
               onClick={() => handleLoginSuccess('AIM-PRO-2025-X9')}
-              className="hidden sm:flex px-2.5 py-1.5 rounded-xl bg-[#39B9FF]/15 border border-[#39B9FF]/40 text-[#39B9FF] hover:bg-[#39B9FF]/25 text-xs font-bold items-center gap-1.5 transition-all cursor-pointer"
+              className={`hidden sm:flex px-2.5 py-1.5 rounded-xl border text-xs font-bold items-center gap-1.5 transition-all cursor-pointer ${
+                theme === 'dark'
+                  ? 'bg-[#39B9FF]/15 border-[#39B9FF]/40 text-[#39B9FF] hover:bg-[#39B9FF]/25'
+                  : 'bg-[#E0F2FE] border-[#39B9FF]/50 text-[#0284C7] hover:bg-[#BAE6FD]'
+              }`}
             >
               <KeyRound className="w-3.5 h-3.5" />
               <span>Test 18-Day Key</span>
@@ -211,10 +336,22 @@ export default function App() {
       </header>
 
       {/* Screen Navigator & Responsive Device Sizer Toolbar */}
-      <div className="bg-[#090D14] border-b border-[#162234] px-3 sm:px-6 py-2 flex flex-wrap items-center justify-between text-xs overflow-x-auto select-none gap-2 shrink-0">
+      <div
+        className={`border-b px-3 sm:px-6 py-2 flex flex-wrap items-center justify-between text-xs overflow-x-auto select-none gap-2 shrink-0 ${
+          theme === 'dark'
+            ? 'bg-[#090D14] border-[#162234]'
+            : 'bg-[#F8FAFC] border-[#CBD5E1]'
+        }`}
+      >
         {/* Screen Jump Links */}
         <div className="flex items-center gap-1.5 shrink-0 overflow-x-auto">
-          <span className="text-[#55657E] font-bold text-[10px] uppercase mr-1">Screens:</span>
+          <span
+            className={`font-bold text-[10px] uppercase mr-1 ${
+              theme === 'dark' ? 'text-[#55657E]' : 'text-[#64748B]'
+            }`}
+          >
+            Screens:
+          </span>
           {(
             [
               { id: 'splash', label: '1. Splash' },
@@ -235,9 +372,6 @@ export default function App() {
                   setCurrentTab('home');
                   setIsLoginModalOpen(true);
                 } else if (item.id === 'premium') {
-                  if (!membership.isLoggedIn) {
-                    handleLoginSuccess('AIM-PRO-2025-X9');
-                  }
                   setCurrentScreen('premium');
                   setCurrentTab('premium');
                 } else {
@@ -249,7 +383,9 @@ export default function App() {
               className={`px-2 py-0.5 rounded-lg text-[10px] font-medium transition-colors shrink-0 cursor-pointer ${
                 currentScreen === item.id || (item.id === 'login_dialog' && isLoginModalOpen)
                   ? 'bg-[#14283D] text-[#39B9FF] border border-[#39B9FF]/40'
-                  : 'text-[#8D9BB0] hover:bg-[#111B2A] hover:text-white'
+                  : theme === 'dark'
+                  ? 'text-[#8D9BB0] hover:bg-[#111B2A] hover:text-white'
+                  : 'text-[#64748B] hover:bg-[#E2E8F0] hover:text-[#0F172A]'
               }`}
             >
               {item.label}
@@ -259,31 +395,46 @@ export default function App() {
 
         {/* Mobile Device Preset Sizer */}
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[#55657E] font-bold text-[10px] uppercase">Device Size:</span>
-          <div className="flex items-center gap-1 bg-[#111B2A] p-0.5 rounded-lg border border-[#1C2B42]">
+          <span
+            className={`font-bold text-[10px] uppercase ${
+              theme === 'dark' ? 'text-[#55657E]' : 'text-[#64748B]'
+            }`}
+          >
+            Device Size:
+          </span>
+          <div
+            className={`flex items-center gap-1 p-0.5 rounded-lg border ${
+              theme === 'dark'
+                ? 'bg-[#111B2A] border-[#1C2B42]'
+                : 'bg-white border-[#CBD5E1]'
+            }`}
+          >
             <button
               onClick={() => {
                 setDevicePreset('responsive');
                 showToast('Auto Responsive Mode (Adapts to any screen)');
               }}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
                 devicePreset === 'responsive'
                   ? 'bg-[#39B9FF] text-[#0B0F17]'
-                  : 'text-[#8D9BB0] hover:text-white'
+                  : theme === 'dark'
+                  ? 'text-[#8D9BB0] hover:text-white'
+                  : 'text-[#64748B] hover:text-[#0F172A]'
               }`}
-              title="Fluid responsive for all screens"
             >
-              Auto Responsive
+              Responsive
             </button>
             <button
               onClick={() => {
                 setDevicePreset('small');
-                showToast('Compact Mobile: 360px × 740px (Galaxy A12)');
+                showToast('Compact Mobile: 360px × 740px');
               }}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
                 devicePreset === 'small'
                   ? 'bg-[#39B9FF] text-[#0B0F17]'
-                  : 'text-[#8D9BB0] hover:text-white'
+                  : theme === 'dark'
+                  ? 'text-[#8D9BB0] hover:text-white'
+                  : 'text-[#64748B] hover:text-[#0F172A]'
               }`}
             >
               360px
@@ -293,10 +444,12 @@ export default function App() {
                 setDevicePreset('standard');
                 showToast('Standard Mobile: 390px × 800px');
               }}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
                 devicePreset === 'standard'
                   ? 'bg-[#39B9FF] text-[#0B0F17]'
-                  : 'text-[#8D9BB0] hover:text-white'
+                  : theme === 'dark'
+                  ? 'text-[#8D9BB0] hover:text-white'
+                  : 'text-[#64748B] hover:text-[#0F172A]'
               }`}
             >
               390px
@@ -304,12 +457,14 @@ export default function App() {
             <button
               onClick={() => {
                 setDevicePreset('large');
-                showToast('Large Mobile: 430px × 880px (Pro Max)');
+                showToast('Large Mobile: 430px × 880px');
               }}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
                 devicePreset === 'large'
                   ? 'bg-[#39B9FF] text-[#0B0F17]'
-                  : 'text-[#8D9BB0] hover:text-white'
+                  : theme === 'dark'
+                  ? 'text-[#8D9BB0] hover:text-white'
+                  : 'text-[#64748B] hover:text-[#0F172A]'
               }`}
             >
               430px
@@ -327,6 +482,8 @@ export default function App() {
               currentTab={currentTab}
               currentScreen={currentScreen}
               devicePreset={devicePreset}
+              theme={theme}
+              t={t}
               onTabChange={handleTabChange}
             >
               {currentScreen === 'splash' && (
@@ -336,6 +493,10 @@ export default function App() {
               {currentScreen === 'home' && (
                 <HomeScreen
                   membership={membership}
+                  theme={theme}
+                  t={t}
+                  selectedGame={selectedGame}
+                  onSelectGame={handleSelectGame}
                   onOpenLoginModal={() => setIsLoginModalOpen(true)}
                   onViewAllGames={() => setCurrentScreen('supported_games')}
                   onOpenNotifications={() => setCurrentScreen('seller_contact')}
@@ -343,30 +504,38 @@ export default function App() {
                     setCurrentTab('premium');
                     setCurrentScreen('premium');
                   }}
-                  onSelectGame={handleSelectGame}
+                  onLaunchGame={handleLaunchGame}
                 />
               )}
 
               {currentScreen === 'premium' && (
                 <PremiumScreen
                   membership={membership}
-                  onOpenSettings={() => {
-                    setCurrentTab('settings');
-                    setCurrentScreen('settings');
-                  }}
+                  theme={theme}
+                  t={t}
+                  onOpenNotifications={() => setCurrentScreen('seller_contact')}
                   onUpgradeRenew={() => setCurrentScreen('seller_contact')}
+                  onShowToast={showToast}
                 />
               )}
 
               {currentScreen === 'supported_games' && (
                 <SupportedGamesScreen
+                  theme={theme}
+                  t={t}
+                  selectedGame={selectedGame}
                   onBack={() => setCurrentScreen('home')}
-                  onSelectGame={handleSelectGame}
+                  onSelectGame={(game) => {
+                    handleSelectGame(game);
+                    setCurrentScreen('home');
+                  }}
                 />
               )}
 
               {currentScreen === 'seller_contact' && (
                 <SellerContactScreen
+                  theme={theme}
+                  t={t}
                   onBack={() => setCurrentScreen(currentTab === 'settings' ? 'settings' : 'home')}
                   onShowToast={showToast}
                 />
@@ -374,6 +543,8 @@ export default function App() {
 
               {currentScreen === 'device_info' && (
                 <DeviceInfoScreen
+                  theme={theme}
+                  t={t}
                   onBack={() => setCurrentScreen('settings')}
                   onShowToast={showToast}
                 />
@@ -381,6 +552,11 @@ export default function App() {
 
               {currentScreen === 'settings' && (
                 <SettingsScreen
+                  theme={theme}
+                  language={language}
+                  t={t}
+                  onToggleTheme={handleToggleTheme}
+                  onChangeLanguage={handleChangeLanguage}
                   onBack={() => {
                     setCurrentTab('home');
                     setCurrentScreen('home');
@@ -388,7 +564,6 @@ export default function App() {
                   onLogout={handleLogout}
                   onOpenDeviceInfo={() => setCurrentScreen('device_info')}
                   onOpenSellerContact={() => setCurrentScreen('seller_contact')}
-                  onDownloadApk={handleDownloadApk}
                   onShowToast={showToast}
                 />
               )}
@@ -399,6 +574,72 @@ export default function App() {
                 onClose={() => setIsLoginModalOpen(false)}
                 onSuccess={handleLoginSuccess}
               />
+
+              {/* Game Launching HUD Simulation Overlay */}
+              {launchingGameSession && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in select-none">
+                  <div
+                    className={`w-full max-w-xs rounded-2xl p-5 border text-center shadow-2xl relative ${
+                      theme === 'dark' ? 'bg-[#111B2A] border-[#39B9FF]/50 text-white' : 'bg-white border-[#0284C7]/50 text-[#0F172A]'
+                    }`}
+                  >
+                    <button
+                      onClick={() => setLaunchingGameSession(null)}
+                      className="absolute top-3 right-3 p-1 rounded-lg text-slate-400 hover:text-white cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+
+                    <div className="w-16 h-16 rounded-2xl mx-auto mb-3 p-2 bg-black/40 border border-white/10 flex items-center justify-center">
+                      <img
+                        src={launchingGameSession.game.logoUrl}
+                        alt={launchingGameSession.game.name}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+
+                    <h3 className="text-base font-bold">{launchingGameSession.game.name}</h3>
+                    <p className="text-xs text-[#39B9FF] font-mono mt-0.5 mb-3">
+                      Package: {launchingGameSession.game.packageName}
+                    </p>
+
+                    <div className="w-full bg-[#080C12] rounded-xl p-3 border border-white/10 text-left text-xs space-y-1.5 mb-4 font-mono">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-400">Aim Assist Engine:</span>
+                        <span className="text-[#49DCA0] font-bold">READY</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-400">Hardware Touch Hook:</span>
+                        <span className="text-[#49DCA0] font-bold">INJECTED</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-400">FPS Boost & Anti-Lag:</span>
+                        <span className="text-[#39B9FF] font-bold">120 FPS</span>
+                      </div>
+                    </div>
+
+                    {launchingGameSession.status !== 'running' ? (
+                      <div className="flex items-center justify-center gap-2 py-2 text-xs text-[#39B9FF] font-bold">
+                        <span className="w-2 h-2 rounded-full bg-[#39B9FF] animate-ping" />
+                        <span>{t.launchingGame}</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-center gap-1.5 text-xs text-[#49DCA0] font-bold">
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Game Running with AimShot Hook</span>
+                        </div>
+                        <button
+                          onClick={() => setLaunchingGameSession(null)}
+                          className="w-full py-2 rounded-xl bg-[#39B9FF] text-[#0B0F17] text-xs font-bold hover:bg-[#2da5e6] cursor-pointer"
+                        >
+                          Return to Dashboard
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </PhoneFrame>
           </div>
         )}
@@ -411,6 +652,8 @@ export default function App() {
                 currentTab={currentTab}
                 currentScreen={currentScreen}
                 devicePreset={devicePreset}
+                theme={theme}
+                t={t}
                 onTabChange={handleTabChange}
               >
                 {currentScreen === 'splash' && (
@@ -420,6 +663,10 @@ export default function App() {
                 {currentScreen === 'home' && (
                   <HomeScreen
                     membership={membership}
+                    theme={theme}
+                    t={t}
+                    selectedGame={selectedGame}
+                    onSelectGame={handleSelectGame}
                     onOpenLoginModal={() => setIsLoginModalOpen(true)}
                     onViewAllGames={() => setCurrentScreen('supported_games')}
                     onOpenNotifications={() => setCurrentScreen('seller_contact')}
@@ -427,30 +674,38 @@ export default function App() {
                       setCurrentTab('premium');
                       setCurrentScreen('premium');
                     }}
-                    onSelectGame={handleSelectGame}
+                    onLaunchGame={handleLaunchGame}
                   />
                 )}
 
                 {currentScreen === 'premium' && (
                   <PremiumScreen
                     membership={membership}
-                    onOpenSettings={() => {
-                      setCurrentTab('settings');
-                      setCurrentScreen('settings');
-                    }}
+                    theme={theme}
+                    t={t}
+                    onOpenNotifications={() => setCurrentScreen('seller_contact')}
                     onUpgradeRenew={() => setCurrentScreen('seller_contact')}
+                    onShowToast={showToast}
                   />
                 )}
 
                 {currentScreen === 'supported_games' && (
                   <SupportedGamesScreen
+                    theme={theme}
+                    t={t}
+                    selectedGame={selectedGame}
                     onBack={() => setCurrentScreen('home')}
-                    onSelectGame={handleSelectGame}
+                    onSelectGame={(game) => {
+                      handleSelectGame(game);
+                      setCurrentScreen('home');
+                    }}
                   />
                 )}
 
                 {currentScreen === 'seller_contact' && (
                   <SellerContactScreen
+                    theme={theme}
+                    t={t}
                     onBack={() => setCurrentScreen(currentTab === 'settings' ? 'settings' : 'home')}
                     onShowToast={showToast}
                   />
@@ -458,6 +713,8 @@ export default function App() {
 
                 {currentScreen === 'device_info' && (
                   <DeviceInfoScreen
+                    theme={theme}
+                    t={t}
                     onBack={() => setCurrentScreen('settings')}
                     onShowToast={showToast}
                   />
@@ -465,6 +722,11 @@ export default function App() {
 
                 {currentScreen === 'settings' && (
                   <SettingsScreen
+                    theme={theme}
+                    language={language}
+                    t={t}
+                    onToggleTheme={handleToggleTheme}
+                    onChangeLanguage={handleChangeLanguage}
                     onBack={() => {
                       setCurrentTab('home');
                       setCurrentScreen('home');
@@ -472,7 +734,6 @@ export default function App() {
                     onLogout={handleLogout}
                     onOpenDeviceInfo={() => setCurrentScreen('device_info')}
                     onOpenSellerContact={() => setCurrentScreen('seller_contact')}
-                    onDownloadApk={handleDownloadApk}
                     onShowToast={showToast}
                   />
                 )}
@@ -504,7 +765,7 @@ export default function App() {
             <div className="w-full bg-[#111B2A] rounded-2xl p-6 border border-[#1C2B42] mb-6">
               <h2 className="text-lg font-bold text-white mb-2">Original Reference Mockup (8 Screens)</h2>
               <p className="text-xs text-[#8D9BB0] mb-4">
-                Comparison against the uploaded graphic specifications: Splash, Home, Key Login, Premium Active 18 Days, Supported Games, Seller Contact, Device Information, and Settings.
+                Comparison against graphic specifications: Splash, Home, Key Login, Premium Active 18 Days, Supported Games, Seller Contact, Device Information, and Settings.
               </p>
               <div className="rounded-xl overflow-hidden border border-[#1C2B42] bg-black">
                 <img

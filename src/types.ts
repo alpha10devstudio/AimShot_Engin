@@ -9,6 +9,8 @@ export type ScreenId =
 
 export type BottomTab = 'home' | 'premium' | 'settings';
 
+export type AppTheme = 'dark' | 'light';
+
 export interface MembershipState {
   isLoggedIn: boolean;
   status: 'active' | 'free' | 'expired' | 'pending';
@@ -27,6 +29,8 @@ export interface Game {
   category: string;
   verified: boolean;
   iconBg: string;
+  logoUrl: string;
+  packageName?: string;
   badgeText?: string;
   isActive?: boolean;
   locked?: boolean;

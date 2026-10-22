@@ -9,7 +9,9 @@ export const SUPPORTED_GAMES: Game[] = [
     verified: true,
     isActive: true,
     locked: false,
-    iconBg: 'from-sky-500 to-blue-700'
+    iconBg: 'from-[#0F2B48] to-[#0A1A2E]',
+    logoUrl: '/assets/images/games/carrom.png',
+    packageName: 'com.miniclip.carrom'
   },
   {
     id: '8ball',
@@ -19,7 +21,9 @@ export const SUPPORTED_GAMES: Game[] = [
     verified: true,
     isActive: false,
     locked: true,
-    iconBg: 'from-slate-700 to-slate-900'
+    iconBg: 'from-[#141E28] to-[#0D151F]',
+    logoUrl: '/assets/images/games/eightball.png',
+    packageName: 'com.miniclip.eightballpool'
   },
   {
     id: 'pubg',
@@ -29,7 +33,9 @@ export const SUPPORTED_GAMES: Game[] = [
     verified: false,
     isActive: false,
     locked: true,
-    iconBg: 'from-amber-600 to-yellow-800'
+    iconBg: 'from-[#3A220B] to-[#1F1206]',
+    logoUrl: '/assets/images/games/pubg.png',
+    packageName: 'com.tencent.ig'
   },
   {
     id: 'freefire',
@@ -39,7 +45,9 @@ export const SUPPORTED_GAMES: Game[] = [
     verified: false,
     isActive: false,
     locked: true,
-    iconBg: 'from-orange-600 to-red-800'
+    iconBg: 'from-[#38160E] to-[#1E0C07]',
+    logoUrl: '/assets/images/games/freefire.png',
+    packageName: 'com.dts.freefireth'
   },
   {
     id: 'bgmi',
@@ -49,7 +57,9 @@ export const SUPPORTED_GAMES: Game[] = [
     verified: false,
     isActive: false,
     locked: true,
-    iconBg: 'from-yellow-500 to-amber-700'
+    iconBg: 'from-[#2E240D] to-[#181307]',
+    logoUrl: '/assets/images/games/bgmi.png',
+    packageName: 'com.pubg.imobile'
   },
   {
     id: 'codm',
@@ -59,7 +69,9 @@ export const SUPPORTED_GAMES: Game[] = [
     verified: false,
     isActive: false,
     locked: true,
-    iconBg: 'from-cyan-700 to-blue-900'
+    iconBg: 'from-[#102737] to-[#091721]',
+    logoUrl: '/assets/images/games/codm.png',
+    packageName: 'com.activision.callofduty.shooter'
   },
   {
     id: 'valorant',
@@ -69,7 +81,9 @@ export const SUPPORTED_GAMES: Game[] = [
     verified: false,
     isActive: false,
     locked: true,
-    iconBg: 'from-rose-600 to-red-900'
+    iconBg: 'from-[#3B1520] to-[#200B11]',
+    logoUrl: '/assets/images/games/valorant.png',
+    packageName: 'com.riotgames.valorant'
   },
   {
     id: 'gtav',
@@ -79,7 +93,9 @@ export const SUPPORTED_GAMES: Game[] = [
     verified: false,
     isActive: false,
     locked: true,
-    iconBg: 'from-emerald-700 to-teal-900'
+    iconBg: 'from-[#132E22] to-[#0A1A13]',
+    logoUrl: '/assets/images/games/gtav.png',
+    packageName: 'com.rockstargames.gtav'
   },
   {
     id: 'efootball',
@@ -89,7 +105,9 @@ export const SUPPORTED_GAMES: Game[] = [
     verified: false,
     isActive: false,
     locked: true,
-    iconBg: 'from-blue-600 to-indigo-900'
+    iconBg: 'from-[#122244] to-[#091326]',
+    logoUrl: '/assets/images/games/efootball.png',
+    packageName: 'jp.konami.pesam'
   },
   {
     id: 'minecraft',
@@ -99,7 +117,9 @@ export const SUPPORTED_GAMES: Game[] = [
     verified: false,
     isActive: false,
     locked: true,
-    iconBg: 'from-lime-600 to-green-800'
+    iconBg: 'from-[#1F2E14] to-[#10180B]',
+    logoUrl: '/assets/images/games/minecraft.png',
+    packageName: 'com.mojang.minecraftpe'
   }
 ];
 
