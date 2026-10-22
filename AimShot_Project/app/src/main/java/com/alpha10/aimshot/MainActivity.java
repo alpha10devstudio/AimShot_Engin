@@ -179,27 +179,42 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
             }
         });
 
-        // Home Carousel Setup with Indicators
+        // Home Carousel Setup with Navigation Arrows & Dynamic 3-Dot Indicators
         final android.widget.ViewFlipper flipper = homeView.findViewById(R.id.home_carousel_flipper);
         final ImageView dot1 = homeView.findViewById(R.id.dot_1);
         final ImageView dot2 = homeView.findViewById(R.id.dot_2);
-        if (flipper != null && dot1 != null && dot2 != null) {
-            int c1 = getResources().getIdentifier("carousel_img_1", "drawable", getPackageName());
-            if (c1 != 0) {
-                ImageView iv1 = homeView.findViewById(R.id.iv_carousel_1);
-                if (iv1 != null) iv1.setImageResource(c1);
+        final ImageView dot3 = homeView.findViewById(R.id.dot_3);
+        View btnPrev = homeView.findViewById(R.id.btn_carousel_prev);
+        View btnNext = homeView.findViewById(R.id.btn_carousel_next);
+
+        if (flipper != null) {
+            updateCarouselIndicators(0, dot1, dot2, dot3);
+
+            if (btnPrev != null) {
+                btnPrev.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        flipper.showPrevious();
+                        updateCarouselIndicators(flipper.getDisplayedChild(), dot1, dot2, dot3);
+                    }
+                });
             }
-            int c2 = getResources().getIdentifier("carousel_img_2", "drawable", getPackageName());
-            if (c2 != 0) {
-                ImageView iv2 = homeView.findViewById(R.id.iv_carousel_2);
-                if (iv2 != null) iv2.setImageResource(c2);
+
+            if (btnNext != null) {
+                btnNext.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        flipper.showNext();
+                        updateCarouselIndicators(flipper.getDisplayedChild(), dot1, dot2, dot3);
+                    }
+                });
             }
         }
 
-        // Game Grid
+        // Game Grid with persistent selection
         RecyclerView rvGrid = homeView.findViewById(R.id.rv_games_grid);
         rvGrid.setLayoutManager(new GridLayoutManager(this, 4));
-        GameGridAdapter adapter = new GameGridAdapter(GameRepository.getInstance().getAllGames(), new GameGridAdapter.OnGameClickListener() {
+        final GameGridAdapter adapter = new GameGridAdapter(GameRepository.getInstance().getAllGames(), new GameGridAdapter.OnGameClickListener() {
             @Override
             public void onGameClick(GameItem item) {
                 if (item.isActive()) {
@@ -211,39 +226,69 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
         });
         rvGrid.setAdapter(adapter);
 
-        // Login Card Setup
+        // State-Dependent Login Card / Launch Button Setup
         updateHomeLoginCard(homeView);
+    }
+
+    private void updateCarouselIndicators(int index, ImageView d1, ImageView d2, ImageView d3) {
+        if (d1 == null || d2 == null || d3 == null) return;
+        float density = getResources().getDisplayMetrics().density;
+        int activeWidth = (int) (20 * density);
+        int inactiveWidth = (int) (6 * density);
+        int height = (int) (6 * density);
+
+        // Dot 1
+        d1.setImageResource(index == 0 ? R.drawable.indicator_dot_active : R.drawable.indicator_dot_inactive);
+        android.widget.LinearLayout.LayoutParams lp1 = new android.widget.LinearLayout.LayoutParams(index == 0 ? activeWidth : inactiveWidth, height);
+        lp1.setMargins((int)(3*density), 0, (int)(3*density), 0);
+        d1.setLayoutParams(lp1);
+
+        // Dot 2
+        d2.setImageResource(index == 1 ? R.drawable.indicator_dot_active : R.drawable.indicator_dot_inactive);
+        android.widget.LinearLayout.LayoutParams lp2 = new android.widget.LinearLayout.LayoutParams(index == 1 ? activeWidth : inactiveWidth, height);
+        lp2.setMargins((int)(3*density), 0, (int)(3*density), 0);
+        d2.setLayoutParams(lp2);
+
+        // Dot 3
+        d3.setImageResource(index == 2 ? R.drawable.indicator_dot_active : R.drawable.indicator_dot_inactive);
+        android.widget.LinearLayout.LayoutParams lp3 = new android.widget.LinearLayout.LayoutParams(index == 2 ? activeWidth : inactiveWidth, height);
+        lp3.setMargins((int)(3*density), 0, (int)(3*density), 0);
+        d3.setLayoutParams(lp3);
     }
 
     private void updateHomeLoginCard(View homeView) {
         final MembershipStatus status = membershipRepository.getCurrentStatus();
-        TextView tvLoginTitle = homeView.findViewById(R.id.tv_login_title);
-        TextView tvLoginSubtitle = homeView.findViewById(R.id.tv_login_subtitle);
+        View cardLoginStatus = homeView.findViewById(R.id.card_login_status);
+        View cardLaunchGame = homeView.findViewById(R.id.card_launch_game);
+        Button btnLaunchGame = homeView.findViewById(R.id.btn_launch_game);
         Button btnLogin = homeView.findViewById(R.id.btn_home_login);
-        ImageView ivLoginIcon = homeView.findViewById(R.id.iv_login_icon);
 
         if (status.getState() == MembershipStatus.State.ACTIVE) {
-            ivLoginIcon.setImageResource(R.drawable.ic_check_circle);
-            tvLoginTitle.setText("License Active (" + status.getRemainingDays() + " Days Left)");
-            tvLoginSubtitle.setText("Pro gaming features unlocked. Plan: " + status.getPlanType());
-            btnLogin.setText("View License Details");
-            btnLogin.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    navigateToTab(Tab.PREMIUM);
+            // Already logged in: Hide login card, display Launch The Game button
+            if (cardLoginStatus != null) cardLoginStatus.setVisibility(View.GONE);
+            if (cardLaunchGame != null) {
+                cardLaunchGame.setVisibility(View.VISIBLE);
+                if (btnLaunchGame != null) {
+                    btnLaunchGame.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            Toast.makeText(MainActivity.this, "AimShot Engine Overlay Activated for Carrom Disc Pool (120 FPS)", Toast.LENGTH_LONG).show();
+                        }
+                    });
                 }
-            });
+            }
         } else {
-            ivLoginIcon.setImageResource(R.drawable.ic_lock);
-            tvLoginTitle.setText(R.string.you_are_not_logged_in);
-            tvLoginSubtitle.setText(R.string.login_desc);
-            btnLogin.setText(R.string.login_now);
-            btnLogin.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    showVerificationDialog();
-                }
-            });
+            // Not logged in: Show login card, hide Launch The Game button
+            if (cardLoginStatus != null) cardLoginStatus.setVisibility(View.VISIBLE);
+            if (cardLaunchGame != null) cardLaunchGame.setVisibility(View.GONE);
+            if (btnLogin != null) {
+                btnLogin.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        showVerificationDialog();
+                    }
+                });
+            }
         }
     }
 

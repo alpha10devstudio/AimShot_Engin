@@ -92,6 +92,8 @@
                     android:id="@+id/switch_app_theme"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    app:thumbTint="@color/switch_thumb_tint"
+                    app:trackTint="@color/switch_track_tint"
                     android:checked="true" />
             </LinearLayout>
 
@@ -194,11 +196,13 @@
                         android:textSize="11sp" />
                 </LinearLayout>
 
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:contentDescription="Go"
-                    android:src="@drawable/ic_chevron_right" />
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/switch_notifications"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:thumbTint="@color/switch_thumb_tint"
+                    app:trackTint="@color/switch_track_tint"
+                    android:checked="true" />
             </LinearLayout>
 
             <!-- Setting Row 4: Haptic Feedback -->
@@ -247,11 +251,13 @@
                         android:textSize="11sp" />
                 </LinearLayout>
 
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:contentDescription="Go"
-                    android:src="@drawable/ic_chevron_right" />
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/switch_haptic"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:thumbTint="@color/switch_thumb_tint"
+                    app:trackTint="@color/switch_track_tint"
+                    android:checked="true" />
             </LinearLayout>
 
             <!-- Setting Row 5: Device Information -->
@@ -274,7 +280,7 @@
                     android:background="#2039B9FF"
                     android:contentDescription="Device"
                     android:padding="6dp"
-                    android:src="@drawable/ic_key" />
+                    android:src="@drawable/ic_chip" />
 
                 <TextView
                     android:layout_width="0dp"

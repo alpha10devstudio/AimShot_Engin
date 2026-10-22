@@ -43,7 +43,7 @@ public class GameRepository {
                 "game_carrom"
         ));
 
-        // 2. 8 Ball Pool - Locked (alpha 0.45)
+        // 2. 8 Ball Pool - Locked
         supportedGames.add(new GameItem(
                 "8ball",
                 "8 Ball Pool",
@@ -55,96 +55,96 @@ public class GameRepository {
                 "game_8ball"
         ));
 
-        // 3. PUBG Mobile - Locked (alpha 0.45)
+        // 3. PUBG Mobile - Locked
         supportedGames.add(new GameItem(
                 "pubg",
                 "PUBG Mobile",
                 "Aim Assist • Crosshair • FPS Boost",
-                R.drawable.ic_aimshot_logo,
+                R.drawable.game_pubg,
                 false,
                 "com.tencent.ig",
                 false,
                 "game_pubg"
         ));
 
-        // 4. Free Fire - Locked (alpha 0.45)
+        // 4. Free Fire - Locked
         supportedGames.add(new GameItem(
                 "freefire",
                 "Free Fire",
                 "Smooth Aim • No Recoil • Custom HUD",
-                R.drawable.ic_aimshot_logo,
+                R.drawable.game_freefire,
                 false,
                 "com.dts.freefireth",
                 false,
                 "game_freefire"
         ));
 
-        // 5. BGMI - Locked (alpha 0.45)
+        // 5. BGMI - Locked
         supportedGames.add(new GameItem(
                 "bgmi",
                 "BGMI",
                 "Performance • Aim Tools • Anti-Lag",
-                R.drawable.ic_aimshot_logo,
+                R.drawable.game_bgmi,
                 false,
                 "com.pubg.imobile",
                 false,
                 "game_bgmi"
         ));
 
-        // 6. Call of Duty Mobile - Locked (alpha 0.45)
+        // 6. Call of Duty Mobile - Locked
         supportedGames.add(new GameItem(
                 "codm",
                 "Call of Duty Mobile",
                 "Precision • Sensitivity • No Recoil",
-                R.drawable.ic_aimshot_logo,
+                R.drawable.game_codm,
                 false,
                 "com.activision.callofduty.shooter",
                 false,
                 "game_codm"
         ));
 
-        // 7. Valorant - Locked (alpha 0.45)
+        // 7. Valorant - Locked
         supportedGames.add(new GameItem(
                 "valorant",
                 "Valorant",
                 "Crosshair • FPS • Game Sense",
-                R.drawable.ic_aimshot_logo,
+                R.drawable.game_valorant,
                 false,
                 "com.riotgames.valorant",
                 false,
                 "game_valorant"
         ));
 
-        // 8. GTA V - Locked (alpha 0.45)
+        // 8. GTA V - Locked
         supportedGames.add(new GameItem(
                 "gtav",
                 "GTA V",
                 "Aim Bot • Visuals • Performance",
-                R.drawable.ic_aimshot_logo,
+                R.drawable.game_gtav,
                 false,
                 "com.rockstargames.gtav",
                 false,
                 "game_gtav"
         ));
 
-        // 9. eFootball - Locked (alpha 0.45)
+        // 9. eFootball - Locked
         supportedGames.add(new GameItem(
                 "efootball",
                 "eFootball",
                 "Better Control • Aim Assist • Smooth",
-                R.drawable.ic_aimshot_logo,
+                R.drawable.game_efootball,
                 false,
                 "jp.konami.pesam",
                 false,
                 "game_efootball"
         ));
 
-        // 10. Minecraft - Locked (alpha 0.45)
+        // 10. Minecraft - Locked
         supportedGames.add(new GameItem(
                 "minecraft",
                 "Minecraft",
                 "FPS Boost • Performance • Stability",
-                R.drawable.ic_aimshot_logo,
+                R.drawable.game_minecraft,
                 false,
                 "com.mojang.minecraftpe",
                 false,
