@@ -136,32 +136,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           <ChevronRight className="w-4 h-4 text-[#8D9BB0]" />
         </div>
 
-        {/* Download APK File */}
-        <button
-          onClick={() => {
-            if (onDownloadApk) {
-              onDownloadApk();
-            }
-          }}
-          className="w-full text-left p-3.5 rounded-2xl bg-gradient-to-r from-[#14283D] to-[#111B2A] border border-[#39B9FF]/50 hover:border-[#39B9FF] transition-all flex items-center justify-between cursor-pointer group shadow-[0_0_12px_rgba(57,185,255,0.15)]"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#39B9FF]/20 flex items-center justify-center text-[#39B9FF]">
-              <Cpu className="w-4 h-4 text-[#39B9FF]" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-bold text-white group-hover:text-[#39B9FF] transition-colors">
-                Install APK Package
-              </span>
-              <span className="text-[11px] text-[#49DCA0] font-mono">
-                AimShot-Engine-v1.0.0.apk (Ready)
-              </span>
-            </div>
-          </div>
-          <span className="text-[11px] px-2.5 py-1 rounded-lg bg-[#39B9FF] text-[#0B0F17] font-bold">
-            Download
-          </span>
-        </button>
 
         {/* Device Information */}
         <div

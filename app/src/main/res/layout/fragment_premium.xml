@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg_main"
@@ -82,7 +83,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="20dp"
+            android:layout_marginBottom="16dp"
             android:background="@drawable/bg_tactical_card"
             android:orientation="vertical"
             android:padding="20dp">
@@ -213,11 +214,83 @@
             </LinearLayout>
         </LinearLayout>
 
+        <!-- Section: Get Activation Key matching Dual Studio preview -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/bg_tactical_card"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:contentDescription="Key"
+                    android:src="@drawable/ic_key" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="@string/get_activation_key"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- 2-Column Buttons Row: Get Free Key & Get Paid Key side by side -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <!-- Button 1: Get Free Key -->
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btn_get_free_key"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_button_tactical_border"
+                    android:elevation="0dp"
+                    android:stateListAnimator="@null"
+                    android:text="@string/btn_get_free_key"
+                    android:textAllCaps="false"
+                    android:textColor="@color/accent_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <!-- Button 2: Get Paid Key -->
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btn_get_paid_key"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_button_paid_border"
+                    android:elevation="0dp"
+                    android:stateListAnimator="@null"
+                    android:text="@string/btn_get_paid_key"
+                    android:textAllCaps="false"
+                    android:textColor="#F59E0B"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+
         <!-- Membership Details Card -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
+            android:layout_marginBottom="20dp"
             android:background="@drawable/bg_tactical_card"
             android:orientation="vertical"
             android:padding="20dp">
@@ -326,10 +399,10 @@
         </LinearLayout>
 
         <!-- Upgrade / Renew Action Button -->
-        <Button
+        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/btn_upgrade_renew"
             android:layout_width="match_parent"
-            android:layout_height="52dp"
+            android:layout_height="50dp"
             android:layout_marginBottom="24dp"
             android:background="@drawable/bg_button_renew"
             android:elevation="0dp"
@@ -338,46 +411,6 @@
             android:textAllCaps="false"
             android:textColor="#F59E0B"
             android:textSize="15sp"
-            android:textStyle="bold" />
-
-        <!-- Section: Get Activation Key matching Updated Spec -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="14dp"
-            android:text="@string/get_activation_key"
-            android:textColor="@color/text_primary"
-            android:textSize="16sp"
-            android:textStyle="bold" />
-
-        <!-- Button 1: Get Free Key (Redirects to website free key URL) -->
-        <Button
-            android:id="@+id/btn_get_free_key"
-            android:layout_width="match_parent"
-            android:layout_height="64dp"
-            android:layout_marginBottom="14dp"
-            android:background="@drawable/bg_button_tactical_border"
-            android:elevation="0dp"
-            android:stateListAnimator="@null"
-            android:text="@string/btn_get_free_key"
-            android:textAllCaps="false"
-            android:textColor="@color/text_primary"
-            android:textSize="18sp"
-            android:textStyle="bold" />
-
-        <!-- Button 2: Get Paid Key (Opens Contact Us / Support) -->
-        <Button
-            android:id="@+id/btn_get_paid_key"
-            android:layout_width="match_parent"
-            android:layout_height="64dp"
-            android:layout_marginBottom="28dp"
-            android:background="@drawable/bg_button_tactical_border"
-            android:elevation="0dp"
-            android:stateListAnimator="@null"
-            android:text="@string/btn_get_paid_key"
-            android:textAllCaps="false"
-            android:textColor="@color/text_primary"
-            android:textSize="18sp"
             android:textStyle="bold" />
 
     </LinearLayout>

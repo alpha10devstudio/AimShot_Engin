@@ -147,25 +147,133 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:autoStart="true"
-                android:flipInterval="3200"
+                android:flipInterval="3500"
                 android:inAnimation="@android:anim/fade_in"
                 android:outAnimation="@android:anim/fade_out">
 
-                <ImageView
-                    android:id="@+id/iv_carousel_1"
+                <!-- Slide 1: Auto Aim & Guideline Engine -->
+                <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:scaleType="centerCrop"
-                    android:src="@drawable/carousel_img_1"
-                    android:contentDescription="AimShot Feature 1" />
+                    android:background="#10233D"
+                    android:padding="16dp">
 
-                <ImageView
-                    android:id="@+id/iv_carousel_2"
+                    <ImageView
+                        android:id="@+id/iv_carousel_1"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:alpha="0.2"
+                        android:contentDescription="Feature 1 Background"
+                        android:scaleType="centerCrop"
+                        android:src="@drawable/carousel_img_1" />
+
+                    <!-- Badge Tag -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_badge_active"
+                        android:paddingStart="8dp"
+                        android:paddingTop="2dp"
+                        android:paddingEnd="8dp"
+                        android:paddingBottom="2dp"
+                        android:text="FEATURED V1.0"
+                        android:textColor="@color/bg_main"
+                        android:textSize="9sp"
+                        android:textStyle="bold" />
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_alignParentEnd="true"
+                        android:contentDescription="AimShot"
+                        android:src="@drawable/ic_aimshot_logo" />
+
+                    <!-- Title & Subtitle -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentBottom="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Auto Aim &amp; Guideline Engine"
+                            android:textColor="@color/text_primary"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Engineered for Carrom Disc Pool &amp; Billiards"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+                </RelativeLayout>
+
+                <!-- Slide 2: Zero Recoil & FPS Stabilization -->
+                <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:scaleType="centerCrop"
-                    android:src="@drawable/carousel_img_2"
-                    android:contentDescription="AimShot Feature 2" />
+                    android:background="#0F2838"
+                    android:padding="16dp">
+
+                    <ImageView
+                        android:id="@+id/iv_carousel_2"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:alpha="0.2"
+                        android:contentDescription="Feature 2 Background"
+                        android:scaleType="centerCrop"
+                        android:src="@drawable/carousel_img_2" />
+
+                    <!-- Badge Tag -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="#3339B9FF"
+                        android:paddingStart="8dp"
+                        android:paddingTop="2dp"
+                        android:paddingEnd="8dp"
+                        android:paddingBottom="2dp"
+                        android:text="PRO TOOLKIT"
+                        android:textColor="@color/accent_primary"
+                        android:textSize="9sp"
+                        android:textStyle="bold" />
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_alignParentEnd="true"
+                        android:contentDescription="AimShot"
+                        android:src="@drawable/ic_aimshot_logo" />
+
+                    <!-- Title & Subtitle -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentBottom="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Zero Recoil &amp; FPS Boost"
+                            android:textColor="@color/text_primary"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Ultra low latency 120 FPS game acceleration"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+                </RelativeLayout>
             </ViewFlipper>
         </androidx.cardview.widget.CardView>
 

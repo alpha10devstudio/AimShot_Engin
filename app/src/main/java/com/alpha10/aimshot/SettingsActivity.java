@@ -134,6 +134,12 @@ public class SettingsActivity extends AppCompatActivity {
         View rowLanguage = findViewById(R.id.row_setting_language);
         rowLanguage.setOnClickListener(v -> showLanguageSelectionDialog());
 
+        // Device Information row
+        View rowDeviceInfo = findViewById(R.id.row_setting_device_info);
+        if (rowDeviceInfo != null) {
+            rowDeviceInfo.setOnClickListener(v -> startActivity(new Intent(SettingsActivity.this, DeviceInfoActivity.class)));
+        }
+
         // Privacy & Security row (Solid Popup Fix)
         View rowPrivacy = findViewById(R.id.row_setting_privacy);
         rowPrivacy.setOnClickListener(v -> showCustomInfoDialog(
