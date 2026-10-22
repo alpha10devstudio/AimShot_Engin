@@ -105,4 +105,7 @@
     <string name="game_8ball_desc">Long Line • Accurate Angle • Safe</string>
     <string name="status_locked">Locked</string>
     <string name="status_unlocked">Active</string>
+
+    <!-- Notification -->
+    <string name="notifications">Notifications</string>
 </resources>
