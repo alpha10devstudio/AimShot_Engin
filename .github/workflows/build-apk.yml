@@ -54,6 +54,18 @@ jobs:
           # এক্সিকিউট পারমিশন নিশ্চিত করা
           chmod +x gradlew
 
+          # ৪.৫. ডিবাগ কিটস্টোর ফাইল না থাকলে তা স্বয়ংক্রিয়ভাবে তৈরি করা
+      - name: Generate Debug Keystore
+        run: |
+          TARGET_DIR="."
+          if [ -d "AimShot_Project" ]; then
+            TARGET_DIR="AimShot_Project"
+          fi
+          cd "$TARGET_DIR"
+          if [ ! -f "debug.keystore" ]; then
+            keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
       # ৫. অ্যান্ড্রয়েড ডিবাগ এপিকে (Debug APK) বিল্ড করা
       - name: Build Android Debug APK
         run: |
