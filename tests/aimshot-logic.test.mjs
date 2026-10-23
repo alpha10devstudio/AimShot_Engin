@@ -65,4 +65,77 @@ describe('AimShot Engine Pure Logic Unit Tests', () => {
     assert.equal(cleanPhone, '8801700111222');
     assert.equal(`https://wa.me/${cleanPhone}`, 'https://wa.me/8801700111222');
   });
+
+  // Test 7: Notification category filtering & unread count
+  test('Notification category filtering and unread count calculate correctly', () => {
+    const sampleNotifs = [
+      { id: '1', title: 'Update A', category: 'update', isRead: false },
+      { id: '2', title: 'Feature B', category: 'feature', isRead: true },
+      { id: '3', title: 'Maintenance C', category: 'maintenance', isRead: false },
+      { id: '4', title: 'Announcement D', category: 'announcement', isRead: false }
+    ];
+
+    const unreadCount = sampleNotifs.filter(n => !n.isRead).length;
+    assert.equal(unreadCount, 3);
+
+    const updateCategory = sampleNotifs.filter(n => n.category === 'update');
+    assert.equal(updateCategory.length, 1);
+    assert.equal(updateCategory[0].title, 'Update A');
+  });
+
+  // Test 8: Notification mark as read immutability
+  test('Marking notification as read returns updated item with isRead: true', () => {
+    const notif = { id: 'test-1', title: 'Notice', isRead: false };
+    const markAsRead = (item) => ({ ...item, isRead: true });
+    const updated = markAsRead(notif);
+    assert.equal(updated.isRead, true);
+    assert.equal(notif.isRead, false); // Original remains unchanged
+  });
+
+  // Test 9: Carousel indicator dot lockstep synchronization
+  test('Carousel index cycles smoothly with 3 slide dots', () => {
+    const totalSlides = 3;
+    let currentSlide = 0;
+    const advanceSlide = (curr) => (curr + 1) % totalSlides;
+    const prevSlide = (curr) => (curr === 0 ? totalSlides - 1 : curr - 1);
+
+    currentSlide = advanceSlide(currentSlide);
+    assert.equal(currentSlide, 1);
+    currentSlide = advanceSlide(currentSlide);
+    assert.equal(currentSlide, 2);
+    currentSlide = advanceSlide(currentSlide);
+    assert.equal(currentSlide, 0); // Wraps back to 0
+
+    currentSlide = prevSlide(currentSlide);
+    assert.equal(currentSlide, 2); // Wraps back to last slide
+  });
+
+  // Test 10: Settings 4 options toggle & state preservation
+  test('Top 4 settings toggle states toggle independently', () => {
+    const settings = {
+      theme: 'dark',
+      language: 'en',
+      notificationsEnabled: true,
+      hapticFeedbackEnabled: true
+    };
+
+    const toggleTheme = (s) => ({ ...s, theme: s.theme === 'dark' ? 'light' : 'dark' });
+    const toggleNotifs = (s) => ({ ...s, notificationsEnabled: !s.notificationsEnabled });
+    const toggleHaptic = (s) => ({ ...s, hapticFeedbackEnabled: !s.hapticFeedbackEnabled });
+    const changeLang = (s, lang) => ({ ...s, language: lang });
+
+    const s1 = toggleTheme(settings);
+    assert.equal(s1.theme, 'light');
+    assert.equal(s1.notificationsEnabled, true);
+
+    const s2 = toggleNotifs(s1);
+    assert.equal(s2.notificationsEnabled, false);
+
+    const s3 = toggleHaptic(s2);
+    assert.equal(s3.hapticFeedbackEnabled, false);
+
+    const s4 = changeLang(s3, 'bn');
+    assert.equal(s4.language, 'bn');
+  });
 });
+

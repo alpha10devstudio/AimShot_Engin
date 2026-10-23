@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Smartphone,
   Code,
@@ -9,7 +9,9 @@ import {
   Download,
   AlertCircle,
   Play,
-  X
+  X,
+  Megaphone,
+  Bell
 } from 'lucide-react';
 import { PhoneFrame, DevicePreset } from './components/PhoneFrame';
 import { SplashScreen } from './components/screens/SplashScreen';
@@ -20,8 +22,10 @@ import { SupportedGamesScreen } from './components/screens/SupportedGamesScreen'
 import { SellerContactScreen } from './components/screens/SellerContactScreen';
 import { DeviceInfoScreen } from './components/screens/DeviceInfoScreen';
 import { SettingsScreen } from './components/screens/SettingsScreen';
+import { NotificationsScreen } from './components/screens/NotificationsScreen';
+import { AdminNotificationModal } from './components/AdminNotificationModal';
 import { CodeExplorer } from './components/CodeExplorer';
-import { ScreenId, BottomTab, MembershipState, Game, AppTheme } from './types';
+import { ScreenId, BottomTab, MembershipState, Game, AppTheme, AppNotification } from './types';
 import { SUPPORTED_GAMES } from './data/mockData';
 import { Language, TRANSLATIONS } from './data/translations';
 
@@ -75,6 +79,170 @@ export default function App() {
       boundDeviceId: 'AIM-8839-4491-BC99'
     };
   });
+
+  // Real-time App & Server Notifications State
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
+    const saved = localStorage.getItem('aimshot_notifications');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        // fallback
+      }
+    }
+    return [
+      {
+        id: 'notif-101',
+        title: 'AimShot Engine v1.0.0 Global Release',
+        message: 'Welcome to AimShot Engine! Enhanced auto-aim guidelines, millimeter precision physics, and 120 FPS frame pacing are active.',
+        category: 'announcement',
+        timestamp: 'Today, 10:24 AM',
+        isRead: false,
+        minVersion: '1.0.0',
+        priority: 'high',
+        isActive: true
+      },
+      {
+        id: 'notif-102',
+        title: 'Carrom Disc Pool Guideline Calibration',
+        message: 'New millimeter precision laser physics engine calibrated for smooth bank shots and double rebound angles.',
+        category: 'update',
+        timestamp: 'Yesterday',
+        isRead: false,
+        minVersion: '1.0.0',
+        priority: 'normal',
+        isActive: true
+      },
+      {
+        id: 'notif-103',
+        title: 'Anti-Ban Shield v2.4 Active',
+        message: 'Kernel touch hook isolation verified against latest mobile anti-cheat updates. 100% undetectable safe overlay kernel.',
+        category: 'feature',
+        timestamp: '2 days ago',
+        isRead: false,
+        minVersion: '1.0.0',
+        priority: 'high',
+        isActive: true
+      },
+      {
+        id: 'notif-104',
+        title: 'Cloud Server Optimization Notice',
+        message: 'Routine cloud verification server maintenance scheduled for 03:00 UTC. In-app offline license verification remains 100% functional.',
+        category: 'maintenance',
+        timestamp: '3 days ago',
+        isRead: false,
+        minVersion: '1.0.0',
+        priority: 'normal',
+        isActive: true
+      }
+    ];
+  });
+
+  const [isSyncingNotifs, setIsSyncingNotifs] = useState(false);
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+
+  const fetchNotifications = useCallback(async () => {
+    setIsSyncingNotifs(true);
+    try {
+      const res = await fetch('/api/notifications');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setNotifications(data);
+          localStorage.setItem('aimshot_notifications', JSON.stringify(data));
+        }
+      }
+    } catch {
+      // offline fallback
+    } finally {
+      setIsSyncingNotifs(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  useEffect(() => {
+    localStorage.setItem('aimshot_notifications', JSON.stringify(notifications));
+  }, [notifications]);
+
+  const handleMarkAsRead = async (id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+    );
+    try {
+      await fetch('/api/notifications/read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+    } catch {
+      // offline persistence handles it
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    try {
+      await fetch('/api/notifications/read-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } catch {
+      // offline persistence handles it
+    }
+    showToast('All notifications marked as read');
+  };
+
+  const handlePublishNotification = async (newNotif: {
+    title: string;
+    message: string;
+    category: 'announcement' | 'update' | 'feature' | 'maintenance';
+    priority: 'normal' | 'high' | 'urgent';
+    minVersion: string;
+  }) => {
+    try {
+      const res = await fetch('/api/admin/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newNotif)
+      });
+      if (res.ok) {
+        await fetchNotifications();
+        showToast('Announcement broadcasted to AimShot Engine!');
+      } else {
+        throw new Error('Failed to publish');
+      }
+    } catch {
+      const localNotif: AppNotification = {
+        id: `notif-${Date.now()}`,
+        title: newNotif.title,
+        message: newNotif.message,
+        category: newNotif.category,
+        timestamp: 'Just now',
+        isRead: false,
+        priority: newNotif.priority,
+        minVersion: newNotif.minVersion,
+        isActive: true
+      };
+      setNotifications((prev) => [localNotif, ...prev]);
+      showToast('Announcement saved locally');
+    }
+  };
+
+  const handleDeleteNotification = async (id: string) => {
+    try {
+      await fetch(`/api/admin/notifications/${id}`, {
+        method: 'DELETE'
+      });
+    } catch {
+      // safe fallback
+    }
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
+  const unreadNotificationsCount = notifications.filter((n) => !n.isRead).length;
 
   // Save state changes
   useEffect(() => {
@@ -299,8 +467,27 @@ export default function App() {
           </button>
         </div>
 
-        {/* Action Group: Download APK & Test Key */}
+        {/* Action Group: Broadcast Admin, Download APK & Test Key */}
         <div className="flex items-center gap-2">
+          {/* Website-to-App Broadcast Admin Button */}
+          <button
+            onClick={() => setIsAdminModalOpen(true)}
+            className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              theme === 'dark'
+                ? 'bg-[#111B2A] border-[#39B9FF]/40 text-[#39B9FF] hover:bg-[#39B9FF]/20 shadow-[0_0_10px_rgba(57,185,255,0.2)]'
+                : 'bg-[#E0F2FE] border-[#39B9FF]/50 text-[#0284C7] hover:bg-[#BAE6FD]'
+            }`}
+            title="Open Website-to-App Notification Management"
+          >
+            <Megaphone className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Broadcast Admin</span>
+            {unreadNotificationsCount > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-[#39B9FF] text-[#0B0F17] font-black">
+                {unreadNotificationsCount}
+              </span>
+            )}
+          </button>
+
           {/* Prominent Direct APK Download Button */}
           <button
             onClick={handleDownloadApk}
@@ -308,7 +495,8 @@ export default function App() {
             title="Download built APK package"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Download APK</span>
+            <span className="hidden md:inline">Download APK</span>
+            <span className="md:hidden">APK</span>
           </button>
 
           {/* Quick Test Key Toggle */}
@@ -361,7 +549,8 @@ export default function App() {
               { id: 'supported_games', label: '5. Games' },
               { id: 'seller_contact', label: '6. Seller' },
               { id: 'device_info', label: '7. Device' },
-              { id: 'settings', label: '8. Settings' }
+              { id: 'settings', label: '8. Settings' },
+              { id: 'notifications', label: '9. Notifications' }
             ] as const
           ).map((item) => (
             <button
@@ -496,10 +685,11 @@ export default function App() {
                   theme={theme}
                   t={t}
                   selectedGame={selectedGame}
+                  unreadNotificationsCount={unreadNotificationsCount}
                   onSelectGame={handleSelectGame}
                   onOpenLoginModal={() => setIsLoginModalOpen(true)}
                   onViewAllGames={() => setCurrentScreen('supported_games')}
-                  onOpenNotifications={() => setCurrentScreen('seller_contact')}
+                  onOpenNotifications={() => setCurrentScreen('notifications')}
                   onNavigateToPremium={() => {
                     setCurrentTab('premium');
                     setCurrentScreen('premium');
@@ -513,9 +703,23 @@ export default function App() {
                   membership={membership}
                   theme={theme}
                   t={t}
-                  onOpenNotifications={() => setCurrentScreen('seller_contact')}
+                  unreadNotificationsCount={unreadNotificationsCount}
+                  onOpenNotifications={() => setCurrentScreen('notifications')}
                   onUpgradeRenew={() => setCurrentScreen('seller_contact')}
                   onShowToast={showToast}
+                />
+              )}
+
+              {currentScreen === 'notifications' && (
+                <NotificationsScreen
+                  theme={theme}
+                  t={t}
+                  notifications={notifications}
+                  onBack={() => setCurrentScreen(currentTab === 'settings' ? 'settings' : 'home')}
+                  onMarkAsRead={handleMarkAsRead}
+                  onMarkAllAsRead={handleMarkAllAsRead}
+                  onRefresh={fetchNotifications}
+                  isSyncing={isSyncingNotifs}
                 />
               )}
 
@@ -666,10 +870,11 @@ export default function App() {
                     theme={theme}
                     t={t}
                     selectedGame={selectedGame}
+                    unreadNotificationsCount={unreadNotificationsCount}
                     onSelectGame={handleSelectGame}
                     onOpenLoginModal={() => setIsLoginModalOpen(true)}
                     onViewAllGames={() => setCurrentScreen('supported_games')}
-                    onOpenNotifications={() => setCurrentScreen('seller_contact')}
+                    onOpenNotifications={() => setCurrentScreen('notifications')}
                     onNavigateToPremium={() => {
                       setCurrentTab('premium');
                       setCurrentScreen('premium');
@@ -683,9 +888,23 @@ export default function App() {
                     membership={membership}
                     theme={theme}
                     t={t}
-                    onOpenNotifications={() => setCurrentScreen('seller_contact')}
+                    unreadNotificationsCount={unreadNotificationsCount}
+                    onOpenNotifications={() => setCurrentScreen('notifications')}
                     onUpgradeRenew={() => setCurrentScreen('seller_contact')}
                     onShowToast={showToast}
+                  />
+                )}
+
+                {currentScreen === 'notifications' && (
+                  <NotificationsScreen
+                    theme={theme}
+                    t={t}
+                    notifications={notifications}
+                    onBack={() => setCurrentScreen(currentTab === 'settings' ? 'settings' : 'home')}
+                    onMarkAsRead={handleMarkAsRead}
+                    onMarkAllAsRead={handleMarkAllAsRead}
+                    onRefresh={fetchNotifications}
+                    isSyncing={isSyncingNotifs}
                   />
                 )}
 
@@ -785,6 +1004,16 @@ export default function App() {
             <span>{toastMessage}</span>
           </div>
         )}
+
+        {/* Website Admin Broadcast Management Modal */}
+        <AdminNotificationModal
+          isOpen={isAdminModalOpen}
+          onClose={() => setIsAdminModalOpen(false)}
+          notifications={notifications}
+          onPublishNotification={handlePublishNotification}
+          onDeleteNotification={handleDeleteNotification}
+          onRefresh={fetchNotifications}
+        />
       </main>
     </div>
   );

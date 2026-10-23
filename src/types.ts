@@ -5,7 +5,8 @@ export type ScreenId =
   | 'supported_games'
   | 'seller_contact'
   | 'device_info'
-  | 'settings';
+  | 'settings'
+  | 'notifications';
 
 export type BottomTab = 'home' | 'premium' | 'settings';
 
@@ -54,4 +55,17 @@ export interface DeviceSpecs {
   totalRam: string;
   screenResolution: string;
   cpu: string;
+}
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  category: 'announcement' | 'update' | 'feature' | 'maintenance';
+  timestamp: string;
+  isRead: boolean;
+  minVersion?: string;
+  actionUrl?: string;
+  priority: 'normal' | 'high' | 'urgent';
+  isActive: boolean;
 }

@@ -157,27 +157,96 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
         if (navDotSettings != null) navDotSettings.setVisibility(currentTab == Tab.SETTINGS ? View.VISIBLE : View.INVISIBLE);
     }
 
+    private final android.os.Handler carouselHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private Runnable carouselRunnable;
+    private android.widget.ViewFlipper currentFlipper;
+    private ImageView currentDot1, currentDot2, currentDot3;
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (currentTab == Tab.HOME) {
+            startCarouselTimer();
+            updateNotificationBadge();
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        stopCarouselTimer();
+    }
+
+    private void startCarouselTimer() {
+        stopCarouselTimer();
+        if (currentFlipper == null) return;
+        carouselRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (currentFlipper != null && currentTab == Tab.HOME) {
+                    currentFlipper.showNext();
+                    updateCarouselIndicators(currentFlipper.getDisplayedChild(), currentDot1, currentDot2, currentDot3);
+                    carouselHandler.postDelayed(this, 4000);
+                }
+            }
+        };
+        carouselHandler.postDelayed(carouselRunnable, 4000);
+    }
+
+    private void stopCarouselTimer() {
+        if (carouselRunnable != null) {
+            carouselHandler.removeCallbacks(carouselRunnable);
+            carouselRunnable = null;
+        }
+    }
+
+    private void resetCarouselTimer() {
+        stopCarouselTimer();
+        startCarouselTimer();
+    }
+
+    private void updateNotificationBadge() {
+        try {
+            int unread = com.alpha10.aimshot.repository.NotificationsRepository.getInstance(this).getUnreadCount();
+            View badge = findViewById(R.id.tv_header_notif_badge);
+            if (badge instanceof TextView) {
+                TextView tvBadge = (TextView) badge;
+                if (unread > 0) {
+                    tvBadge.setText(String.valueOf(unread));
+                    tvBadge.setVisibility(View.VISIBLE);
+                } else {
+                    tvBadge.setVisibility(View.GONE);
+                }
+            }
+        } catch (Exception ignored) {}
+    }
+
     private void renderHomeScreen() {
         View homeView = LayoutInflater.from(this).inflate(R.layout.fragment_home, fragmentContainer, false);
         fragmentContainer.addView(homeView);
 
-        // Header notifications
+        // Header notifications - Open dedicated NotificationsActivity
         View btnNotifications = homeView.findViewById(R.id.btn_notifications);
-        btnNotifications.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(MainActivity.this, SellerContactActivity.class));
-            }
-        });
+        if (btnNotifications != null) {
+            btnNotifications.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    startActivity(new Intent(MainActivity.this, NotificationsActivity.class));
+                }
+            });
+        }
+        updateNotificationBadge();
 
         // View All Games
         View tvViewAll = homeView.findViewById(R.id.tv_view_all_games);
-        tvViewAll.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(MainActivity.this, SupportedGamesActivity.class));
-            }
-        });
+        if (tvViewAll != null) {
+            tvViewAll.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    startActivity(new Intent(MainActivity.this, SupportedGamesActivity.class));
+                }
+            });
+        }
 
         // Home Carousel Setup with Navigation Arrows & Dynamic 3-Dot Indicators
         final android.widget.ViewFlipper flipper = homeView.findViewById(R.id.home_carousel_flipper);
@@ -187,15 +256,22 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
         View btnPrev = homeView.findViewById(R.id.btn_carousel_prev);
         View btnNext = homeView.findViewById(R.id.btn_carousel_next);
 
+        currentFlipper = flipper;
+        currentDot1 = dot1;
+        currentDot2 = dot2;
+        currentDot3 = dot3;
+
         if (flipper != null) {
             updateCarouselIndicators(0, dot1, dot2, dot3);
 
+            // Left / Right arrow navigation
             if (btnPrev != null) {
                 btnPrev.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         flipper.showPrevious();
                         updateCarouselIndicators(flipper.getDisplayedChild(), dot1, dot2, dot3);
+                        resetCarouselTimer();
                     }
                 });
             }
@@ -206,25 +282,82 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
                     public void onClick(View v) {
                         flipper.showNext();
                         updateCarouselIndicators(flipper.getDisplayedChild(), dot1, dot2, dot3);
+                        resetCarouselTimer();
                     }
                 });
             }
+
+            // Direct indicator dot clicks
+            if (dot1 != null) {
+                dot1.setOnClickListener(v -> {
+                    flipper.setDisplayedChild(0);
+                    updateCarouselIndicators(0, dot1, dot2, dot3);
+                    resetCarouselTimer();
+                });
+            }
+            if (dot2 != null) {
+                dot2.setOnClickListener(v -> {
+                    flipper.setDisplayedChild(1);
+                    updateCarouselIndicators(1, dot1, dot2, dot3);
+                    resetCarouselTimer();
+                });
+            }
+            if (dot3 != null) {
+                dot3.setOnClickListener(v -> {
+                    flipper.setDisplayedChild(2);
+                    updateCarouselIndicators(2, dot1, dot2, dot3);
+                    resetCarouselTimer();
+                });
+            }
+
+            // Horizontal Swipe Gesture Support on Carousel
+            final android.view.GestureDetector gestureDetector = new android.view.GestureDetector(this, new android.view.GestureDetector.SimpleOnGestureListener() {
+                private static final int SWIPE_THRESHOLD = 50;
+                private static final int SWIPE_VELOCITY_THRESHOLD = 80;
+
+                @Override
+                public boolean onFling(android.view.MotionEvent e1, android.view.MotionEvent e2, float velocityX, float velocityY) {
+                    if (e1 == null || e2 == null) return false;
+                    float diffX = e2.getX() - e1.getX();
+                    float diffY = e2.getY() - e1.getY();
+                    if (Math.abs(diffX) > Math.abs(diffY)) {
+                        if (Math.abs(diffX) > SWIPE_THRESHOLD && Math.abs(velocityX) > SWIPE_VELOCITY_THRESHOLD) {
+                            if (diffX > 0) {
+                                flipper.showPrevious();
+                            } else {
+                                flipper.showNext();
+                            }
+                            updateCarouselIndicators(flipper.getDisplayedChild(), dot1, dot2, dot3);
+                            resetCarouselTimer();
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+            });
+
+            flipper.setOnTouchListener((v, event) -> gestureDetector.onTouchEvent(event));
+
+            // Start synchronized timer
+            startCarouselTimer();
         }
 
         // Game Grid with persistent selection
         RecyclerView rvGrid = homeView.findViewById(R.id.rv_games_grid);
-        rvGrid.setLayoutManager(new GridLayoutManager(this, 4));
-        final GameGridAdapter adapter = new GameGridAdapter(GameRepository.getInstance().getAllGames(), new GameGridAdapter.OnGameClickListener() {
-            @Override
-            public void onGameClick(GameItem item) {
-                if (item.isActive()) {
-                    Toast.makeText(MainActivity.this, "Aim Assist Ready for " + item.getName(), Toast.LENGTH_SHORT).show();
-                } else {
-                    Toast.makeText(MainActivity.this, item.getName() + " is currently locked / Pro Key required", Toast.LENGTH_SHORT).show();
+        if (rvGrid != null) {
+            rvGrid.setLayoutManager(new GridLayoutManager(this, 4));
+            final GameGridAdapter adapter = new GameGridAdapter(GameRepository.getInstance().getAllGames(), new GameGridAdapter.OnGameClickListener() {
+                @Override
+                public void onGameClick(GameItem item) {
+                    if (item.isActive()) {
+                        Toast.makeText(MainActivity.this, "Aim Assist Ready for " + item.getName(), Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(MainActivity.this, item.getName() + " is currently locked / Pro Key required", Toast.LENGTH_SHORT).show();
+                    }
                 }
-            }
-        });
-        rvGrid.setAdapter(adapter);
+            });
+            rvGrid.setAdapter(adapter);
+        }
 
         // State-Dependent Login Card / Launch Button Setup
         updateHomeLoginCard(homeView);
@@ -264,10 +397,14 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
         Button btnLogin = homeView.findViewById(R.id.btn_home_login);
 
         if (status.getState() == MembershipStatus.State.ACTIVE) {
-            // Already logged in: Hide login card, display Launch The Game button
+            // Already logged in: Hide login card, display Launch The Game card
             if (cardLoginStatus != null) cardLoginStatus.setVisibility(View.GONE);
             if (cardLaunchGame != null) {
                 cardLaunchGame.setVisibility(View.VISIBLE);
+                TextView tvDays = homeView.findViewById(R.id.tv_active_days_remaining);
+                if (tvDays != null) {
+                    tvDays.setText(status.getRemainingDays() + " Days");
+                }
                 if (btnLaunchGame != null) {
                     btnLaunchGame.setOnClickListener(new View.OnClickListener() {
                         @Override
@@ -286,8 +423,6 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
                     @Override
                     public void onClick(View v) {
                         showVerificationDialog();
-                    }
-                });
             }
         }
     }
@@ -296,13 +431,13 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
         View premiumView = LayoutInflater.from(this).inflate(R.layout.fragment_premium, fragmentContainer, false);
         fragmentContainer.addView(premiumView);
 
-        // Notification icon on top-right (opens seller & notifications)
+        // Notification icon on top-right (opens NotificationsActivity)
         View btnNotifications = premiumView.findViewById(R.id.btn_premium_notifications);
         if (btnNotifications != null) {
             btnNotifications.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    startActivity(new Intent(MainActivity.this, SellerContactActivity.class));
+                    startActivity(new Intent(MainActivity.this, NotificationsActivity.class));
                 }
             });
         }

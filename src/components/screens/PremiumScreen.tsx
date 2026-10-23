@@ -8,6 +8,7 @@ interface PremiumScreenProps {
   membership: MembershipState;
   theme: AppTheme;
   t: Translations;
+  unreadNotificationsCount?: number;
   onOpenNotifications: () => void;
   onUpgradeRenew: () => void;
   onShowToast: (msg: string) => void;
@@ -17,6 +18,7 @@ export const PremiumScreen: React.FC<PremiumScreenProps> = ({
   membership,
   theme,
   t,
+  unreadNotificationsCount = 0,
   onOpenNotifications,
   onUpgradeRenew,
   onShowToast
@@ -68,10 +70,16 @@ export const PremiumScreen: React.FC<PremiumScreenProps> = ({
               ? 'bg-[#111B2A] border border-[#1C2B42] text-[#8D9BB0] hover:text-[#39B9FF]'
               : 'bg-white border border-[#CBD5E1] text-[#64748B] hover:text-[#0284C7] shadow-xs'
           }`}
-          title="Notifications & Seller Support"
+          title="Notifications & Announcements"
         >
           <Bell className="w-4 h-4" />
-          <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#39B9FF]" />
+          {unreadNotificationsCount > 0 ? (
+            <span className="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-1 rounded-full bg-[#39B9FF] text-[#0B0F17] text-[10px] font-black flex items-center justify-center shadow-[0_0_8px_rgba(57,185,255,0.7)] border border-[#0B0F17]">
+              {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+            </span>
+          ) : (
+            <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-[#39B9FF]/40" />
+          )}
         </button>
       </div>
 

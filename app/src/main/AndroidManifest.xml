@@ -61,6 +61,13 @@
             android:screenOrientation="portrait"
             android:theme="@style/Theme.AimShotEngine.NoActionBar" />
 
+        <!-- Dedicated Notifications & Announcement Activity -->
+        <activity
+            android:name=".NotificationsActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AimShotEngine.NoActionBar" />
+
     </application>
 
 </manifest>

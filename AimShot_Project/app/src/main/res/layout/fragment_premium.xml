@@ -67,16 +67,41 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <ImageView
+            <RelativeLayout
                 android:id="@+id/btn_premium_notifications"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/notifications"
-                android:padding="6dp"
-                android:src="@drawable/ic_bell" />
+                android:clickable="true"
+                android:focusable="true">
+
+                <ImageView
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_centerInParent="true"
+                    android:contentDescription="@string/notifications"
+                    android:padding="6dp"
+                    android:src="@drawable/ic_bell" />
+
+                <!-- Unread notification count badge -->
+                <TextView
+                    android:id="@+id/tv_premium_notif_badge"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_alignParentTop="true"
+                    android:layout_alignParentEnd="true"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginEnd="2dp"
+                    android:background="@drawable/bg_badge_active"
+                    android:gravity="center"
+                    android:text="4"
+                    android:textColor="#0B0F17"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:visibility="visible" />
+            </RelativeLayout>
         </RelativeLayout>
 
         <!-- Premium Status Card -->

@@ -28,6 +28,8 @@ public class SupportedGamesActivity extends AppCompatActivity {
     private View btnSearch;
     private boolean isSearchVisible = false;
 
+    private TextView tvEmptyState;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -42,6 +44,7 @@ public class SupportedGamesActivity extends AppCompatActivity {
         rvGames = findViewById(R.id.rv_supported_games_list);
         editSearch = findViewById(R.id.edit_games_search);
         btnSearch = findViewById(R.id.btn_games_search);
+        tvEmptyState = findViewById(R.id.tv_games_empty_state);
 
         View btnBack = findViewById(R.id.btn_games_back);
         btnBack.setOnClickListener(new View.OnClickListener() {
@@ -80,9 +83,15 @@ public class SupportedGamesActivity extends AppCompatActivity {
                 editSearch.setVisibility(isSearchVisible ? View.VISIBLE : View.GONE);
                 if (isSearchVisible) {
                     editSearch.requestFocus();
+                    android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                    if (imm != null) imm.showSoftInput(editSearch, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
                 } else {
                     editSearch.setText("");
-                    adapter.updateData(GameRepository.getInstance().getAllGames());
+                    List<GameItem> all = GameRepository.getInstance().getAllGames();
+                    adapter.updateData(all);
+                    if (tvEmptyState != null) tvEmptyState.setVisibility(View.GONE);
+                    android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                    if (imm != null) imm.hideSoftInputFromWindow(editSearch.getWindowToken(), 0);
                 }
             }
         });
@@ -95,6 +104,9 @@ public class SupportedGamesActivity extends AppCompatActivity {
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 List<GameItem> filtered = GameRepository.getInstance().searchGames(s.toString());
                 adapter.updateData(filtered);
+                if (tvEmptyState != null) {
+                    tvEmptyState.setVisibility(filtered.isEmpty() ? View.VISIBLE : View.GONE);
+                }
             }
 
             @Override

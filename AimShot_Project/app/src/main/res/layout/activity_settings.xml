@@ -49,10 +49,13 @@
 
             <!-- Setting Row 1: App Theme -->
             <LinearLayout
+                android:id="@+id/row_setting_theme"
                 android:layout_width="match_parent"
                 android:layout_height="64dp"
                 android:layout_marginBottom="10dp"
                 android:background="@drawable/bg_tactical_card"
+                android:clickable="true"
+                android:focusable="true"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:paddingStart="16dp"
@@ -94,6 +97,7 @@
                     android:id="@+id/switch_app_theme"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:focusable="false"
                     app:thumbTint="@color/switch_thumb_tint"
                     app:trackTint="@color/switch_track_tint"
                     android:checked="true" />
@@ -202,6 +206,7 @@
                     android:id="@+id/switch_notifications"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:focusable="false"
                     app:thumbTint="@color/switch_thumb_tint"
                     app:trackTint="@color/switch_track_tint"
                     android:checked="true" />
@@ -257,6 +262,7 @@
                     android:id="@+id/switch_haptic"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:focusable="false"
                     app:thumbTint="@color/switch_thumb_tint"
                     app:trackTint="@color/switch_track_tint"
                     android:checked="true" />

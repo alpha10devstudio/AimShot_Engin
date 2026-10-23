@@ -67,16 +67,41 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <ImageView
+            <RelativeLayout
                 android:id="@+id/btn_notifications"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Notifications"
-                android:padding="6dp"
-                android:src="@drawable/ic_bell" />
+                android:clickable="true"
+                android:focusable="true">
+
+                <ImageView
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_centerInParent="true"
+                    android:contentDescription="Notifications"
+                    android:padding="6dp"
+                    android:src="@drawable/ic_bell" />
+
+                <!-- Unread notification count badge -->
+                <TextView
+                    android:id="@+id/tv_header_notif_badge"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_alignParentTop="true"
+                    android:layout_alignParentEnd="true"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginEnd="2dp"
+                    android:background="@drawable/bg_badge_active"
+                    android:gravity="center"
+                    android:text="4"
+                    android:textColor="#0B0F17"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:visibility="visible" />
+            </RelativeLayout>
         </RelativeLayout>
 
         <!-- Compact Hero Banner Card: AimShot Engine Pro Gaming Toolkit -->
@@ -163,8 +188,7 @@
                     android:id="@+id/home_carousel_flipper"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:autoStart="true"
-                    android:flipInterval="4000"
+                    android:autoStart="false"
                     android:inAnimation="@android:anim/fade_in"
                     android:outAnimation="@android:anim/fade_out">
 
@@ -551,31 +575,108 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- 2. Launch Game Container: Displayed ONLY when user IS logged in -->
+        <!-- 2. Launch Game Tactical Card: Displayed ONLY when user IS logged in -->
         <LinearLayout
             android:id="@+id/card_launch_game"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="24dp"
+            android:background="@drawable/bg_tactical_card"
             android:orientation="vertical"
+            android:padding="16dp"
             android:visibility="gone">
 
+            <!-- Top Row: Game Icon + Title + Active Badge + Remaining Days -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="14dp">
+
+                <ImageView
+                    android:id="@+id/iv_active_game_icon"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:background="@drawable/bg_game_icon_container"
+                    android:contentDescription="Active Game"
+                    android:padding="3dp"
+                    android:src="@drawable/carrom" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:layout_marginStart="12dp"
+                    android:layout_toEndOf="@id/iv_active_game_icon"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/tv_active_game_title"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Carrom Disc Pool"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tv_active_game_badge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:background="@drawable/bg_badge_active"
+                            android:paddingStart="6dp"
+                            android:paddingTop="2dp"
+                            android:paddingEnd="6dp"
+                            android:paddingBottom="2dp"
+                            android:text="ACTIVE"
+                            android:textColor="#49DCA0"
+                            android:textSize="9sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tv_active_game_features"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Auto Aim • Guideline • Smooth Control"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tv_active_days_remaining"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:text="18 Days"
+                    android:textColor="@color/accent_primary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </RelativeLayout>
+
+            <!-- Prominent Electric Blue Launch Button matching Reference Preview -->
             <Button
                 android:id="@+id/btn_launch_game"
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:background="@drawable/bg_button_launch"
-                android:drawableStart="@drawable/ic_aimshot_logo"
-                android:drawablePadding="10dp"
+                android:layout_height="48dp"
+                android:background="@drawable/bg_button_accent"
                 android:elevation="4dp"
                 android:gravity="center"
-                android:paddingStart="24dp"
-                android:paddingEnd="24dp"
                 android:stateListAnimator="@null"
-                android:text="Launch The Game"
-                android:textAllCaps="false"
+                android:text="▶  LAUNCH THE GAME"
+                android:textAllCaps="true"
                 android:textColor="@color/bg_main"
-                android:textSize="16sp"
+                android:textSize="14sp"
                 android:textStyle="bold" />
         </LinearLayout>
 

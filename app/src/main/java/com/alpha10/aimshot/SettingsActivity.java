@@ -40,6 +40,7 @@ public class SettingsActivity extends AppCompatActivity {
     private SwitchCompat switchTheme;
     private SwitchCompat switchNotifications;
     private SwitchCompat switchHaptic;
+    private TextView tvThemeDesc;
     private TextView tvNotificationsStatus;
     private TextView tvHapticStatus;
     private TextView tvLanguageDesc;
@@ -63,33 +64,43 @@ public class SettingsActivity extends AppCompatActivity {
 
     private void initViews() {
         View btnBack = findViewById(R.id.btn_settings_back);
-        btnBack.setOnClickListener(v -> finish());
+        if (btnBack != null) {
+            btnBack.setOnClickListener(v -> finish());
+        }
 
         switchTheme = findViewById(R.id.switch_app_theme);
         switchNotifications = findViewById(R.id.switch_notifications);
         switchHaptic = findViewById(R.id.switch_haptic);
+        tvThemeDesc = findViewById(R.id.tv_theme_desc);
         tvNotificationsStatus = findViewById(R.id.tv_notifications_status);
         tvHapticStatus = findViewById(R.id.tv_haptic_status);
         tvLanguageDesc = findViewById(R.id.tv_language_desc);
 
         // Populate saved states
+        boolean isDarkMode = prefs.getBoolean(KEY_DARK_MODE, true);
+        if (switchTheme != null) {
+            switchTheme.setChecked(isDarkMode);
+        }
+        if (tvThemeDesc != null) {
+            tvThemeDesc.setText(isDarkMode ? "Dark Mode" : "Light Mode");
+        }
+
         if (tvNotificationsStatus != null) {
             tvNotificationsStatus.setText(isNotificationsOn ? "On" : "Off");
         }
         if (switchNotifications != null) {
             switchNotifications.setChecked(isNotificationsOn);
         }
+
         if (tvHapticStatus != null) {
             tvHapticStatus.setText(isHapticOn ? "On" : "Off");
         }
         if (switchHaptic != null) {
             switchHaptic.setChecked(isHapticOn);
         }
+
         if (tvLanguageDesc != null) {
             tvLanguageDesc.setText(prefs.getString(KEY_LANG, "English"));
-        }
-        if (switchTheme != null) {
-            switchTheme.setChecked(prefs.getBoolean(KEY_DARK_MODE, true));
         }
 
         // Bottom Navigation Bar
@@ -111,16 +122,42 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void setupListeners() {
-        // App Theme Toggle (Dark / Light mode)
+        // Option 1: App Theme - Row & Switch click
+        View rowTheme = findViewById(R.id.row_setting_theme);
+        if (rowTheme != null) {
+            rowTheme.setOnClickListener(v -> {
+                if (switchTheme != null) {
+                    switchTheme.toggle();
+                }
+            });
+        }
         if (switchTheme != null) {
             switchTheme.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 prefs.edit().putBoolean(KEY_DARK_MODE, isChecked).apply();
+                if (tvThemeDesc != null) {
+                    tvThemeDesc.setText(isChecked ? "Dark Mode" : "Light Mode");
+                }
                 AppCompatDelegate.setDefaultNightMode(isChecked ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
                 Toast.makeText(this, isChecked ? "Tactical Dark Mode active" : "Default Light Mode active", Toast.LENGTH_SHORT).show();
+                triggerHapticFeedback();
             });
         }
 
-        // Notifications switch toggle
+        // Option 2: Language - Row click
+        View rowLanguage = findViewById(R.id.row_setting_language);
+        if (rowLanguage != null) {
+            rowLanguage.setOnClickListener(v -> showLanguageSelectionDialog());
+        }
+
+        // Option 3: Notifications - Row & Switch click
+        View rowNotifications = findViewById(R.id.row_setting_notifications);
+        if (rowNotifications != null) {
+            rowNotifications.setOnClickListener(v -> {
+                if (switchNotifications != null) {
+                    switchNotifications.toggle();
+                }
+            });
+        }
         if (switchNotifications != null) {
             switchNotifications.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 isNotificationsOn = isChecked;
@@ -133,17 +170,15 @@ public class SettingsActivity extends AppCompatActivity {
             });
         }
 
-        // Notifications row click
-        View rowNotifications = findViewById(R.id.row_setting_notifications);
-        if (rowNotifications != null) {
-            rowNotifications.setOnClickListener(v -> {
-                if (switchNotifications != null) {
-                    switchNotifications.toggle();
+        // Option 4: Haptic Feedback - Row & Switch click
+        View rowHaptic = findViewById(R.id.row_setting_haptic);
+        if (rowHaptic != null) {
+            rowHaptic.setOnClickListener(v -> {
+                if (switchHaptic != null) {
+                    switchHaptic.toggle();
                 }
             });
         }
-
-        // Haptic Feedback switch toggle
         if (switchHaptic != null) {
             switchHaptic.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 isHapticOn = isChecked;
@@ -157,20 +192,6 @@ public class SettingsActivity extends AppCompatActivity {
                 }
             });
         }
-
-        // Haptic Feedback row click
-        View rowHaptic = findViewById(R.id.row_setting_haptic);
-        if (rowHaptic != null) {
-            rowHaptic.setOnClickListener(v -> {
-                if (switchHaptic != null) {
-                    switchHaptic.toggle();
-                }
-            });
-        }
-
-        // Language row
-        View rowLanguage = findViewById(R.id.row_setting_language);
-        rowLanguage.setOnClickListener(v -> showLanguageSelectionDialog());
 
         // Device Information row
         View rowDeviceInfo = findViewById(R.id.row_setting_device_info);
