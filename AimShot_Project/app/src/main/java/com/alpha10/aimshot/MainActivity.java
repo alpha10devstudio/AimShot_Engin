@@ -423,6 +423,8 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
                     @Override
                     public void onClick(View v) {
                         showVerificationDialog();
+                    }
+                });
             }
         }
     }
@@ -444,12 +446,14 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
 
         // Upgrade / Renew button
         View btnRenew = premiumView.findViewById(R.id.btn_upgrade_renew);
-        btnRenew.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(MainActivity.this, SellerContactActivity.class));
-            }
-        });
+        if (btnRenew != null) {
+            btnRenew.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    startActivity(new Intent(MainActivity.this, SellerContactActivity.class));
+                }
+            });
+        }
 
         // Get Free Key button
         View btnFreeKey = premiumView.findViewById(R.id.btn_get_free_key);
@@ -497,34 +501,38 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
         TextView tvRemainingDaysRow = premiumView.findViewById(R.id.tv_detail_days_remaining);
 
         if (status.getState() == MembershipStatus.State.ACTIVE) {
-            tvBadge.setText(R.string.status_active);
-            tvBadge.setBackgroundResource(R.drawable.bg_badge_active);
+            if (tvBadge != null) {
+                tvBadge.setText(R.string.status_active);
+                tvBadge.setBackgroundResource(R.drawable.bg_badge_active);
+            }
 
             int remainingDays = status.getRemainingDays();
-            tvDaysRemaining.setText(remainingDays + " Days");
-            tvExpirySub.setText("( " + status.getFormattedExpiryDate() + " )");
-            tvRemainingDaysRow.setText(remainingDays + " Days");
+            if (tvDaysRemaining != null) tvDaysRemaining.setText(remainingDays + " Days");
+            if (tvExpirySub != null) tvExpirySub.setText("( " + status.getFormattedExpiryDate() + " )");
+            if (tvRemainingDaysRow != null) tvRemainingDaysRow.setText(remainingDays + " Days");
 
-            progressBar.setProgress(Math.max(10, Math.min(100, remainingDays * 3)));
-            layoutFeaturesUnlocked.setVisibility(View.VISIBLE);
+            if (progressBar != null) progressBar.setProgress(Math.max(10, Math.min(100, remainingDays * 3)));
+            if (layoutFeaturesUnlocked != null) layoutFeaturesUnlocked.setVisibility(View.VISIBLE);
 
-            tvPlan.setText(status.getPlanType());
-            tvStart.setText(status.getFormattedStartDate());
-            tvExpiry.setText(status.getFormattedExpiryDate());
+            if (tvPlan != null) tvPlan.setText(status.getPlanType());
+            if (tvStart != null) tvStart.setText(status.getFormattedStartDate());
+            if (tvExpiry != null) tvExpiry.setText(status.getFormattedExpiryDate());
         } else {
-            tvBadge.setText(status.getState() == MembershipStatus.State.EXPIRED ? R.string.status_expired : R.string.status_free);
-            tvBadge.setBackgroundColor(ContextCompat.getColor(this, R.color.border_subtle));
+            if (tvBadge != null) {
+                tvBadge.setText(status.getState() == MembershipStatus.State.EXPIRED ? R.string.status_expired : R.string.status_free);
+                tvBadge.setBackgroundColor(ContextCompat.getColor(this, R.color.border_subtle));
+            }
 
-            tvDaysRemaining.setText("0 Days");
-            tvExpirySub.setText("( Not Activated )");
-            tvRemainingDaysRow.setText("0 Days");
+            if (tvDaysRemaining != null) tvDaysRemaining.setText("0 Days");
+            if (tvExpirySub != null) tvExpirySub.setText("( Not Activated )");
+            if (tvRemainingDaysRow != null) tvRemainingDaysRow.setText("0 Days");
 
-            progressBar.setProgress(0);
-            layoutFeaturesUnlocked.setVisibility(View.GONE);
+            if (progressBar != null) progressBar.setProgress(0);
+            if (layoutFeaturesUnlocked != null) layoutFeaturesUnlocked.setVisibility(View.GONE);
 
-            tvPlan.setText("Free / Not Activated");
-            tvStart.setText("--");
-            tvExpiry.setText("--");
+            if (tvPlan != null) tvPlan.setText("Free / Not Activated");
+            if (tvStart != null) tvStart.setText("--");
+            if (tvExpiry != null) tvExpiry.setText("--");
         }
     }
 
