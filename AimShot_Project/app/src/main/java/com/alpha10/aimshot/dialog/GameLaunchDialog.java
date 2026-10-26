@@ -72,8 +72,8 @@ public class GameLaunchDialog extends Dialog {
         btnAbort = findViewById(R.id.btn_launch_abort);
 
         if (gameItem != null) {
-            if (ivIcon != null && gameItem.getIconRes() != 0) {
-                ivIcon.setImageResource(gameItem.getIconRes());
+            if (ivIcon != null && gameItem.getIconResId() != 0) {
+                ivIcon.setImageResource(gameItem.getIconResId());
             }
             if (tvName != null) {
                 tvName.setText(gameItem.getName());
@@ -137,7 +137,7 @@ public class GameLaunchDialog extends Dialog {
 
         tvStatusMessage.setText(getContext().getString(R.string.launching_game, gameItem.getName()));
 
-        String packageName = gameItem.getPackageName();
+        String packageName = gameItem.getLaunchPackage();
         Intent launchIntent = null;
         try {
             launchIntent = getContext().getPackageManager().getLaunchIntentForPackage(packageName);
@@ -200,11 +200,11 @@ public class GameLaunchDialog extends Dialog {
         builder.setMessage(getContext().getString(R.string.game_not_installed_msg, gameItem.getName()));
         builder.setPositiveButton(R.string.btn_install_game, (dialog, which) -> {
             try {
-                Intent marketIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + gameItem.getPackageName()));
+                Intent marketIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + gameItem.getLaunchPackage()));
                 marketIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 getContext().startActivity(marketIntent);
             } catch (ActivityNotFoundException e) {
-                Intent webIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=" + gameItem.getPackageName()));
+                Intent webIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=" + gameItem.getLaunchPackage()));
                 webIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 getContext().startActivity(webIntent);
             }

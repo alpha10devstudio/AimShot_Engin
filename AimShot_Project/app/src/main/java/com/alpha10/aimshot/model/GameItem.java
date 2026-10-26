@@ -44,11 +44,25 @@ public class GameItem {
         return iconResId;
     }
 
+    /**
+     * Alias for getIconResId() to ensure full API compatibility.
+     */
+    public int getIconRes() {
+        return iconResId;
+    }
+
     public boolean isVerified() {
         return isVerified;
     }
 
     public String getLaunchPackage() {
+        return launchPackage;
+    }
+
+    /**
+     * Alias for getLaunchPackage() to ensure full API compatibility.
+     */
+    public String getPackageName() {
         return launchPackage;
     }
 
