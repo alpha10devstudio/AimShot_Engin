@@ -27,7 +27,7 @@ import java.util.List;
  * Dedicated Notifications Activity displaying official announcements, updates,
  * synchronization states, and read tracking.
  */
-public class NotificationsActivity extends AppCompatActivity {
+public class NotificationsActivity extends BaseActivity {
 
     private NotificationsRepository repository;
     private NotificationAdapter adapter;

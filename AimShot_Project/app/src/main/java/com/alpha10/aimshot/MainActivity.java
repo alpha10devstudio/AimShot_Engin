@@ -11,22 +11,25 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.alpha10.aimshot.adapter.GameGridAdapter;
+import com.alpha10.aimshot.dialog.GameLaunchDialog;
 import com.alpha10.aimshot.dialog.VerificationKeyDialog;
 import com.alpha10.aimshot.model.GameItem;
 import com.alpha10.aimshot.model.MembershipStatus;
 import com.alpha10.aimshot.repository.GameRepository;
 import com.alpha10.aimshot.repository.MembershipRepository;
+import com.alpha10.aimshot.util.FontHelper;
+import com.alpha10.aimshot.util.NetworkUtil;
 
 /**
  * Main dashboard hosting Home and Premium destinations with persistent Bottom Navigation.
  */
-public class MainActivity extends AppCompatActivity implements MembershipRepository.MembershipChangeListener {
+public class MainActivity extends BaseActivity implements MembershipRepository.MembershipChangeListener {
 
     public enum Tab {
         HOME,
@@ -42,6 +45,7 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
 
     private Tab currentTab = Tab.HOME;
     private MembershipRepository membershipRepository;
+    private boolean isLaunching = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -361,6 +365,9 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
 
         // State-Dependent Login Card / Launch Button Setup
         updateHomeLoginCard(homeView);
+
+        // Apply custom fonts
+        FontHelper.applyRegularFont(homeView);
     }
 
     private void updateCarouselIndicators(int index, ImageView d1, ImageView d2, ImageView d3) {
@@ -409,7 +416,7 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
                     btnLaunchGame.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
-                            Toast.makeText(MainActivity.this, "AimShot Engine Overlay Activated for Carrom Disc Pool (120 FPS)", Toast.LENGTH_LONG).show();
+                            handleLaunchGameClick();
                         }
                     });
                 }
@@ -427,6 +434,40 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
                 });
             }
         }
+    }
+
+    /**
+     * Executes the mandatory internet check and initiates the tactical launching HUD flow.
+     */
+    private void handleLaunchGameClick() {
+        if (isLaunching) {
+            return; // Prevent duplicate launches from repeated clicks
+        }
+
+        // A. Mandatory Internet Check
+        if (!NetworkUtil.isNetworkConnected(this)) {
+            showNoInternetDialog();
+            return;
+        }
+
+        // B. Connected Launch Flow
+        isLaunching = true;
+        GameItem activeGame = GameRepository.getInstance().getAllGames().get(0); // Carrom Disc Pool
+        GameLaunchDialog launchDialog = new GameLaunchDialog(this, activeGame, new GameLaunchDialog.OnLaunchListener() {
+            @Override
+            public void onLaunchComplete(boolean success) {
+                isLaunching = false;
+            }
+        });
+        launchDialog.show();
+    }
+
+    private void showNoInternetDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.Theme_AimShotEngine_Dialog);
+        builder.setTitle(R.string.no_internet_title);
+        builder.setMessage(R.string.no_internet_msg);
+        builder.setPositiveButton(R.string.action_close, null);
+        builder.show();
     }
 
     private void renderPremiumScreen() {
@@ -484,6 +525,7 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
         }
 
         populatePremiumData(premiumView);
+        FontHelper.applyRegularFont(premiumView);
     }
 
     private void populatePremiumData(View premiumView) {

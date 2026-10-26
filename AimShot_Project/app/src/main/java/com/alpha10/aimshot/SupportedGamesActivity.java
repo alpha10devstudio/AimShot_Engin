@@ -21,7 +21,7 @@ import java.util.List;
 /**
  * Screen presenting all supported games, their optimization profiles, and search capability.
  */
-public class SupportedGamesActivity extends AppCompatActivity {
+public class SupportedGamesActivity extends BaseActivity {
 
     private RecyclerView rvGames;
     private GameListAdapter adapter;

@@ -1,7 +1,6 @@
 package com.alpha10.aimshot;
 
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
@@ -19,17 +18,18 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.SwitchCompat;
 
 import com.alpha10.aimshot.repository.MembershipRepository;
+import com.alpha10.aimshot.util.FontHelper;
+import com.alpha10.aimshot.util.LocaleHelper;
 
 /**
- * Settings screen configuring preferences, diagnostics, and secure session termination.
+ * Settings screen configuring theme, language localization, diagnostics, and secure session termination.
  * Features dedicated icons, solid background custom dialogs, physical vibration, and persistent bottom nav.
  */
-public class SettingsActivity extends AppCompatActivity {
+public class SettingsActivity extends BaseActivity {
 
     private static final String PREFS_NAME = "aimshot_settings_prefs";
     private static final String KEY_NOTIF = "notifications_enabled";
@@ -60,6 +60,10 @@ public class SettingsActivity extends AppCompatActivity {
 
         initViews();
         setupListeners();
+
+        if (findViewById(android.R.id.content) != null) {
+            FontHelper.applyRegularFont(findViewById(android.R.id.content));
+        }
     }
 
     private void initViews() {
@@ -76,13 +80,13 @@ public class SettingsActivity extends AppCompatActivity {
         tvHapticStatus = findViewById(R.id.tv_haptic_status);
         tvLanguageDesc = findViewById(R.id.tv_language_desc);
 
-        // Populate saved states
+        // Populate saved theme state
         boolean isDarkMode = prefs.getBoolean(KEY_DARK_MODE, true);
         if (switchTheme != null) {
             switchTheme.setChecked(isDarkMode);
         }
         if (tvThemeDesc != null) {
-            tvThemeDesc.setText(isDarkMode ? "Dark Mode" : "Light Mode");
+            tvThemeDesc.setText(isDarkMode ? R.string.setting_theme_desc : R.string.setting_theme_desc_light);
         }
 
         if (tvNotificationsStatus != null) {
@@ -99,8 +103,16 @@ public class SettingsActivity extends AppCompatActivity {
             switchHaptic.setChecked(isHapticOn);
         }
 
+        // Populate saved language state
+        String currentCode = LocaleHelper.getPersistedData(this, "en");
+        String displayLang = "English";
+        if ("bn".equals(currentCode)) {
+            displayLang = "বাংলা (Bengali)";
+        } else if ("hi".equals(currentCode)) {
+            displayLang = "हिन्दी (Hindi)";
+        }
         if (tvLanguageDesc != null) {
-            tvLanguageDesc.setText(prefs.getString(KEY_LANG, "English"));
+            tvLanguageDesc.setText(displayLang);
         }
 
         // Bottom Navigation Bar
@@ -135,10 +147,10 @@ public class SettingsActivity extends AppCompatActivity {
             switchTheme.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 prefs.edit().putBoolean(KEY_DARK_MODE, isChecked).apply();
                 if (tvThemeDesc != null) {
-                    tvThemeDesc.setText(isChecked ? "Dark Mode" : "Light Mode");
+                    tvThemeDesc.setText(isChecked ? R.string.setting_theme_desc : R.string.setting_theme_desc_light);
                 }
                 AppCompatDelegate.setDefaultNightMode(isChecked ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
-                Toast.makeText(this, isChecked ? "Tactical Dark Mode active" : "Default Light Mode active", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, isChecked ? "Tactical Dark Mode active" : "Tactical Light Mode active", Toast.LENGTH_SHORT).show();
                 triggerHapticFeedback();
             });
         }
@@ -199,40 +211,48 @@ public class SettingsActivity extends AppCompatActivity {
             rowDeviceInfo.setOnClickListener(v -> startActivity(new Intent(SettingsActivity.this, DeviceInfoActivity.class)));
         }
 
-        // Privacy & Security row (Solid Popup Fix)
+        // Privacy & Security row (Solid Popup)
         View rowPrivacy = findViewById(R.id.row_setting_privacy);
-        rowPrivacy.setOnClickListener(v -> showCustomInfoDialog(
-                "Privacy & Security",
-                "AimShot Engine guarantees complete operational security:\n\n" +
-                        "• Zero plaintext credential storage\n" +
-                        "• No IMEI or SIM hardware harvesting\n" +
-                        "• App-scoped cryptographic device fingerprint\n" +
-                        "• 256-bit TLS encrypted cloud communications\n" +
-                        "• Independent tactical server verification\n\n" +
-                        "Your privacy and account safety are 100% protected.",
-                R.drawable.ic_shield
-        ));
+        if (rowPrivacy != null) {
+            rowPrivacy.setOnClickListener(v -> showCustomInfoDialog(
+                    "Privacy & Security",
+                    "AimShot Engine guarantees complete operational security:\n\n" +
+                            "• Zero plaintext credential storage\n" +
+                            "• No IMEI or SIM hardware harvesting\n" +
+                            "• App-scoped cryptographic device fingerprint\n" +
+                            "• 256-bit TLS encrypted cloud communications\n" +
+                            "• Independent tactical server verification\n\n" +
+                            "Your privacy and account safety are 100% protected.",
+                    R.drawable.ic_shield
+            ));
+        }
 
         // Help & Support row
         View rowHelp = findViewById(R.id.row_setting_help);
-        rowHelp.setOnClickListener(v -> startActivity(new Intent(SettingsActivity.this, SellerContactActivity.class)));
+        if (rowHelp != null) {
+            rowHelp.setOnClickListener(v -> startActivity(new Intent(SettingsActivity.this, SellerContactActivity.class)));
+        }
 
-        // About App row (Solid Popup Fix)
+        // About App row (Solid Popup)
         View rowAbout = findViewById(R.id.row_setting_about);
-        rowAbout.setOnClickListener(v -> showCustomInfoDialog(
-                "AimShot Engine v1.0.0",
-                "Sharper Aim • Better Game • Higher You\n\n" +
-                        "Package: com.alpha10.aimshot\n" +
-                        "Engine Version: 1.0.0 (Build 16)\n" +
-                        "Architecture: Native Android (Java + Modern XML)\n\n" +
-                        "Designed for competitive accuracy, zero recoil simulation, and peak frame pacing.\n\n" +
-                        "© 2026 AimShot Studio. All rights reserved.",
-                R.drawable.ic_aimshot_logo
-        ));
+        if (rowAbout != null) {
+            rowAbout.setOnClickListener(v -> showCustomInfoDialog(
+                    "AimShot Engine v1.0.0",
+                    "Sharper Aim • Better Game • Higher You\n\n" +
+                            "Package: com.alpha10.aimshot\n" +
+                            "Engine Version: 1.0.0 (Build 16)\n" +
+                            "Architecture: Native Android (Java + Modern XML)\n\n" +
+                            "Designed for competitive accuracy, zero recoil simulation, and peak frame pacing.\n\n" +
+                            "© 2026 AimShot Studio. All rights reserved.",
+                    R.drawable.ic_aimshot_logo
+            ));
+        }
 
         // Logout action button
         Button btnLogout = findViewById(R.id.btn_settings_logout);
-        btnLogout.setOnClickListener(v -> confirmLogout());
+        if (btnLogout != null) {
+            btnLogout.setOnClickListener(v -> confirmLogout());
+        }
     }
 
     private void triggerHapticFeedback() {
@@ -250,23 +270,42 @@ public class SettingsActivity extends AppCompatActivity {
 
     private void showLanguageSelectionDialog() {
         final String[] languages = {"English", "বাংলা (Bengali)", "हिन्दी (Hindi)"};
-        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.Theme_AimShotEngine_Dialog);
-        builder.setTitle("Select Language");
-        builder.setItems(languages, (dialog, which) -> {
-            String selected = languages[which];
-            prefs.edit().putString(KEY_LANG, selected).apply();
-            if (tvLanguageDesc != null) {
-                tvLanguageDesc.setText(selected);
+        final String[] langCodes = {"en", "bn", "hi"};
+
+        String currentCode = LocaleHelper.getPersistedData(this, "en");
+        int selectedIndex = 0;
+        for (int i = 0; i < langCodes.length; i++) {
+            if (langCodes[i].equals(currentCode)) {
+                selectedIndex = i;
+                break;
             }
-            Toast.makeText(SettingsActivity.this, "Language set to " + selected, Toast.LENGTH_SHORT).show();
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.Theme_AimShotEngine_Dialog);
+        builder.setTitle(R.string.setting_language);
+        builder.setSingleChoiceItems(languages, selectedIndex, (dialog, which) -> {
+            String selectedName = languages[which];
+            String selectedCode = langCodes[which];
+
+            prefs.edit().putString(KEY_LANG, selectedName).apply();
+            LocaleHelper.setLocale(SettingsActivity.this, selectedCode);
+
+            if (tvLanguageDesc != null) {
+                tvLanguageDesc.setText(selectedName);
+            }
+            Toast.makeText(SettingsActivity.this, getString(R.string.setting_language) + ": " + selectedName, Toast.LENGTH_SHORT).show();
             triggerHapticFeedback();
+            dialog.dismiss();
+
+            // Recreate activity so all UI texts re-resolve in the selected locale immediately
+            recreate();
         });
-        builder.setNegativeButton("Cancel", null);
+        builder.setNegativeButton(R.string.action_close, null);
         builder.show();
     }
 
     /**
-     * Renders high-fidelity solid card dialog with #111B2A background, preventing overlapping text.
+     * Renders high-fidelity solid card dialog with theme background, preventing overlapping text.
      */
     private void showCustomInfoDialog(String title, String message, int iconRes) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -296,14 +335,14 @@ public class SettingsActivity extends AppCompatActivity {
 
     private void confirmLogout() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.Theme_AimShotEngine_Dialog);
-        builder.setTitle("Confirm Logout");
+        builder.setTitle(R.string.btn_logout);
         builder.setMessage(R.string.logout_confirmation);
-        builder.setPositiveButton("Log Out", (dialog, which) -> {
+        builder.setPositiveButton(R.string.btn_logout, (dialog, which) -> {
             MembershipRepository.getInstance(SettingsActivity.this).clearSession();
             Toast.makeText(SettingsActivity.this, "Session cleared. Logged out.", Toast.LENGTH_SHORT).show();
             finish();
         });
-        builder.setNegativeButton("Cancel", null);
+        builder.setNegativeButton(R.string.action_close, null);
         builder.show();
     }
 }

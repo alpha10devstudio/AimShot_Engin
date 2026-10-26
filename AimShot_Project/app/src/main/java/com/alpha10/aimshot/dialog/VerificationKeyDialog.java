@@ -23,13 +23,15 @@ import com.alpha10.aimshot.repository.MembershipRepository;
 import com.alpha10.aimshot.service.DeviceIdManager;
 import com.alpha10.aimshot.service.LicenseVerificationService;
 import com.alpha10.aimshot.service.VerificationCallback;
+import com.alpha10.aimshot.util.FontHelper;
 
 /**
- * Tactical verification key modal dialog matching the reference mockup.
+ * Tactical verification key modal dialog with right-aligned Paste button.
  */
 public class VerificationKeyDialog extends Dialog {
 
     private EditText editKey;
+    private View btnPaste;
     private Button btnLogin;
     private TextView tvClose;
     private TextView tvError;
@@ -66,13 +68,26 @@ public class VerificationKeyDialog extends Dialog {
         }
 
         editKey = findViewById(R.id.edit_verification_key);
+        btnPaste = findViewById(R.id.btn_paste_key);
         btnLogin = findViewById(R.id.btn_dialog_login);
         tvClose = findViewById(R.id.tv_dialog_close);
         tvError = findViewById(R.id.tv_dialog_error);
         progressBar = findViewById(R.id.progress_verification);
 
-        // Check clipboard for auto-suggest if available
-        checkClipboardForQuickPaste();
+        // Apply regular typography
+        if (findViewById(android.R.id.content) != null) {
+            FontHelper.applyRegularFont(findViewById(android.R.id.content));
+        }
+
+        // Paste button listener
+        if (btnPaste != null) {
+            btnPaste.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    handlePasteFromClipboard();
+                }
+            });
+        }
 
         btnLogin.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -89,20 +104,32 @@ public class VerificationKeyDialog extends Dialog {
         });
     }
 
-    private void checkClipboardForQuickPaste() {
+    /**
+     * Reads clipboard text, replaces verification key field content,
+     * positions cursor at the end, and preserves editability without auto-submitting.
+     */
+    private void handlePasteFromClipboard() {
         try {
             ClipboardManager clipboard = (ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
             if (clipboard != null && clipboard.hasPrimaryClip()) {
                 ClipData clipData = clipboard.getPrimaryClip();
                 if (clipData != null && clipData.getItemCount() > 0) {
-                    CharSequence clipText = clipData.getItemAt(0).getText();
-                    if (clipText != null && clipText.toString().startsWith("AIM-")) {
-                        editKey.setText(clipText.toString().trim());
+                    ClipData.Item item = clipData.getItemAt(0);
+                    CharSequence clipText = (item != null) ? item.getText() : null;
+                    if (clipText != null && clipText.length() > 0) {
+                        String pastedKey = clipText.toString().trim();
+                        editKey.setText(pastedKey);
                         editKey.setSelection(editKey.getText().length());
+                        editKey.requestFocus();
+                        Toast.makeText(getContext(), R.string.pasted_from_clipboard, Toast.LENGTH_SHORT).show();
+                        return;
                     }
                 }
             }
-        } catch (Exception ignored) {}
+            Toast.makeText(getContext(), R.string.clipboard_empty, Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Toast.makeText(getContext(), "Unable to access clipboard", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void attemptVerification() {
@@ -154,6 +181,9 @@ public class VerificationKeyDialog extends Dialog {
         }
         if (editKey != null) {
             editKey.setEnabled(!isLoading);
+        }
+        if (btnPaste != null) {
+            btnPaste.setEnabled(!isLoading);
         }
     }
 

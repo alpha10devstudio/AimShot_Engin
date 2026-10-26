@@ -637,7 +637,7 @@
                             android:paddingEnd="6dp"
                             android:paddingBottom="2dp"
                             android:text="ACTIVE"
-                            android:textColor="#49DCA0"
+                            android:textColor="#0B0F17"
                             android:textSize="9sp"
                             android:textStyle="bold" />
                     </LinearLayout>

@@ -1,5 +1,5 @@
 <resources>
-    <!-- Base application theme -->
+    <!-- Base application theme with custom fonts and DayNight support -->
     <style name="Theme.AimShotEngine" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
         <item name="colorPrimary">@color/accent_primary</item>
         <item name="colorPrimaryVariant">@color/accent_primary_dark</item>
@@ -10,6 +10,8 @@
         <item name="android:statusBarColor">@color/bg_main</item>
         <item name="android:navigationBarColor">@color/nav_bg</item>
         <item name="android:windowBackground">@color/bg_main</item>
+        <item name="android:fontFamily">@font/roboto</item>
+        <item name="fontFamily">@font/roboto</item>
     </style>
 
     <style name="Theme.AimShotEngine.NoActionBar">
@@ -18,11 +20,15 @@
         <item name="android:statusBarColor">@color/bg_main</item>
         <item name="android:navigationBarColor">@color/nav_bg</item>
         <item name="android:windowBackground">@color/bg_main</item>
+        <item name="android:fontFamily">@font/roboto</item>
+        <item name="fontFamily">@font/roboto</item>
     </style>
 
-    <!-- Clean, valid Dialog style without invalid or deprecated attributes -->
+    <!-- Clean, valid Dialog style -->
     <style name="Theme.AimShotEngine.Dialog" parent="Theme.MaterialComponents.Dialog">
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowIsFloating">true</item>
+        <item name="android:fontFamily">@font/roboto</item>
+        <item name="fontFamily">@font/roboto</item>
     </style>
 </resources>

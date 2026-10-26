@@ -38,7 +38,7 @@
         android:textColor="@color/text_secondary"
         android:textSize="13sp" />
 
-    <!-- Verification Key Input Field with Icon -->
+    <!-- Verification Key Input Field with Icon and Right-Aligned Compact Paste Button -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="52dp"
@@ -46,7 +46,7 @@
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingStart="14dp"
-        android:paddingEnd="14dp">
+        android:paddingEnd="8dp">
 
         <ImageView
             android:layout_width="20dp"
@@ -56,9 +56,11 @@
 
         <EditText
             android:id="@+id/edit_verification_key"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_marginStart="10dp"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1"
             android:background="@android:color/transparent"
             android:hint="@string/paste_key_hint"
             android:imeOptions="actionDone"
@@ -66,7 +68,22 @@
             android:maxLines="1"
             android:textColor="@color/text_primary"
             android:textColorHint="@color/text_secondary"
-            android:textSize="14sp" />
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/btn_paste_key"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:background="@drawable/bg_button_paste"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:text="@string/btn_paste"
+            android:textColor="@color/accent_primary"
+            android:textSize="11sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
     <!-- Error message display -->

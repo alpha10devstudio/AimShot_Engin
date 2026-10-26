@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AimShot Engine</string>
+    <string name="slogan">Sharper Aim • Better Game • Higher You</string>
+    <string name="pro_gaming_toolkit">Pro Gaming Toolkit</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">হোম</string>
+    <string name="nav_premium">প্রিমিয়াম</string>
+    <string name="nav_settings">সেটিংস</string>
+
+    <!-- Home Screen -->
+    <string name="supported_games">সাপোর্টেড গেমস</string>
+    <string name="view_all">সব দেখুন</string>
+    <string name="you_are_not_logged_in">আপনি লগইন করেননি</string>
+    <string name="login_desc">প্রিমিয়াম ফিচার এবং সম্পূর্ণ টুলস অ্যাক্সেস করতে লগইন করুন।</string>
+    <string name="login_now">এখনই লগইন করুন</string>
+
+    <!-- Verification Dialog -->
+    <string name="login_dialog_title">Login to AimShot Engine</string>
+    <string name="login_dialog_subtitle">চালিয়ে যেতে আপনার ভেরিফিকেশন কি লিখুন</string>
+    <string name="paste_key_hint">ভেরিফিকেশন কি পেস্ট করুন</string>
+    <string name="btn_login">লগইন</string>
+    <string name="btn_paste">পেস্ট</string>
+    <string name="pasted_from_clipboard">ক্লিপবোর্ড থেকে পেস্ট করা হয়েছে</string>
+    <string name="clipboard_empty">ক্লিপবোর্ড খালি</string>
+    <string name="how_to_get_key">কীভাবে কি পাবেন?</string>
+    <string name="step_1">১. অনুমোদিত বিক্রেতার কাছ থেকে সংগ্রহ করুন</string>
+    <string name="step_2">২. আপনার অনন্য ভেরিফিকেশন কি পান</string>
+    <string name="step_3">৩. কি পেস্ট করুন এবং লগইন করুন</string>
+    <string name="action_close">বন্ধ করুন</string>
+    <string name="err_empty_key">ভেরিফিকেশন কি খালি রাখা যাবে না।</string>
+    <string name="err_invalid_key">অবৈধ বা মেয়াদোত্তীর্ণ ভেরিফিকেশন কি।</string>
+    <string name="service_not_configured">ভেরিফিকেশন সার্ভিস এখনও সক্রিয় নয়। ডেমো চেক চলছে।</string>
+
+    <!-- Premium Screen -->
+    <string name="premium_status">প্রিমিয়াম স্ট্যাটাস</string>
+    <string name="status_active">Active</string>
+    <string name="status_expired">Expired</string>
+    <string name="status_free">ফ্রি / সক্রিয় নয়</string>
+    <string name="expires_in">মেয়াদ শেষ হবে</string>
+    <string name="premium_features_unlocked">প্রিমিয়াম ফিচারসমূহ আনলকড</string>
+    <string name="membership_details">মেম্বারশিপের বিবরণ</string>
+    <string name="plan_type">প্ল্যানের ধরণ</string>
+    <string name="start_date">শুরুর তারিখ</string>
+    <string name="expiry_date">সমাপ্তির তারিখ</string>
+    <string name="days_remaining">বাকি দিন</string>
+    <string name="btn_upgrade_renew">আপগ্রেড / রিনিউ</string>
+
+    <!-- Seller Contact -->
+    <string name="seller_contact">বিক্রেতা যোগাযোগ</string>
+    <string name="official_seller">অফিশিয়াল বিক্রেতা</string>
+    <string name="seller_name">AimShot Shop</string>
+    <string name="status_online">অনলাইন</string>
+    <string name="trusted_verified">বিশ্বস্ত ও যাচাইকৃত</string>
+    <string name="contact_whatsapp">+880 1700 111222</string>
+    <string name="contact_telegram">@aimshot_support</string>
+    <string name="contact_email">aimshot@support.com</string>
+    <string name="badge_fast_response">দ্রুত প্রতিক্রিয়া</string>
+    <string name="badge_secure_payment">নিরাপদ পেমেন্ট</string>
+    <string name="badge_trusted">১০০% বিশ্বস্ত</string>
+    <string name="btn_contact_now">এখনই যোগাযোগ করুন</string>
+    <string name="whatsapp">WhatsApp</string>
+    <string name="telegram">Telegram</string>
+    <string name="email">Email</string>
+
+    <!-- Device Information -->
+    <string name="device_information">ডিভাইসের তথ্য</string>
+    <string name="device_id">ডিভাইস আইডি</string>
+    <string name="action_copy">কপি</string>
+    <string name="device_id_copied">ডিভাইস আইডি ক্লিপবোর্ডে কপি করা হয়েছে</string>
+    <string name="lbl_android_version">অ্যান্ড্রয়েড সংস্করণ</string>
+    <string name="lbl_model">মডেল</string>
+    <string name="lbl_brand">ব্র্যান্ড</string>
+    <string name="lbl_total_ram">মোট র‍্যাম</string>
+    <string name="lbl_screen_resolution">স্ক্রিন রেজোলিউশন</string>
+    <string name="lbl_cpu">সিপিইউ</string>
+    <string name="device_binding_notice">এই ডিভাইস আইডি লাইসেন্স যাচাই ও ডিভাইস বাইন্ডিং-এ ব্যবহৃত হয়।</string>
+    <string name="keep_device_id_safe">আপনার ডিভাইস আইডি নিরাপদে রাখুন</string>
+    <string name="keep_device_id_safe_sub">অফিশিয়াল বিক্রেতা ব্যতীত কারো সাথে শেয়ার করবেন না।</string>
+
+    <!-- Settings -->
+    <string name="settings">সেটিংস</string>
+    <string name="setting_theme">অ্যাপ থিম</string>
+    <string name="setting_theme_desc">ডার্ক মোড</string>
+    <string name="setting_theme_desc_light">লাইট মোড</string>
+    <string name="setting_language">ভাষা</string>
+    <string name="setting_language_desc">বাংলা (Bengali)</string>
+    <string name="setting_notifications">নোটিফিকেশন</string>
+    <string name="setting_haptic">হ্যাপটিক ফিডব্যাক</string>
+    <string name="setting_privacy">গোপনীয়তা ও নিরাপত্তা</string>
+    <string name="setting_help">সহায়তা ও সমর্থন</string>
+    <string name="setting_about">অ্যাপ সম্পর্কিত</string>
+    <string name="app_version">v1.0.0</string>
+    <string name="btn_logout">লগ আউট</string>
+    <string name="logout_confirmation">আপনি কি নিশ্চিত আপনি লগ আউট করতে চান? আপনার সক্রিয় সেশন সাফ হয়ে যাবে।</string>
+
+    <!-- Activation Keys -->
+    <string name="get_activation_key">অ্যাক্টিভেশন কি সংগ্রহ করুন</string>
+    <string name="btn_get_free_key">ফ্রি কি নিন</string>
+    <string name="btn_get_paid_key">পেইড কি কিনুন</string>
+    <string name="free_key_url">https://aimshotengine.com/free-key</string>
+
+    <!-- Games -->
+    <string name="game_carrom">Carrom Disc Pool</string>
+    <string name="game_carrom_desc">Auto Aim • Guideline • Smooth Control</string>
+    <string name="game_8ball">8 Ball Pool</string>
+    <string name="game_8ball_desc">Long Line • Accurate Angle • Safe</string>
+    <string name="status_locked">Locked</string>
+    <string name="status_unlocked">Active</string>
+
+    <!-- Notification -->
+    <string name="notifications">নোটিফিকেশন</string>
+
+    <!-- Game Launching and Network Gate -->
+    <string name="launch_the_game">▶  গেম চালু করুন</string>
+    <string name="no_internet_title">কোনো ইন্টারনেট সংযোগ নেই</string>
+    <string name="no_internet_msg">অনুগ্রহ করে ইন্টারনেটের সাথে সংযুক্ত হোন এবং পুনরায় চেষ্টা করুন।</string>
+    <string name="launching_game">%1$s চালু হচ্ছে...</string>
+    <string name="launching_status_init">INITIALIZING AIMSHOT ENGINE</string>
+    <string name="launching_status_sync">১২০ FPS গাইডলাইন কোর সিঙ্ক করা হচ্ছে...</string>
+    <string name="launching_status_starting">গেম প্রক্রিয়া শুরু করা হচ্ছে...</string>
+    <string name="game_not_installed_title">গেম ইনস্টল করা নেই</string>
+    <string name="game_not_installed_msg">এই ডিভাইসে %1$s ইনস্টল করা নেই। AimShot Engine ব্যবহার করতে দয়া করে এটি ইনস্টল করুন।</string>
+    <string name="btn_install_game">গেম ইনস্টল করুন</string>
+    <string name="connection_lost">চালু করার সময় ইন্টারনেট সংযোগ বিচ্ছিন্ন হয়েছে। আবার চেষ্টা করুন।</string>
+</resources>

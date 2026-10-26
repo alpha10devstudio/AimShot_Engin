@@ -1,12 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Essential permissions only: network for license verification, vibrate for tactical haptic feedback -->
+    <!-- Essential permissions: network for license verification & launch checks, vibrate for tactical haptic feedback -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- Queries declaration for Android 11+ package visibility -->
+    <queries>
+        <package android:name="com.miniclip.carrom" />
+        <package android:name="com.miniclip.eightballpool" />
+        <package android:name="com.tencent.ig" />
+        <package android:name="com.dts.freefireth" />
+        <package android:name="com.pubg.imobile" />
+        <package android:name="com.activision.callofduty.shooter" />
+        <package android:name="com.riotgames.valorant" />
+        <package android:name="com.rockstargames.gtav" />
+        <package android:name="jp.konami.pesam" />
+        <package android:name="com.mojang.minecraftpe" />
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
     <application
+        android:name=".AimShotApp"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"

@@ -327,6 +327,12 @@ export default function App() {
       return;
     }
 
+    // A. Mandatory Internet Check
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      showToast('No Internet Connection. Please connect to the internet and try again.');
+      return;
+    }
+
     setLaunchingGameSession({
       game,
       status: 'initializing'

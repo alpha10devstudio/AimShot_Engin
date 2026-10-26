@@ -1,36 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- AimShot Tactical Theme Palette -->
-    <color name="bg_main">#0B0F17</color>
-    <color name="bg_card">#111B2A</color>
-    <color name="bg_card_secondary">#0D1420</color>
-    <color name="bg_input">#080C12</color>
+    <!-- AimShot Light Theme Palette (Day Mode) -->
+    <color name="bg_main">#F4F7FC</color>
+    <color name="bg_card">#FFFFFF</color>
+    <color name="bg_card_secondary">#E9EFF7</color>
+    <color name="bg_input">#EDF2F7</color>
 
-    <color name="accent_primary">#39B9FF</color>
-    <color name="accent_primary_dark">#1A85CC</color>
-    <color name="accent_primary_glow">#3339B9FF</color>
-    <color name="accent_primary_soft">#14283D</color>
+    <color name="accent_primary">#008CE3</color>
+    <color name="accent_primary_dark">#006CB3</color>
+    <color name="accent_primary_glow">#26008CE3</color>
+    <color name="accent_primary_soft">#E1F0FA</color>
 
-    <color name="text_primary">#F4F7FC</color>
-    <color name="text_secondary">#8D9BB0</color>
-    <color name="text_muted">#55657E</color>
+    <color name="text_primary">#0F172A</color>
+    <color name="text_secondary">#475569</color>
+    <color name="text_muted">#64748B</color>
 
-    <color name="color_success">#49DCA0</color>
-    <color name="color_success_bg">#1A49DCA0</color>
+    <color name="color_success">#10B981</color>
+    <color name="color_success_bg">#1A10B981</color>
 
     <color name="color_warning">#F59E0B</color>
     <color name="color_warning_bg">#1AF59E0B</color>
 
-    <color name="color_error">#FF4655</color>
-    <color name="color_error_bg">#1AFF4655</color>
+    <color name="color_error">#EF4444</color>
+    <color name="color_error_bg">#1AEF4444</color>
 
-    <color name="border_subtle">#1C2B42</color>
-    <color name="border_accent">#39B9FF</color>
-    <color name="border_glow">#4D39B9FF</color>
+    <color name="border_subtle">#CBD5E1</color>
+    <color name="border_accent">#008CE3</color>
+    <color name="border_glow">#33008CE3</color>
 
-    <color name="nav_active">#39B9FF</color>
-    <color name="nav_inactive">#8D9BB0</color>
-    <color name="nav_bg">#090D14</color>
+    <color name="nav_active">#008CE3</color>
+    <color name="nav_inactive">#64748B</color>
+    <color name="nav_bg">#FFFFFF</color>
 
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>

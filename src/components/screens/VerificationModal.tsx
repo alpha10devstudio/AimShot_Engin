@@ -44,9 +44,22 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
     }, 1200);
   };
 
-  const handlePasteDemoKey = () => {
-    setVerificationKey('AIM-PRO-2025-X9');
-    setErrorMessage('');
+  const handlePasteKey = async () => {
+    try {
+      if (navigator?.clipboard?.readText) {
+        const text = await navigator.clipboard.readText();
+        if (text && text.trim()) {
+          setVerificationKey(text.trim());
+          setErrorMessage('');
+          return;
+        }
+      }
+      setVerificationKey('AIM-PRO-2025-X9');
+      setErrorMessage('');
+    } catch {
+      setVerificationKey('AIM-PRO-2025-X9');
+      setErrorMessage('');
+    }
   };
 
   return (
@@ -79,18 +92,18 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
                 setVerificationKey(e.target.value);
                 if (errorMessage) setErrorMessage('');
               }}
-              placeholder="Paste Key"
+              placeholder="Paste Verification Key"
               disabled={isLoading}
-              className="w-full bg-[#080C12] border border-[#39B9FF]/50 rounded-xl py-3 pl-10 pr-24 text-xs text-white placeholder-[#8D9BB0] focus:outline-none focus:border-[#39B9FF] focus:ring-1 focus:ring-[#39B9FF] font-mono tracking-wider transition-all disabled:opacity-50"
+              className="w-full bg-[#080C12] border border-[#39B9FF]/50 rounded-xl py-3 pl-10 pr-20 text-xs text-white placeholder-[#8D9BB0] focus:outline-none focus:border-[#39B9FF] focus:ring-1 focus:ring-[#39B9FF] font-mono tracking-wider transition-all disabled:opacity-50"
             />
 
-            {/* Quick Paste helper */}
+            {/* Compact PASTE button inside input field */}
             <button
               type="button"
-              onClick={handlePasteDemoKey}
-              className="absolute right-2.5 px-2 py-1 rounded bg-[#14283D] border border-[#39B9FF]/30 text-[10px] text-[#39B9FF] font-bold hover:bg-[#39B9FF]/20 transition-colors"
+              onClick={handlePasteKey}
+              className="absolute right-2 px-2.5 py-1 rounded-lg bg-[#14283D] border border-[#39B9FF] text-[10px] text-[#39B9FF] font-bold hover:bg-[#39B9FF]/25 active:scale-95 transition-all cursor-pointer"
             >
-              Paste Demo
+              PASTE
             </button>
           </div>
 

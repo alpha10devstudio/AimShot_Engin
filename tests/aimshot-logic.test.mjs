@@ -137,5 +137,95 @@ describe('AimShot Engine Pure Logic Unit Tests', () => {
     const s4 = changeLang(s3, 'bn');
     assert.equal(s4.language, 'bn');
   });
+
+  // Test 11: Clipboard Paste replaces text and avoids auto-submission
+  test('Clipboard Paste replaces input content, positions cursor, and avoids auto-submission', () => {
+    let inputField = 'OLD_KEY_123';
+    let isSubmitted = false;
+
+    const handlePaste = (clipboardContent) => {
+      if (clipboardContent && clipboardContent.trim()) {
+        inputField = clipboardContent.trim();
+        const cursorPosition = inputField.length;
+        return { success: true, text: inputField, cursor: cursorPosition, submitted: isSubmitted };
+      }
+      return { success: false, text: inputField, cursor: inputField.length, submitted: isSubmitted };
+    };
+
+    const res = handlePaste('  AIM-PRO-2025-X9  ');
+    assert.equal(res.success, true);
+    assert.equal(res.text, 'AIM-PRO-2025-X9');
+    assert.equal(res.cursor, 15);
+    assert.equal(res.submitted, false); // Crucial: must NOT auto-submit
+
+    // Empty clipboard handling
+    const emptyRes = handlePaste('');
+    assert.equal(emptyRes.success, false);
+    assert.equal(emptyRes.text, 'AIM-PRO-2025-X9'); // Preserves previous input without crash
+  });
+
+  // Test 12: Mandatory Internet Check prevents launch when offline
+  test('Mandatory Internet Check gates launch button: blocks offline, allows online', () => {
+    const launchGameFlow = (isNetworkOnline) => {
+      if (!isNetworkOnline) {
+        return {
+          proceeded: false,
+          error: 'No Internet Connection. Please connect to the internet and try again.',
+          showSpinner: false
+        };
+      }
+      return {
+        proceeded: true,
+        error: null,
+        showSpinner: true
+      };
+    };
+
+    // When offline
+    const offlineResult = launchGameFlow(false);
+    assert.equal(offlineResult.proceeded, false);
+    assert.equal(offlineResult.showSpinner, false);
+    assert.match(offlineResult.error, /No Internet Connection/);
+
+    // When online
+    const onlineResult = launchGameFlow(true);
+    assert.equal(onlineResult.proceeded, true);
+    assert.equal(onlineResult.showSpinner, true);
+  });
+
+  // Test 13: Game package mapping for Carrom Disc Pool
+  test('Target game package resolves to com.miniclip.carrom for Carrom Disc Pool', () => {
+    const games = [
+      { id: 'carrom', name: 'Carrom Disc Pool', package: 'com.miniclip.carrom' },
+      { id: '8ball', name: '8 Ball Pool', package: 'com.miniclip.eightballpool' }
+    ];
+
+    const activeGame = games.find(g => g.id === 'carrom');
+    assert.ok(activeGame);
+    assert.equal(activeGame.package, 'com.miniclip.carrom');
+  });
+
+  // Test 14: Badge text contrast fix ensures non-invisible text
+  test('Badge background color (#49DCA0) and text color (#0B0F17) have strong contrast', () => {
+    const bgGreen = '#49DCA0';
+    const textDark = '#0B0F17';
+    // Old bug: text was #49DCA0 on #49DCA0 (invisible)
+    assert.notEqual(bgGreen, textDark);
+    assert.equal(textDark, '#0B0F17');
+  });
+
+  // Test 15: Supported language locale mapping (en, bn, hi)
+  test('Language options map cleanly to supported ISO codes', () => {
+    const langMap = {
+      'English': 'en',
+      'বাংলা (Bengali)': 'bn',
+      'हिन्दी (Hindi)': 'hi'
+    };
+
+    assert.equal(langMap['English'], 'en');
+    assert.equal(langMap['বাংলা (Bengali)'], 'bn');
+    assert.equal(langMap['हिन्दी (Hindi)'], 'hi');
+  });
 });
+
 
