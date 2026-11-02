@@ -23,6 +23,17 @@ android {
             keyAlias "androiddebugkey"
             keyPassword "android"
         }
+        release {
+            def keystorePath = System.getenv("KEYSTORE_FILE") ?: "${rootDir}/keystore/aimshot-release.p12"
+            def releaseStoreFile = file(keystorePath)
+            if (releaseStoreFile.exists()) {
+                storeFile releaseStoreFile
+                storeType "PKCS12"
+                storePassword System.getenv("KEYSTORE_PASSWORD") ?: "aimshot2026pass"
+                keyAlias System.getenv("KEY_ALIAS") ?: "aimshot-release-key"
+                keyPassword System.getenv("KEY_PASSWORD") ?: "aimshot2026pass"
+            }
+        }
     }
 
     buildTypes {
@@ -32,6 +43,9 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (signingConfigs.release.storeFile != null && signingConfigs.release.storeFile.exists()) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 

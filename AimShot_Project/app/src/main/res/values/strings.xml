@@ -124,4 +124,29 @@
     <string name="game_not_installed_msg">%1$s is not installed on this device. Please install it to use AimShot Engine aim assist.</string>
     <string name="btn_install_game">Install Game</string>
     <string name="connection_lost">Internet connection lost during launch. Please try again.</string>
+
+    <!-- Secure APK Update & Verification System -->
+    <string name="setting_update_title">Check for Updates</string>
+    <string name="setting_update_desc">Current Version %1$s • Tap to check</string>
+    <string name="update_dialog_title">AimShot Update System</string>
+    <string name="update_checking">Checking for updates...</string>
+    <string name="update_up_to_date">AimShot Engine is up to date (%1$s)</string>
+    <string name="update_available_title">New Version Available</string>
+    <string name="update_available_subtitle">AimShot Engine v%1$s is ready to install</string>
+    <string name="update_btn_download">Download &amp; Install</string>
+    <string name="update_btn_check">Check Updates</string>
+    <string name="update_status_network">Verifying internet &amp; server reachability...</string>
+    <string name="update_status_auth">Authenticating with Alpha10 Server...</string>
+    <string name="update_status_downloading">Downloading update: %1$d%%</string>
+    <string name="update_status_sha">Verifying SHA-256 package integrity...</string>
+    <string name="update_status_cert">Verifying permanent release certificate...</string>
+    <string name="update_status_installing">Launching Android Package Installer...</string>
+    <string name="update_failed_auth">Authentication failed. Unable to obtain download token.</string>
+    <string name="update_failed_sha">Integrity check failed: SHA-256 hash mismatch.</string>
+    <string name="update_failed_cert">Security check failed: Signing certificate mismatch.</string>
+    <string name="update_failed_storage">Insufficient internal storage space.</string>
+    <string name="update_failed_network">Network error: Connection to Alpha10 server failed.</string>
+    <string name="update_permission_prompt">Install permission required. Please enable Unknown App Installation for AimShot Engine.</string>
+    <string name="btn_retry">Retry</string>
+    <string name="btn_cancel">Cancel</string>
 </resources>

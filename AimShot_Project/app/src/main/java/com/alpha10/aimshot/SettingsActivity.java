@@ -233,6 +233,15 @@ public class SettingsActivity extends BaseActivity {
             rowHelp.setOnClickListener(v -> startActivity(new Intent(SettingsActivity.this, SellerContactActivity.class)));
         }
 
+        // Check for Updates & Security row
+        View rowUpdate = findViewById(R.id.row_setting_update);
+        if (rowUpdate != null) {
+            rowUpdate.setOnClickListener(v -> {
+                triggerHapticFeedback();
+                new com.alpha10.aimshot.dialog.UpdateDialog(SettingsActivity.this).show();
+            });
+        }
+
         // About App row (Solid Popup)
         View rowAbout = findViewById(R.id.row_setting_about);
         if (rowAbout != null) {

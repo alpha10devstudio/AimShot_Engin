@@ -124,4 +124,29 @@
     <string name="game_not_installed_msg">এই ডিভাইসে %1$s ইনস্টল করা নেই। AimShot Engine ব্যবহার করতে দয়া করে এটি ইনস্টল করুন।</string>
     <string name="btn_install_game">গেম ইনস্টল করুন</string>
     <string name="connection_lost">চালু করার সময় ইন্টারনেট সংযোগ বিচ্ছিন্ন হয়েছে। আবার চেষ্টা করুন।</string>
+
+    <!-- Secure APK Update & Verification System -->
+    <string name="setting_update_title">আপডেট চেক করুন</string>
+    <string name="setting_update_desc">বর্তমান ভার্সন %1$s • চেক করতে ট্যাপ করুন</string>
+    <string name="update_dialog_title">AimShot আপডেট সিস্টেম</string>
+    <string name="update_checking">আপডেট খোঁজা হচ্ছে...</string>
+    <string name="update_up_to_date">AimShot Engine সম্পূর্ণ আপ-টু-ডেট রয়েছে (%1$s)</string>
+    <string name="update_available_title">নতুন ভার্সন পাওয়া গেছে</string>
+    <string name="update_available_subtitle">AimShot Engine v%1$s ইনস্টল করার জন্য প্রস্তুত</string>
+    <string name="update_btn_download">ডাউনলোড ও ইনস্টল</string>
+    <string name="update_btn_check">আপডেট চেক</string>
+    <string name="update_status_network">ইন্টারনেট ও সার্ভার যাচাই করা হচ্ছে...</string>
+    <string name="update_status_auth">Alpha10 সার্ভারে প্রমাণীকরণ করা হচ্ছে...</string>
+    <string name="update_status_downloading">আপডেট ডাউনলোড হচ্ছে: %1$d%%</string>
+    <string name="update_status_sha">SHA-256 প্যাকেজ সততা যাচাই করা হচ্ছে...</string>
+    <string name="update_status_cert">রিলিজ সার্টিফিকেট যাচাই করা হচ্ছে...</string>
+    <string name="update_status_installing">প্যাকেজ ইনস্টলার প্রস্তুত করা হচ্ছে...</string>
+    <string name="update_failed_auth">প্রমাণীকরণ ব্যর্থ হয়েছে। ডাউনলোড টোকেন পাওয়া যায়নি।</string>
+    <string name="update_failed_sha">সততা যাচাই ব্যর্থ: SHA-256 হ্যাশ অমিল।</string>
+    <string name="update_failed_cert">নিরাপত্তা যাচাই ব্যর্থ: স্বাক্ষরকারী সার্টিফিকেট অমিল।</string>
+    <string name="update_failed_storage">ডিভাইসে পর্যাপ্ত ইন্টারনাল স্টোরেজ খালি নেই।</string>
+    <string name="update_failed_network">নেটওয়ার্ক ত্রুটি: Alpha10 সার্ভারের সাথে সংযোগ ব্যর্থ।</string>
+    <string name="update_permission_prompt">ইনস্টলেশন অনুমতি প্রয়োজন। অনুগ্রহ করে অজানা অ্যাপ ইনস্টল করার অনুমতি দিন।</string>
+    <string name="btn_retry">পুনরায় চেষ্টা করুন</string>
+    <string name="btn_cancel">বাতিল</string>
 </resources>

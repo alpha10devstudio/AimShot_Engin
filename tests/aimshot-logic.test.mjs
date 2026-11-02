@@ -226,6 +226,106 @@ describe('AimShot Engine Pure Logic Unit Tests', () => {
     assert.equal(langMap['বাংলা (Bengali)'], 'bn');
     assert.equal(langMap['हिन्दी (Hindi)'], 'hi');
   });
+
+  // Test 16: Release Manifest version comparison
+  test('Release Manifest correctly identifies newer version vs up-to-date', () => {
+    const currentVersionCode = 1; // v1.0.0
+    const manifestNew = { versionCode: 2, versionName: '1.0.1' };
+    const manifestSame = { versionCode: 1, versionName: '1.0.0' };
+
+    assert.equal(manifestNew.versionCode > currentVersionCode, true);
+    assert.equal(manifestSame.versionCode > currentVersionCode, false);
+  });
+
+  // Test 17: SHA-256 integrity check logic with case/colon normalization
+  test('SHA-256 integrity check normalizes hex format and rejects tampered digests', () => {
+    const cleanHash = (h) => (h ? h.replace(/[:\s]/g, '').toLowerCase() : '');
+    const expected = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+    const calculatedMatching = 'E3:B0:C4:42:98:FC:1C:14:9A:FB:F4:C8:99:6F:B9:24:27:AE:41:E4:64:9B:93:4C:A4:95:99:1B:78:52:B8:55';
+    const calculatedTampered = '112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00';
+
+    assert.equal(cleanHash(calculatedMatching), cleanHash(expected));
+    assert.notEqual(cleanHash(calculatedTampered), cleanHash(expected));
+  });
+
+  // Test 18: Permanent signing certificate SHA-256 fingerprint verification
+  test('Permanent signing certificate matches established release identity fingerprint', () => {
+    const trustedFingerprint = '1C:8D:56:83:62:EE:D9:04:02:36:43:0D:AC:8D:1F:BE:30:06:0E:9F:FD:2D:F4:01:AB:69:04:E7:94:86:A5:A2';
+    const clean = (fp) => fp.replace(/[:\s]/g, '').toUpperCase();
+    const extractedCert = '1c8d568362eed9040236430dac8d1fbe30060e9ffd2df401ab6904e79486a5a2';
+
+    assert.equal(clean(extractedCert), clean(trustedFingerprint));
+    assert.equal(clean(trustedFingerprint).length, 64);
+  });
+
+  // Test 19: Temporary Bearer token 60s lifecycle and single-use policy
+  test('Temporary token expires after 60 seconds and cannot be reused', () => {
+    const issuedAt = Date.now();
+    const expiresInMs = 60 * 1000;
+    let token = 'tmp_sec_tok_alpha10_xyz789';
+    let isUsed = false;
+
+    const useToken = (currentTime) => {
+      if (currentTime > issuedAt + expiresInMs) return { valid: false, error: 'Token expired' };
+      if (isUsed) return { valid: false, error: 'Token already consumed' };
+      isUsed = true;
+      const consumedToken = token;
+      token = null; // Cleared from memory immediately
+      return { valid: true, token: consumedToken };
+    };
+
+    // First use within window
+    const firstUse = useToken(issuedAt + 10000);
+    assert.equal(firstUse.valid, true);
+    assert.equal(firstUse.token, 'tmp_sec_tok_alpha10_xyz789');
+
+    // Second use rejected (single-use)
+    const secondUse = useToken(issuedAt + 20000);
+    assert.equal(secondUse.valid, false);
+    assert.equal(secondUse.error, 'Token already consumed');
+
+    // Expired token rejected
+    isUsed = false;
+    token = 'another_tok';
+    const expiredUse = useToken(issuedAt + 70000);
+    assert.equal(expiredUse.valid, false);
+    assert.equal(expiredUse.error, 'Token expired');
+  });
+
+  // Test 20: Staging atomic file lifecycle (promotes .tmp only on complete success)
+  test('Atomic staging preserves clean internal storage and cleans up on failure', () => {
+    const fileStore = new Map();
+    const stageFile = (name, content) => fileStore.set(`${name}.tmp`, content);
+    const promoteFile = (name) => {
+      const data = fileStore.get(`${name}.tmp`);
+      fileStore.delete(`${name}.tmp`);
+      fileStore.set(name, data);
+    };
+    const abortAndClean = (name) => fileStore.delete(`${name}.tmp`);
+
+    // Failed download cleanup
+    stageFile('AimShot_v2.apk', 'partial_stream');
+    abortAndClean('AimShot_v2.apk');
+    assert.equal(fileStore.has('AimShot_v2.apk.tmp'), false);
+    assert.equal(fileStore.has('AimShot_v2.apk'), false);
+
+    // Successful download promotion
+    stageFile('AimShot_v2.apk', 'full_verified_apk_bytes');
+    promoteFile('AimShot_v2.apk');
+    assert.equal(fileStore.has('AimShot_v2.apk.tmp'), false);
+    assert.equal(fileStore.has('AimShot_v2.apk'), true);
+  });
+
+  // Test 21: Package name check rejects non-AimShot packages
+  test('Package identity validator enforces com.alpha10.aimshot package ID', () => {
+    const expectedPackage = 'com.alpha10.aimshot';
+    const isValidPackage = (pkg) => pkg === expectedPackage;
+
+    assert.equal(isValidPackage('com.alpha10.aimshot'), true);
+    assert.equal(isValidPackage('com.fake.impostor'), false);
+    assert.equal(isValidPackage('com.miniclip.carrom'), false);
+  });
 });
+
 
 

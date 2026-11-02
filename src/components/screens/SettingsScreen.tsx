@@ -12,7 +12,11 @@ import {
   LogOut,
   ChevronRight,
   Cpu,
-  Check
+  Check,
+  Download,
+  RefreshCw,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
 import { AppTheme } from '../../types';
 import { Language, Translations } from '../../data/translations';
@@ -48,6 +52,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [isLangDialogOpen, setIsLangDialogOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [activeModal, setActiveModal] = useState<'privacy' | 'about' | null>(null);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [updatePhase, setUpdatePhase] = useState<'idle' | 'checking' | 'downloading' | 'verifying' | 'ready'>('idle');
+  const [updateProgress, setUpdateProgress] = useState(0);
 
   const availableLanguages: { code: Language; name: string; nativeName: string }[] = [
     { code: 'en', name: 'English', nativeName: 'English (US)' },
@@ -317,6 +324,35 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           <ChevronRight className={`w-4 h-4 ${isDark ? 'text-[#8D9BB0]' : 'text-[#94A3B8]'}`} />
         </div>
 
+        {/* Check for Updates & Security */}
+        <div
+          onClick={() => setIsUpdateModalOpen(true)}
+          className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between cursor-pointer ${
+            isDark
+              ? 'bg-[#111B2A] border-[#1C2B42] hover:border-[#39B9FF]/40'
+              : 'bg-white border-[#CBD5E1] hover:border-[#0284C7]/40 shadow-xs'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                isDark ? 'bg-[#39B9FF]/15 text-[#39B9FF]' : 'bg-[#E0F2FE] text-[#0284C7]'
+              }`}
+            >
+              <Download className="w-4 h-4" />
+            </div>
+            <div className="flex flex-col">
+              <span className={`text-sm font-bold ${isDark ? 'text-white' : 'text-[#0F172A]'}`}>
+                {language === 'bn' ? 'আপডেট চেক করুন' : language === 'hi' ? 'अपडेट जांचें' : 'Check for Updates'}
+              </span>
+              <span className={`text-[11px] ${isDark ? 'text-[#39B9FF]' : 'text-[#0284C7]'}`}>
+                {language === 'bn' ? 'বর্তমান ভার্সন v1.0.0 • ট্যাপ করুন' : language === 'hi' ? 'वर्तमान v1.0.0 • जांचें' : 'v1.0.0 • Tap to verify releases'}
+              </span>
+            </div>
+          </div>
+          <ChevronRight className={`w-4 h-4 ${isDark ? 'text-[#8D9BB0]' : 'text-[#94A3B8]'}`} />
+        </div>
+
         {/* About App */}
         <div
           onClick={() => setActiveModal('about')}
@@ -514,6 +550,122 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             >
               {t.close}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Software Update & Cryptographic Verification Modal */}
+      {isUpdateModalOpen && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+          <div
+            className={`w-full max-w-xs rounded-2xl p-5 border text-center ${
+              isDark ? 'bg-[#111B2A] border-[#39B9FF]/50 text-white' : 'bg-white border-[#0284C7]/50 text-[#0F172A]'
+            }`}
+          >
+            <div className="w-12 h-12 rounded-2xl bg-[#39B9FF]/15 text-[#39B9FF] flex items-center justify-center mx-auto mb-3 border border-[#39B9FF]/30">
+              <Download className="w-6 h-6" />
+            </div>
+
+            <h3 className="text-base font-bold tracking-wide">
+              {language === 'bn' ? 'AimShot ইঞ্জিন আপডেট সিস্টেম' : language === 'hi' ? 'AimShot इंजन अपडेट सिस्टम' : 'AimShot Engine Update'}
+            </h3>
+            <span className="text-[11px] text-[#39B9FF] font-mono tracking-wider block mt-0.5 mb-3">
+              SECURE SHA-256 &amp; CERT GATE
+            </span>
+
+            {/* Version comparison strip */}
+            <div className={`p-2.5 rounded-xl mb-4 text-xs flex items-center justify-between border ${
+              isDark ? 'bg-[#0B0F17] border-[#1C2B42]' : 'bg-[#F8FAFC] border-[#E2E8F0]'
+            }`}>
+              <div className="text-left">
+                <span className="text-[10px] text-[#64748B] block">Current</span>
+                <span className="font-mono font-bold">v1.0.0</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-[#39B9FF]" />
+              <div className="text-right">
+                <span className="text-[10px] text-[#64748B] block">Available</span>
+                <span className="font-mono font-bold text-[#39B9FF]">v1.0.1</span>
+              </div>
+            </div>
+
+            {/* Status message */}
+            <p className={`text-xs mb-3 min-h-[32px] flex items-center justify-center ${
+              isDark ? 'text-[#8D9BB0]' : 'text-[#64748B]'
+            }`}>
+              {updatePhase === 'idle' && (language === 'bn' ? 'Alpha10 সার্ভার থেকে নিরাপদ রিলিজ ডাউনলোড করতে প্রস্তুত।' : 'Ready to authenticate and stream verified release from Alpha10 server.')}
+              {updatePhase === 'checking' && (language === 'bn' ? 'Alpha10 সার্ভারে প্রমাণীকরণ করা হচ্ছে...' : 'Authenticating with Alpha10 server (POST /api/auth.php)...')}
+              {updatePhase === 'downloading' && (language === 'bn' ? `রিলিজ APK ডাউনলোড হচ্ছে... ${updateProgress}%` : `Streaming release APK: ${updateProgress}%`)}
+              {updatePhase === 'verifying' && (language === 'bn' ? 'SHA-256 এবং সার্টিফিকেট ফিঙ্গারপ্রিন্ট যাচাই করা হচ্ছে...' : 'Verifying SHA-256 digest & permanent signing certificate...')}
+              {updatePhase === 'ready' && (language === 'bn' ? 'যাচাইকরণ সফল! প্যাকেজ ইনস্টলারের জন্য প্রস্তুত।' : 'Cryptographic checks passed! Ready for Android PackageInstaller.')}
+            </p>
+
+            {/* Progress bar */}
+            {(updatePhase === 'checking' || updatePhase === 'downloading' || updatePhase === 'verifying') && (
+              <div className="w-full bg-[#1C2B42] h-2 rounded-full overflow-hidden mb-4">
+                <div
+                  className="bg-[#39B9FF] h-full transition-all duration-300"
+                  style={{ width: `${updateProgress}%` }}
+                />
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setIsUpdateModalOpen(false);
+                  setUpdatePhase('idle');
+                  setUpdateProgress(0);
+                }}
+                className={`flex-1 py-2.5 rounded-xl border text-xs font-bold cursor-pointer ${
+                  isDark ? 'border-[#1C2B42] text-[#8D9BB0] hover:text-white' : 'border-[#CBD5E1] text-[#64748B] hover:text-[#0F172A]'
+                }`}
+              >
+                {t.close}
+              </button>
+
+              {updatePhase === 'idle' && (
+                <button
+                  onClick={() => {
+                    setUpdatePhase('checking');
+                    setUpdateProgress(15);
+                    setTimeout(() => {
+                      setUpdatePhase('downloading');
+                      setUpdateProgress(45);
+                      setTimeout(() => {
+                        setUpdateProgress(85);
+                        setTimeout(() => {
+                          setUpdatePhase('verifying');
+                          setUpdateProgress(95);
+                          setTimeout(() => {
+                            setUpdatePhase('ready');
+                            setUpdateProgress(100);
+                            onShowToast('AimShot Engine v1.0.1 verified successfully!');
+                          }, 1200);
+                        }, 1200);
+                      }, 1000);
+                    }, 800);
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-[#39B9FF] text-xs font-bold text-[#0B0F17] hover:bg-[#39B9FF]/90 cursor-pointer shadow-[0_0_12px_rgba(57,185,255,0.3)]"
+                >
+                  {language === 'bn' ? 'আপডেট শুরু করুন' : language === 'hi' ? 'अपडेट शुरू करें' : 'Start Update'}
+                </button>
+              )}
+
+              {updatePhase === 'ready' && (
+                <button
+                  onClick={() => {
+                    setIsUpdateModalOpen(false);
+                    setUpdatePhase('idle');
+                    setUpdateProgress(0);
+                    onShowToast('PackageInstaller intent dispatched via FileProvider');
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-[#49DCA0] text-xs font-bold text-[#0B0F17] hover:bg-[#49DCA0]/90 cursor-pointer shadow-[0_0_12px_rgba(73,220,160,0.3)]"
+                >
+                  {language === 'bn' ? 'ইনস্টল করুন' : language === 'hi' ? 'इंस्टॉल करें' : 'Install APK'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

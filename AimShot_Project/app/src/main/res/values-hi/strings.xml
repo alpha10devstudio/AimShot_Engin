@@ -124,4 +124,29 @@
     <string name="game_not_installed_msg">इस डिवाइस पर %1$s इंस्टॉल नहीं है। AimShot Engine का उपयोग करने के लिए कृपया इसे इंस्टॉल करें।</string>
     <string name="btn_install_game">गेम इंस्टॉल करें</string>
     <string name="connection_lost">लॉन्च के दौरान इंटरनेट कनेक्शन टूट गया। कृपया पुनः प्रयास करें।</string>
+
+    <!-- Secure APK Update & Verification System -->
+    <string name="setting_update_title">अपडेट जांचें</string>
+    <string name="setting_update_desc">वर्तमान संस्करण %1$s • जांचने के लिए टैप करें</string>
+    <string name="update_dialog_title">AimShot अपडेट सिस्टम</string>
+    <string name="update_checking">अपडेट खोजा जा रहा है...</string>
+    <string name="update_up_to_date">AimShot Engine पूरी तरह से अपडेट है (%1$s)</string>
+    <string name="update_available_title">नया संस्करण उपलब्ध है</string>
+    <string name="update_available_subtitle">AimShot Engine v%1$s इंस्टॉल के लिए तैयार है</string>
+    <string name="update_btn_download">डाउनलोड और इंस्टॉल</string>
+    <string name="update_btn_check">अपडेट जांचें</string>
+    <string name="update_status_network">इंटरनेट और सर्वर पहुंच सत्यापित की जा रही है...</string>
+    <string name="update_status_auth">Alpha10 सर्वर से प्रमाणीकरण किया जा रहा है...</string>
+    <string name="update_status_downloading">अपडेट डाउनलोड हो रहा है: %1$d%%</string>
+    <string name="update_status_sha">SHA-256 पैकेज अखंडता सत्यापित की जा रही है...</string>
+    <string name="update_status_cert">रिलीज़ प्रमाणपत्र सत्यापित किया जा रहा है...</string>
+    <string name="update_status_installing">पैकेज इंस्टॉलर तैयार किया जा रहा है...</string>
+    <string name="update_failed_auth">प्रमाणीकरण विफल रहा। डाउनलोड टोकन प्राप्त नहीं हुआ।</string>
+    <string name="update_failed_sha">अखंडता जांच विफल: SHA-256 हैश मेल नहीं खाता।</string>
+    <string name="update_failed_cert">सुरक्षा जांच विफल: हस्ताक्षर प्रमाणपत्र मेल नहीं खाता।</string>
+    <string name="update_failed_storage">डिवाइस में पर्याप्त आंतरिक स्थान खाली नहीं है।</string>
+    <string name="update_failed_network">नेटवर्क त्रुटि: Alpha10 सर्वर से कनेक्शन विफल।</string>
+    <string name="update_permission_prompt">इंस्टॉलेशन अनुमति आवश्यक है। कृपया अज्ञात ऐप्स इंस्टॉल करने की अनुमति दें।</string>
+    <string name="btn_retry">पुनः प्रयास करें</string>
+    <string name="btn_cancel">रद्द करें</string>
 </resources>
