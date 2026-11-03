@@ -7,7 +7,7 @@ android {
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.alpha10.aimshot"
+        applicationId "com.alpha10.aimshot.launcher"
         minSdk 24
         targetSdk 34
         versionCode 1

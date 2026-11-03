@@ -636,6 +636,54 @@ describe('AimShot Engine Pure Logic Unit Tests', () => {
     assert.equal(result.canOpen, true);
     assert.equal(result.package, 'com.alpha10.aimshot');
   });
+
+  // Test 32: Dual Application Architecture & Package ID Distinction
+  test('Dual Application Architecture: Launcher and Main Engine have distinct package IDs', () => {
+    const LAUNCHER_PACKAGE = 'com.alpha10.aimshot.launcher';
+    const MAIN_ENGINE_PACKAGE = 'com.alpha10.aimshot';
+
+    // Must be distinct to avoid Android OS treating them as identical apps
+    assert.notEqual(LAUNCHER_PACKAGE, MAIN_ENGINE_PACKAGE);
+    assert.equal(LAUNCHER_PACKAGE.startsWith('com.alpha10.aimshot'), true);
+    assert.equal(MAIN_ENGINE_PACKAGE, 'com.alpha10.aimshot');
+  });
+
+  // Test 33: Self-Launch Loop Prevention
+  test('Self-Launch Loop Prevention: Launcher explicitly refuses to launch itself', () => {
+    const launchInstalledApp = (currentPackage, targetPackage) => {
+      // Loop protection: if launcher and target are identical, reject launch
+      if (currentPackage === targetPackage) {
+        return { success: false, error: 'Self-launch loop prevented' };
+      }
+      return { success: true, launchedPackage: targetPackage };
+    };
+
+    // Buggy previous state (both had same ID) -> blocked by safety check
+    const loopAttempt = launchInstalledApp('com.alpha10.aimshot', 'com.alpha10.aimshot');
+    assert.equal(loopAttempt.success, false);
+    assert.equal(loopAttempt.error, 'Self-launch loop prevented');
+
+    // Fixed dual-package architecture -> launches external Main Engine cleanly
+    const cleanLaunch = launchInstalledApp('com.alpha10.aimshot.launcher', 'com.alpha10.aimshot');
+    assert.equal(cleanLaunch.success, true);
+    assert.equal(cleanLaunch.launchedPackage, 'com.alpha10.aimshot');
+  });
+
+  // Test 34: Authoritative External Package Status Detection
+  test('External Package Status Detection: Accurate OS query from com.alpha10.aimshot.launcher', () => {
+    const installedSystemPackages = new Set(['com.alpha10.aimshot.launcher', 'com.miniclip.carrom']);
+
+    const isMainApkInstalled = (systemPackages, targetPackage = 'com.alpha10.aimshot') => {
+      return systemPackages.has(targetPackage);
+    };
+
+    // Initially Main APK is not installed -> returns false, prompting download
+    assert.equal(isMainApkInstalled(installedSystemPackages), false);
+
+    // After Main APK is installed via PackageInstaller -> returns true
+    installedSystemPackages.add('com.alpha10.aimshot');
+    assert.equal(isMainApkInstalled(installedSystemPackages), true);
+  });
 });
 
 

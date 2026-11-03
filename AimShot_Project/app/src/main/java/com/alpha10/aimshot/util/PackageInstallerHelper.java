@@ -154,32 +154,28 @@ public class PackageInstallerHelper {
 
     /**
      * Checks if the Main AimShot Engine APK (com.alpha10.aimshot) is installed.
-     * When running as a separate launcher, inspects the OS PackageManager.
-     * When running in unified launcher environment, checks verified installation state.
+     * With the Launcher running as com.alpha10.aimshot.launcher, this checks the OS
+     * for the presence of the separate Main Engine package com.alpha10.aimshot.
      */
     public static boolean isMainApkInstalled(Context context) {
         if (context == null) return false;
 
-        // Situation A: Check if package is installed in the Android OS
-        if (!context.getPackageName().equals(TARGET_PACKAGE_NAME)) {
-            try {
-                PackageManager pm = context.getPackageManager();
-                Intent launchIntent = pm.getLaunchIntentForPackage(TARGET_PACKAGE_NAME);
-                if (launchIntent != null) {
-                    return true;
-                }
-                PackageInfo info = pm.getPackageInfo(TARGET_PACKAGE_NAME, 0);
-                return info != null;
-            } catch (PackageManager.NameNotFoundException e) {
-                return false;
-            } catch (Exception e) {
-                return false;
+        try {
+            PackageManager pm = context.getPackageManager();
+            Intent launchIntent = pm.getLaunchIntentForPackage(TARGET_PACKAGE_NAME);
+            if (launchIntent != null) {
+                return true;
             }
+            PackageInfo info = pm.getPackageInfo(TARGET_PACKAGE_NAME, 0);
+            return info != null;
+        } catch (PackageManager.NameNotFoundException e) {
+            // Check fallback shared preferences flag in case newly installed in this session
+            return context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+                    .getBoolean(KEY_MAIN_APK_INSTALLED, false);
+        } catch (Exception e) {
+            Log.w(TAG, "Error checking package info: " + e.getMessage());
+            return false;
         }
-
-        // Check persistent launcher installation flag
-        return context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-                .getBoolean(KEY_MAIN_APK_INSTALLED, false);
     }
 
     /**
@@ -196,10 +192,17 @@ public class PackageInstallerHelper {
 
     /**
      * Launches the installed Main AimShot Engine application using its official launcher intent.
-     * Under NO circumstances will this launch Carrom Pool or any unrelated package.
+     * Prevents self-launch loop by verifying the target package is distinct from launcher package.
+     * Under NO circumstances will this launch Carrom Pool or re-launch the Launcher itself.
      */
     public static boolean launchInstalledApp(Context context) {
         if (context == null) return false;
+
+        // Safety verification: never self-launch the launcher
+        if (context.getPackageName().equals(TARGET_PACKAGE_NAME)) {
+            Log.e(TAG, "Refusing self-launch: launcher and target share identical package ID!");
+            return false;
+        }
 
         try {
             PackageManager pm = context.getPackageManager();
@@ -207,7 +210,7 @@ public class PackageInstallerHelper {
             if (launchIntent != null) {
                 launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 context.startActivity(launchIntent);
-                Log.i(TAG, "Successfully started launch intent for: " + TARGET_PACKAGE_NAME);
+                Log.i(TAG, "Successfully started Main AimShot Engine intent for: " + TARGET_PACKAGE_NAME);
                 return true;
             }
 
@@ -218,11 +221,11 @@ public class PackageInstallerHelper {
             mainIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             if (mainIntent.resolveActivity(pm) != null) {
                 context.startActivity(mainIntent);
-                Log.i(TAG, "Started explicit ACTION_MAIN intent for: " + TARGET_PACKAGE_NAME);
+                Log.i(TAG, "Started explicit ACTION_MAIN intent for Main AimShot Engine: " + TARGET_PACKAGE_NAME);
                 return true;
             }
         } catch (Exception e) {
-            Log.e(TAG, "Failed to launch installed app: " + e.getMessage(), e);
+            Log.e(TAG, "Failed to launch installed Main Engine app: " + e.getMessage(), e);
         }
         return false;
     }

@@ -121,7 +121,7 @@ export interface Translations {
 export const TRANSLATIONS: Record<Language, Translations> = {
   en: {
     appTitle: 'AimShot',
-    appEngine: 'Engine',
+    appEngine: 'Launcher',
     appSlogan: 'Sharper Aim • Better Game • Higher You',
     toolkitBadge: 'Pro Gaming Toolkit',
     featuredTag: 'FEATURED V1.0',
@@ -229,7 +229,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
 
   bn: {
     appTitle: 'এইমশট',
-    appEngine: 'ইঞ্জিন',
+    appEngine: 'লঞ্চার',
     appSlogan: 'শার্পার এইম • বেটার গেম • হায়ার ইউ',
     toolkitBadge: 'প্রো গেমিং টুলকিট',
     featuredTag: 'ফিচার্ড V১.০',
@@ -337,7 +337,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
 
   hi: {
     appTitle: 'एमशॉट',
-    appEngine: 'इंजन',
+    appEngine: 'लॉन्चर',
     appSlogan: 'शार्पर एम • बेहतर गेम • उच्च रैंक',
     toolkitBadge: 'प्रो गेमिंग टूलकिट',
     featuredTag: 'फीचर्ड V1.0',
