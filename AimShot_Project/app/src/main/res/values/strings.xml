@@ -149,4 +149,17 @@
     <string name="update_permission_prompt">Install permission required. Please enable Unknown App Installation for AimShot Engine.</string>
     <string name="btn_retry">Retry</string>
     <string name="btn_cancel">Cancel</string>
+
+    <!-- 9 Distinct Tactical Pipeline Stages -->
+    <string name="stage_1_internet">1. Checking Internet Connection</string>
+    <string name="stage_2_server">2. Connecting to Alpha10 Server</string>
+    <string name="stage_3_auth">3. Authenticating</string>
+    <string name="stage_4_download">4. Downloading AimShot Engine</string>
+    <string name="stage_5_verify">5. Verifying APK Security</string>
+    <string name="stage_6_confirm">6. Waiting for Installation Confirmation</string>
+    <string name="stage_7_install">7. Installing AimShot Engine</string>
+    <string name="stage_8_success">8. Installation Successful</string>
+    <string name="stage_9_open">9. Opening AimShot Engine</string>
+    <string name="btn_open_app">OPEN AIMSHOT ENGINE</string>
+    <string name="auto_launching_countdown">Launching AimShot Engine in %1$ds...</string>
 </resources>

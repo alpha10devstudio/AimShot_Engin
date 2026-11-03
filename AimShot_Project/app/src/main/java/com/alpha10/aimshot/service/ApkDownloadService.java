@@ -13,8 +13,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Downloads the release APK into application-private internal storage
- * using the authenticated single-use Bearer token.
+ * Downloads the binary release APK from GET https://alpha10.freedev.app/api/aimshot-download.php
+ * using the single-use Bearer token, strictly enforcing the 60-second expiration window
+ * and writing directly into app-private internal storage.
  */
 public class ApkDownloadService {
 
@@ -40,9 +41,19 @@ public class ApkDownloadService {
      */
     public void downloadApk(final Context context,
                             final String bearerToken,
+                            final long tokenIssuedAt,
+                            final long tokenExpiresInSeconds,
                             final int targetVersionCode,
                             final DownloadCallback callback) {
         if (callback == null || context == null) return;
+
+        // Verify token is not expired before initiating connection
+        long now = System.currentTimeMillis();
+        long tokenLifespanMillis = tokenExpiresInSeconds > 0 ? (tokenExpiresInSeconds * 1000) : 60000;
+        if (now > tokenIssuedAt + tokenLifespanMillis) {
+            callback.onDownloadError("Temporary token expired (exceeded 60s window). Please re-authenticate.", -101);
+            return;
+        }
 
         this.isCancelled = false;
         executor.execute(new Runnable() {
@@ -53,11 +64,22 @@ public class ApkDownloadService {
                 FileOutputStream fos = null;
                 File stagedFile = null;
 
+                // Token is single-use: copy locally and advise immediate caller-side disposal
+                String activeToken = bearerToken;
+
                 try {
                     // Ensure private downloads directory exists
                     File downloadsDir = new File(context.getFilesDir(), "downloads");
                     if (!downloadsDir.exists()) {
                         downloadsDir.mkdirs();
+                    }
+
+                    // Clean up any stale partial files
+                    File[] staleFiles = downloadsDir.listFiles((dir, name) -> name.endsWith(".tmp"));
+                    if (staleFiles != null) {
+                        for (File stale : staleFiles) {
+                            try { stale.delete(); } catch (Exception ignored) {}
+                        }
                     }
 
                     // Staging file with .tmp extension
@@ -70,10 +92,13 @@ public class ApkDownloadService {
                     conn = (HttpURLConnection) url.openConnection();
                     conn.setRequestMethod("GET");
                     conn.setRequestProperty("User-Agent", "AimShotEngine/1.0 (Android)");
-                    conn.setRequestProperty("Authorization", "Bearer " + bearerToken);
+                    conn.setRequestProperty("Authorization", "Bearer " + activeToken);
                     conn.setRequestProperty("Accept", "application/octet-stream");
                     conn.setConnectTimeout(10000);
                     conn.setReadTimeout(15000);
+
+                    // Clear token reference immediately
+                    activeToken = null;
 
                     int responseCode = conn.getResponseCode();
                     if (responseCode != 200) {
@@ -82,9 +107,16 @@ public class ApkDownloadService {
                         return;
                     }
 
+                    String contentType = conn.getContentType();
+                    if (contentType != null && (contentType.contains("text/html") || contentType.contains("application/json"))) {
+                        cleanupFile(stagedFile);
+                        mainHandler.post(() -> callback.onDownloadError("Server returned non-binary error page instead of APK", -102));
+                        return;
+                    }
+
                     long contentLength = conn.getContentLength();
-                    // Storage check: ensure at least 2x expected content length or minimum 40MB
-                    long minRequiredSpace = contentLength > 0 ? (contentLength + (10 * 1024 * 1024)) : (40 * 1024 * 1024);
+                    // Storage check: ensure sufficient internal space
+                    long minRequiredSpace = contentLength > 0 ? (contentLength + (10 * 1024 * 1024)) : (30 * 1024 * 1024);
                     if (context.getFilesDir().getUsableSpace() < minRequiredSpace) {
                         cleanupFile(stagedFile);
                         mainHandler.post(() -> callback.onDownloadError("Insufficient internal storage to store update", -2));
@@ -121,7 +153,7 @@ public class ApkDownloadService {
 
                     fos.flush();
 
-                    // Verification that download is non-empty
+                    // Verification that download is complete
                     if (stagedFile.length() == 0 || (contentLength > 0 && stagedFile.length() < contentLength)) {
                         cleanupFile(stagedFile);
                         mainHandler.post(() -> callback.onDownloadError("Incomplete download received from server", -4));

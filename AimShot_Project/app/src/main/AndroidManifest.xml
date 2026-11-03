@@ -99,6 +99,20 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <!-- PackageInstaller Session Status Receiver -->
+        <receiver
+            android:name=".receiver.PackageInstallStatusReceiver"
+            android:exported="false" />
+
+        <!-- Package Replaced Secondary Confirmation Receiver -->
+        <receiver
+            android:name=".receiver.PackageInstallReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>

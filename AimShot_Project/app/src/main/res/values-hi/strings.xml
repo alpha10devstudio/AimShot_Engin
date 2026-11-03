@@ -149,4 +149,17 @@
     <string name="update_permission_prompt">इंस्टॉलेशन अनुमति आवश्यक है। कृपया अज्ञात ऐप्स इंस्टॉल करने की अनुमति दें।</string>
     <string name="btn_retry">पुनः प्रयास करें</string>
     <string name="btn_cancel">रद्द करें</string>
+
+    <!-- 9 Distinct Tactical Pipeline Stages -->
+    <string name="stage_1_internet">1. इंटरनेट कनेक्शन की जांच</string>
+    <string name="stage_2_server">2. Alpha10 सर्वर से कनेक्शन</string>
+    <string name="stage_3_auth">3. सर्वर प्रमाणीकरण</string>
+    <string name="stage_4_download">4. AimShot Engine डाउनलोड हो रहा है</string>
+    <string name="stage_5_verify">5. APK सुरक्षा एवं प्रमाणपत्र सत्यापन</string>
+    <string name="stage_6_confirm">6. इंस्टॉलेशन पुष्टि की प्रतीक्षा</string>
+    <string name="stage_7_install">7. AimShot Engine इंस्टॉल हो रहा है</string>
+    <string name="stage_8_success">8. इंस्टॉलेशन सफल रहा</string>
+    <string name="stage_9_open">9. AimShot Engine खोला जा रहा है</string>
+    <string name="btn_open_app">OPEN AIMSHOT ENGINE</string>
+    <string name="auto_launching_countdown">%1$d सेकंड में खोला जा रहा है...</string>
 </resources>

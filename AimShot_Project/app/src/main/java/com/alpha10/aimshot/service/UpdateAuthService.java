@@ -7,7 +7,6 @@ import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -15,8 +14,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Handles authentication against the Alpha10 backend to acquire
- * single-use temporary tokens for secure APK streaming.
+ * Handles server authentication against POST https://alpha10.freedev.app/api/auth.php
+ * with the required X-App-Key header and validates single-use token expiry (60s).
  */
 public class UpdateAuthService {
 
@@ -24,7 +23,7 @@ public class UpdateAuthService {
     public static final String DEFAULT_APP_KEY = "AIMSHOT-ALPHA10-ENGINE-2026";
 
     public interface AuthCallback {
-        void onAuthSuccess(String temporaryToken, long expiresInSeconds);
+        void onAuthSuccess(String temporaryToken, long expiresInSeconds, long issuedAtTimestamp);
         void onAuthFailure(String errorMessage, int httpCode);
     }
 
@@ -41,7 +40,8 @@ public class UpdateAuthService {
     }
 
     /**
-     * Authenticates with the Alpha10 server and returns a single-use token.
+     * Authenticates directly with the Alpha10 server via POST /api/auth.php
+     * with the required X-App-Key header.
      */
     public void authenticate(final AuthCallback callback) {
         if (callback == null) return;
@@ -57,16 +57,13 @@ public class UpdateAuthService {
                     conn.setRequestProperty("User-Agent", "AimShotEngine/1.0 (Android)");
                     conn.setRequestProperty("X-App-Key", appKey);
                     conn.setRequestProperty("Accept", "application/json");
-                    conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
                     conn.setConnectTimeout(8000);
                     conn.setReadTimeout(8000);
                     conn.setDoOutput(true);
 
-                    // Send basic request payload
-                    byte[] payload = "action=request_download_token".getBytes(StandardCharsets.UTF_8);
-                    try (OutputStream os = conn.getOutputStream()) {
-                        os.write(payload);
-                    }
+                    // Send empty POST body or standard request boundary
+                    byte[] emptyBytes = new byte[0];
+                    conn.getOutputStream().write(emptyBytes);
 
                     int responseCode = conn.getResponseCode();
                     if (responseCode == 200) {
@@ -79,8 +76,13 @@ public class UpdateAuthService {
                         }
 
                         String responseBody = sb.toString().trim();
+                        if (responseBody.isEmpty()) {
+                            mainHandler.post(() -> callback.onAuthFailure("Empty authentication response from server", responseCode));
+                            return;
+                        }
+
                         String token = null;
-                        long expiresIn = 60; // 60s default per spec
+                        long expiresIn = 60; // 60s default per server spec
 
                         try {
                             JSONObject json = new JSONObject(responseBody);
@@ -106,17 +108,16 @@ public class UpdateAuthService {
                         if (token != null && !token.isEmpty()) {
                             final String finalToken = token;
                             final long finalExpiresIn = expiresIn;
-                            mainHandler.post(() -> callback.onAuthSuccess(finalToken, finalExpiresIn));
-                            return;
+                            final long issuedAt = System.currentTimeMillis();
+                            mainHandler.post(() -> callback.onAuthSuccess(finalToken, finalExpiresIn, issuedAt));
                         } else {
-                            mainHandler.post(() -> callback.onAuthFailure("Invalid authentication response from server", responseCode));
-                            return;
+                            mainHandler.post(() -> callback.onAuthFailure("No valid token found in server authentication response", responseCode));
                         }
                     } else {
-                        mainHandler.post(() -> callback.onAuthFailure("Server rejected authentication (HTTP " + responseCode + ")", responseCode));
+                        mainHandler.post(() -> callback.onAuthFailure("Alpha10 server rejected authentication (HTTP " + responseCode + ")", responseCode));
                     }
                 } catch (Exception e) {
-                    mainHandler.post(() -> callback.onAuthFailure("Network error: " + e.getMessage(), -1));
+                    mainHandler.post(() -> callback.onAuthFailure("Network error communicating with auth.php: " + e.getMessage(), -1));
                 } finally {
                     if (conn != null) {
                         try { conn.disconnect(); } catch (Exception ignored) {}

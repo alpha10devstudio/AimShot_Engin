@@ -48,6 +48,7 @@ public class SettingsActivity extends BaseActivity {
 
     private boolean isNotificationsOn;
     private boolean isHapticOn;
+    private com.alpha10.aimshot.dialog.UpdateDialog currentUpdateDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,6 +64,14 @@ public class SettingsActivity extends BaseActivity {
 
         if (findViewById(android.R.id.content) != null) {
             FontHelper.applyRegularFont(findViewById(android.R.id.content));
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (currentUpdateDialog != null && currentUpdateDialog.isShowing()) {
+            currentUpdateDialog.onActivityResume();
         }
     }
 
@@ -238,7 +247,8 @@ public class SettingsActivity extends BaseActivity {
         if (rowUpdate != null) {
             rowUpdate.setOnClickListener(v -> {
                 triggerHapticFeedback();
-                new com.alpha10.aimshot.dialog.UpdateDialog(SettingsActivity.this).show();
+                currentUpdateDialog = new com.alpha10.aimshot.dialog.UpdateDialog(SettingsActivity.this);
+                currentUpdateDialog.show();
             });
         }
 

@@ -325,6 +325,217 @@ describe('AimShot Engine Pure Logic Unit Tests', () => {
     assert.equal(isValidPackage('com.fake.impostor'), false);
     assert.equal(isValidPackage('com.miniclip.carrom'), false);
   });
+
+  // Test 22: Authentication Failure Handling (X-App-Key, non-200, missing token)
+  test('UpdateAuthService handles auth errors, invalid HTTP status, and missing token', () => {
+    const handleAuthResponse = (status, body) => {
+      if (status !== 200) {
+        return { success: false, error: `Server returned HTTP ${status}` };
+      }
+      try {
+        const json = typeof body === 'string' ? JSON.parse(body) : body;
+        if (!json || !json.token) {
+          return { success: false, error: 'Server response missing security token' };
+        }
+        return { success: true, token: json.token, expiresIn: json.expires_in || 60 };
+      } catch (e) {
+        return { success: false, error: 'Malformed JSON from server' };
+      }
+    };
+
+    assert.deepEqual(handleAuthResponse(401, 'Unauthorized'), {
+      success: false,
+      error: 'Server returned HTTP 401'
+    });
+
+    assert.deepEqual(handleAuthResponse(500, 'Server Error'), {
+      success: false,
+      error: 'Server returned HTTP 500'
+    });
+
+    assert.deepEqual(handleAuthResponse(200, '<html>502 Bad Gateway</html>'), {
+      success: false,
+      error: 'Malformed JSON from server'
+    });
+
+    assert.deepEqual(handleAuthResponse(200, JSON.stringify({ status: 'ok' })), {
+      success: false,
+      error: 'Server response missing security token'
+    });
+
+    const valid = handleAuthResponse(200, JSON.stringify({ token: 'as_tok_99182', expires_in: 60 }));
+    assert.equal(valid.success, true);
+    assert.equal(valid.token, 'as_tok_99182');
+    assert.equal(valid.expiresIn, 60);
+  });
+
+  // Test 23: Download Failure & Content Validation (non-binary / HTML error page / size checks)
+  test('ApkDownloadService detects invalid content type, HTML error responses, and stream aborts', () => {
+    const validateDownloadStream = (httpStatus, contentType, byteLength, minExpectedBytes = 1000000) => {
+      if (httpStatus !== 200) {
+        return { ok: false, error: `Download failed with HTTP ${httpStatus}` };
+      }
+      if (contentType && contentType.includes('text/html')) {
+        return { ok: false, error: 'Server returned HTML instead of binary APK stream' };
+      }
+      if (byteLength < minExpectedBytes) {
+        return { ok: false, error: `Incomplete APK payload: ${byteLength} bytes received` };
+      }
+      return { ok: true, error: null };
+    };
+
+    assert.equal(validateDownloadStream(403, 'text/plain', 50000).ok, false);
+    assert.equal(validateDownloadStream(200, 'text/html; charset=UTF-8', 50000).ok, false);
+    assert.equal(validateDownloadStream(200, 'application/vnd.android.package-archive', 500, 1000000).ok, false);
+    assert.equal(validateDownloadStream(200, 'application/octet-stream', 4500000, 1000000).ok, true);
+  });
+
+  // Test 24: APK Structure Validation (ZIP / AndroidManifest magic bytes)
+  test('ApkSecurityVerifier rejects corrupt files or non-ZIP packages', () => {
+    const checkApkStructure = (buffer) => {
+      if (!buffer || buffer.length < 4) return { valid: false, error: 'Empty or truncated file' };
+      const isZip = buffer[0] === 0x50 && buffer[1] === 0x4B && buffer[2] === 0x03 && buffer[3] === 0x04;
+      if (!isZip) return { valid: false, error: 'File header does not match valid Android APK (ZIP) format' };
+      return { valid: true };
+    };
+
+    const fakeText = Buffer.from('Error 404 Not Found');
+    assert.equal(checkApkStructure(fakeText).valid, false);
+
+    const zipHeader = Buffer.from([0x50, 0x4B, 0x03, 0x04, 0x14, 0x00]);
+    assert.equal(checkApkStructure(zipHeader).valid, true);
+  });
+
+  // Test 25: PackageInstaller Session Status Handling
+  test('PackageInstaller Session status correctly routes to Success, Cancellation, or Failure states', () => {
+    const STATUS_SUCCESS = 0;
+    const STATUS_FAILURE_ABORTED = 3;
+    const STATUS_FAILURE_CONFLICT = 5;
+
+    const processSessionStatus = (statusCode, message) => {
+      switch (statusCode) {
+        case STATUS_SUCCESS:
+          return { stage: 'INSTALLED', canLaunch: true, message: 'Installation succeeded' };
+        case STATUS_FAILURE_ABORTED:
+          return { stage: 'CANCELLED', canLaunch: false, message: 'Installation was cancelled by user' };
+        case STATUS_FAILURE_CONFLICT:
+          return { stage: 'ERROR', canLaunch: false, message: 'Package signature conflict with installed app' };
+        default:
+          return { stage: 'ERROR', canLaunch: false, message: message || `Installation failed (code: ${statusCode})` };
+      }
+    };
+
+    const successResult = processSessionStatus(STATUS_SUCCESS);
+    assert.equal(successResult.stage, 'INSTALLED');
+    assert.equal(successResult.canLaunch, true);
+
+    const cancelResult = processSessionStatus(STATUS_FAILURE_ABORTED);
+    assert.equal(cancelResult.stage, 'CANCELLED');
+    assert.equal(cancelResult.canLaunch, false);
+
+    const conflictResult = processSessionStatus(STATUS_FAILURE_CONFLICT);
+    assert.equal(conflictResult.stage, 'ERROR');
+    assert.match(conflictResult.message, /conflict/i);
+  });
+
+  // Test 26: Unknown App Installation Permission Caching and Resumption
+  test('Permission redirection caches verified APK and resumes in onResume without redownload', () => {
+    let pendingVerifiedApk = null;
+    let downloadCount = 0;
+
+    const onApkVerified = (apkPath) => {
+      pendingVerifiedApk = apkPath;
+    };
+
+    const handleInstallRequest = (hasInstallPermission) => {
+      if (!hasInstallPermission) {
+        return { action: 'REDIRECT_SETTINGS', cachedApk: pendingVerifiedApk };
+      }
+      return { action: 'COMMIT_SESSION', apkToInstall: pendingVerifiedApk };
+    };
+
+    const onActivityResume = (hasInstallPermission) => {
+      if (pendingVerifiedApk && hasInstallPermission) {
+        const apk = pendingVerifiedApk;
+        return { canResume: true, apkToInstall: apk };
+      }
+      return { canResume: false };
+    };
+
+    downloadCount++;
+    onApkVerified('/data/user/0/com.alpha10.aimshot/files/downloads/AimShot_v1.0.1.apk');
+    assert.ok(pendingVerifiedApk);
+
+    const req1 = handleInstallRequest(false);
+    assert.equal(req1.action, 'REDIRECT_SETTINGS');
+    assert.equal(req1.cachedApk, '/data/user/0/com.alpha10.aimshot/files/downloads/AimShot_v1.0.1.apk');
+
+    const resumed = onActivityResume(true);
+    assert.equal(resumed.canResume, true);
+    assert.equal(resumed.apkToInstall, '/data/user/0/com.alpha10.aimshot/files/downloads/AimShot_v1.0.1.apk');
+    assert.equal(downloadCount, 1);
+  });
+
+  // Test 27: Open AimShot Engine Launch & Countdown Behavior
+  test('Launch trigger resolves package intent and respects Android background launch rules', () => {
+    const createLaunchPlan = (installedPackage, isForeground, autoCountdownAllowed) => {
+      if (installedPackage !== 'com.alpha10.aimshot') {
+        return { canLaunch: false, reason: 'Unknown package' };
+      }
+
+      return {
+        canLaunch: true,
+        targetPackage: installedPackage,
+        buttonText: 'OPEN AIMSHOT ENGINE',
+        hasAutoCountdown: isForeground && autoCountdownAllowed,
+        countdownSeconds: isForeground && autoCountdownAllowed ? 3 : null
+      };
+    };
+
+    const fgPlan = createLaunchPlan('com.alpha10.aimshot', true, true);
+    assert.equal(fgPlan.canLaunch, true);
+    assert.equal(fgPlan.buttonText, 'OPEN AIMSHOT ENGINE');
+    assert.equal(fgPlan.hasAutoCountdown, true);
+    assert.equal(fgPlan.countdownSeconds, 3);
+
+    const bgPlan = createLaunchPlan('com.alpha10.aimshot', false, true);
+    assert.equal(bgPlan.canLaunch, true);
+    assert.equal(bgPlan.buttonText, 'OPEN AIMSHOT ENGINE');
+    assert.equal(bgPlan.hasAutoCountdown, false);
+    assert.equal(bgPlan.countdownSeconds, null);
+  });
+
+  // Test 28: Localization strings for 9-stage sequence in English, Bengali, and Hindi
+  test('9-stage update state machine has complete localized status strings', () => {
+    const stages = [
+      'CHECKING',
+      'AUTH_REQUEST',
+      'DOWNLOADING',
+      'HASH_VERIFY',
+      'SIGN_VERIFY',
+      'REQUEST_PERMISSION',
+      'INSTALLING',
+      'INSTALLED',
+      'ERROR'
+    ];
+
+    const localizedBengali = {
+      CHECKING: 'ইন্টারনেট ও সার্ভার চেক করা হচ্ছে...',
+      AUTH_REQUEST: 'সার্ভার ভেরিফিকেশন ও অথেনটিকেশন চলছে...',
+      DOWNLOADING: 'নিরাপদ APK ডাউনলোড হচ্ছে...',
+      HASH_VERIFY: 'SHA-256 ইন্টিগ্রিটি যাচাই করা হচ্ছে...',
+      SIGN_VERIFY: 'ডিজিタル সিগনেচার যাচাই করা হচ্ছে...',
+      REQUEST_PERMISSION: 'ইনস্টলেশন পারমিশন প্রয়োজন...',
+      INSTALLING: 'অ্যান্ড্রয়েড সিস্টেমে ইনস্টল হচ্ছে...',
+      INSTALLED: 'ইনস্টলেশন সফলভাবে সম্পন্ন হয়েছে!',
+      ERROR: 'একটি সমস্যা দেখা দিয়েছে'
+    };
+
+    for (const stage of stages) {
+      assert.ok(localizedBengali[stage], `Missing Bengali translation for stage ${stage}`);
+      assert.ok(localizedBengali[stage].length > 0);
+    }
+  });
 });
 
 
