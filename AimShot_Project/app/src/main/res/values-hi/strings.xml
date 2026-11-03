@@ -113,7 +113,12 @@
     <string name="notifications">सूचनाएं</string>
 
     <!-- Game Launching and Network Gate -->
-    <string name="launch_the_game">▶  गेम लॉन्च करें</string>
+    <string name="launch_the_game">▶  एमशॉट इंजन शुरू करें</string>
+    <string name="launch_aimshot_engine">▶  एमशॉट इंजन शुरू करें</string>
+    <string name="install_aimshot_engine">▶  एमशॉट इंजन इंस्टॉल करें</string>
+    <string name="launching_aimshot_engine">एमशॉट इंजन (com.alpha10.aimshot) शुरू हो रहा है...</string>
+    <string name="failed_to_launch_main_apk">एमशॉट इंजन शुरू नहीं किया जा सका। कृपया पुनः स्थापना सत्यापित करें।</string>
+    <string name="main_apk_not_installed">मुख्य एमशॉट इंजन एपीके अभी स्थापित नहीं है। डाउनलोड प्रारंभ हो रहा है...</string>
     <string name="no_internet_title">कोई इंटरनेट कनेक्शन नहीं</string>
     <string name="no_internet_msg">कृपया इंटरनेट से कनेक्ट करें और पुनः प्रयास करें।</string>
     <string name="launching_game">%1$s लॉन्च हो रहा है...</string>

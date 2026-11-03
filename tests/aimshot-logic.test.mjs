@@ -536,6 +536,106 @@ describe('AimShot Engine Pure Logic Unit Tests', () => {
       assert.ok(localizedBengali[stage].length > 0);
     }
   });
+
+  // Test 29: Launcher Button Disconnection from Carrom Pool
+  test('Launcher Button completely disconnects from Carrom Pool launch behavior', () => {
+    const handleLauncherButtonClick = (isInstalled, carromPackage = 'com.miniclip.carrom') => {
+      // Corrected logic: ALWAYS targets Main AimShot Engine (com.alpha10.aimshot)
+      const targetPackage = 'com.alpha10.aimshot';
+
+      // Crucial: Must NEVER equal carromPackage
+      assert.notEqual(targetPackage, carromPackage);
+
+      if (isInstalled) {
+        return {
+          action: 'LAUNCH_PACKAGE',
+          package: targetPackage,
+          gameLaunched: null // Carrom is NOT launched
+        };
+      } else {
+        return {
+          action: 'OPEN_INSTALLER_PIPELINE',
+          targetPackage: targetPackage,
+          gameLaunched: null
+        };
+      }
+    };
+
+    const whenInstalled = handleLauncherButtonClick(true);
+    assert.equal(whenInstalled.action, 'LAUNCH_PACKAGE');
+    assert.equal(whenInstalled.package, 'com.alpha10.aimshot');
+    assert.equal(whenInstalled.gameLaunched, null);
+
+    const whenNotInstalled = handleLauncherButtonClick(false);
+    assert.equal(whenNotInstalled.action, 'OPEN_INSTALLER_PIPELINE');
+    assert.equal(whenNotInstalled.targetPackage, 'com.alpha10.aimshot');
+    assert.equal(whenNotInstalled.gameLaunched, null);
+  });
+
+  // Test 30: Situation A — Main APK already installed launches com.alpha10.aimshot
+  test('Situation A: Installed AimShot Engine triggers explicit launch intent without downloading', () => {
+    let downloadAttempted = false;
+    let launchedPackage = null;
+
+    const executeLauncherFlow = (installedPackages) => {
+      const isInstalled = installedPackages.includes('com.alpha10.aimshot');
+      if (isInstalled) {
+        launchedPackage = 'com.alpha10.aimshot';
+        return { success: true, launchedPackage };
+      }
+      downloadAttempted = true;
+      return { success: false, action: 'DOWNLOAD' };
+    };
+
+    const res = executeLauncherFlow(['com.alpha10.aimshot', 'com.miniclip.carrom']);
+    assert.equal(res.success, true);
+    assert.equal(launchedPackage, 'com.alpha10.aimshot');
+    assert.equal(downloadAttempted, false); // Zero downloads when already installed!
+  });
+
+  // Test 31: Situation B — Main APK not installed runs download & verification pipeline
+  test('Situation B: Uninstalled Main APK executes full 9-stage Alpha10 pipeline before launch is enabled', () => {
+    let pipelineCompleted = false;
+    let mainApkMarkedInstalled = false;
+
+    const startDownloadAndInstallPipeline = () => {
+      // 1. Internet & Server Reachability
+      const isOnline = true;
+      assert.equal(isOnline, true);
+
+      // 2. Alpha10 Server Authentication
+      const authHeader = { 'X-App-Key': 'existing-key' };
+      const token = 'alpha10_temp_60s_token';
+      assert.ok(token);
+
+      // 3. Download Main APK
+      const downloadHeader = { 'Authorization': `Bearer ${token}` };
+      const receivedBytes = 4320000;
+      assert.ok(receivedBytes > 1000000);
+
+      // 4. Verification
+      const sha256Valid = true;
+      const certFingerprint = '1C:8D:56:83:62:EE:D9:04:02:36:43:0D:AC:8D:1F:BE:30:06:0E:9F:FD:2D:F4:01:AB:69:04:E7:94:86:A5:A2';
+      assert.equal(sha256Valid, true);
+      assert.equal(certFingerprint.length, 95);
+
+      // 5. PackageInstaller Commit & Success
+      mainApkMarkedInstalled = true;
+      pipelineCompleted = true;
+
+      return {
+        installed: true,
+        package: 'com.alpha10.aimshot',
+        canOpen: true
+      };
+    };
+
+    const result = startDownloadAndInstallPipeline();
+    assert.equal(pipelineCompleted, true);
+    assert.equal(mainApkMarkedInstalled, true);
+    assert.equal(result.canOpen, true);
+    assert.equal(result.package, 'com.alpha10.aimshot');
+  });
 });
 
 

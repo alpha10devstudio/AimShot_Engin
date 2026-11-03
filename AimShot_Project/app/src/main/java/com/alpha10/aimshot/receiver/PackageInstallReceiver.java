@@ -29,6 +29,8 @@ public class PackageInstallReceiver extends BroadcastReceiver {
                     .putLong("last_update_timestamp", System.currentTimeMillis())
                     .apply();
 
+            PackageInstallerHelper.setMainApkInstalled(context, true);
+
             // Attempt automatic launch if permitted
             PackageInstallerHelper.launchInstalledApp(context);
         }

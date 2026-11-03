@@ -113,7 +113,12 @@
     <string name="notifications">Notifications</string>
 
     <!-- Game Launching and Network Gate -->
-    <string name="launch_the_game">▶  LAUNCH THE GAME</string>
+    <string name="launch_the_game">▶  LAUNCH AIMSHOT ENGINE</string>
+    <string name="launch_aimshot_engine">▶  LAUNCH AIMSHOT ENGINE</string>
+    <string name="install_aimshot_engine">▶  INSTALL AIMSHOT ENGINE</string>
+    <string name="launching_aimshot_engine">Launching AimShot Engine (com.alpha10.aimshot)...</string>
+    <string name="failed_to_launch_main_apk">Unable to launch AimShot Engine. Please verify installation.</string>
+    <string name="main_apk_not_installed">Main AimShot Engine APK is not installed yet. Starting download...</string>
     <string name="no_internet_title">No Internet Connection</string>
     <string name="no_internet_msg">Please connect to the internet and try again.</string>
     <string name="launching_game">Launching %1$s...</string>

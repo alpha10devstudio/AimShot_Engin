@@ -17,6 +17,8 @@ interface HomeScreenProps {
   onOpenNotifications: () => void;
   onNavigateToPremium: () => void;
   onLaunchGame: (game: Game) => void;
+  isMainApkInstalled?: boolean;
+  onLaunchEngine?: () => void;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
@@ -25,12 +27,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   t,
   selectedGame,
   unreadNotificationsCount = 0,
+  isMainApkInstalled = false,
   onSelectGame,
   onOpenLoginModal,
   onViewAllGames,
   onOpenNotifications,
   onNavigateToPremium,
-  onLaunchGame
+  onLaunchGame,
+  onLaunchEngine
 }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const isDark = theme === 'dark';
@@ -389,13 +393,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               </button>
             </div>
 
-            {/* Prominent Launch The Game Action Button */}
+            {/* Prominent Launch AimShot Engine Action Button */}
             <button
-              onClick={() => onLaunchGame(selectedGame)}
+              onClick={() => (onLaunchEngine ? onLaunchEngine() : onLaunchGame(selectedGame))}
               className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#1A85CC] via-[#39B9FF] to-[#1A85CC] hover:opacity-95 text-[#0B0F17] font-black text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(57,185,255,0.45)] active:scale-[0.98] flex items-center justify-center gap-2.5 cursor-pointer"
             >
               <Play className="w-4 h-4 fill-[#0B0F17]" />
-              <span>{t.launchTheGame}</span>
+              <span>{isMainApkInstalled ? t.launchAimShotEngine : t.installAimShotEngine}</span>
             </button>
           </div>
         ) : (

@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.alpha10.aimshot.adapter.GameGridAdapter;
 import com.alpha10.aimshot.dialog.GameLaunchDialog;
+import com.alpha10.aimshot.dialog.UpdateDialog;
 import com.alpha10.aimshot.dialog.VerificationKeyDialog;
 import com.alpha10.aimshot.model.GameItem;
 import com.alpha10.aimshot.model.MembershipStatus;
@@ -25,6 +26,7 @@ import com.alpha10.aimshot.repository.GameRepository;
 import com.alpha10.aimshot.repository.MembershipRepository;
 import com.alpha10.aimshot.util.FontHelper;
 import com.alpha10.aimshot.util.NetworkUtil;
+import com.alpha10.aimshot.util.PackageInstallerHelper;
 
 /**
  * Main dashboard hosting Home and Premium destinations with persistent Bottom Navigation.
@@ -412,11 +414,12 @@ public class MainActivity extends BaseActivity implements MembershipRepository.M
                 if (tvDays != null) {
                     tvDays.setText(status.getRemainingDays() + " Days");
                 }
+                updateLauncherButtonState(btnLaunchGame);
                 if (btnLaunchGame != null) {
                     btnLaunchGame.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
-                            handleLaunchGameClick();
+                            handleLauncherButtonClick();
                         }
                     });
                 }
@@ -437,29 +440,65 @@ public class MainActivity extends BaseActivity implements MembershipRepository.M
     }
 
     /**
-     * Executes the mandatory internet check and initiates the tactical launching HUD flow.
+     * Updates Launcher Button text to reflect whether Main AimShot Engine APK is installed.
      */
-    private void handleLaunchGameClick() {
+    private void updateLauncherButtonState(Button btnLaunchGame) {
+        if (btnLaunchGame == null) return;
+        boolean isInstalled = PackageInstallerHelper.isMainApkInstalled(this);
+        if (isInstalled) {
+            btnLaunchGame.setText(R.string.launch_aimshot_engine);
+        } else {
+            btnLaunchGame.setText(R.string.install_aimshot_engine);
+        }
+    }
+
+    /**
+     * Executes the Launcher Button workflow for the Main AimShot Engine APK (com.alpha10.aimshot).
+     *
+     * Situation A: Main APK is already installed:
+     * - Detects the installed package com.alpha10.aimshot.
+     * - Obtains its official launch intent.
+     * - Directly launches Main AimShot Engine.
+     * - Under NO circumstances launches Carrom Pool!
+     *
+     * Situation B: Main APK is not installed yet:
+     * - Opens UpdateDialog which connects to the Alpha10 Server Authentication API (POST /api/auth.php).
+     * - Obtains temporary 60-second token.
+     * - Downloads Main APK binary stream to app-private storage.
+     * - Verifies SHA-256 integrity and permanent release signing certificate.
+     * - Commits Android PackageInstaller session.
+     * - Prepares Launcher Button to launch Main AimShot Engine upon confirmation.
+     */
+    private void handleLauncherButtonClick() {
         if (isLaunching) {
-            return; // Prevent duplicate launches from repeated clicks
+            return; // Prevent duplicate clicks from repeated taps
         }
 
-        // A. Mandatory Internet Check
+        // 1. Mandatory Internet Check
         if (!NetworkUtil.isNetworkConnected(this)) {
             showNoInternetDialog();
             return;
         }
 
-        // B. Connected Launch Flow
-        isLaunching = true;
-        GameItem activeGame = GameRepository.getInstance().getAllGames().get(0); // Carrom Disc Pool
-        GameLaunchDialog launchDialog = new GameLaunchDialog(this, activeGame, new GameLaunchDialog.OnLaunchListener() {
-            @Override
-            public void onLaunchComplete(boolean success) {
-                isLaunching = false;
+        // 2. Check if Main AimShot Engine APK is installed
+        boolean isInstalled = PackageInstallerHelper.isMainApkInstalled(this);
+
+        if (isInstalled) {
+            // Situation A: Main APK is already installed -> Directly launch AimShot Engine
+            isLaunching = true;
+            boolean launched = PackageInstallerHelper.launchInstalledApp(this);
+            if (launched) {
+                Toast.makeText(this, R.string.launching_aimshot_engine, Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, R.string.failed_to_launch_main_apk, Toast.LENGTH_LONG).show();
             }
-        });
-        launchDialog.show();
+            isLaunching = false;
+        } else {
+            // Situation B: Main APK is NOT installed yet -> Start Alpha10 Download, Verification & Installer Flow
+            Toast.makeText(this, R.string.main_apk_not_installed, Toast.LENGTH_SHORT).show();
+            UpdateDialog updateDialog = new UpdateDialog(this);
+            updateDialog.show();
+        }
     }
 
     private void showNoInternetDialog() {
@@ -605,5 +644,13 @@ public class MainActivity extends BaseActivity implements MembershipRepository.M
                 }
             }
         });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (currentTab == Tab.HOME) {
+            renderHomeScreen();
+        }
     }
 }

@@ -21,6 +21,10 @@ export interface Translations {
   loginDesc: string;
   loginNow: string;
   launchTheGame: string;
+  launchAimShotEngine: string;
+  installAimShotEngine: string;
+  aimshotEngineLaunched: string;
+  mainApkNotInstalledToast: string;
   launchingGame: string;
   gameActive: string;
   gameLocked: string;
@@ -132,8 +136,12 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     youAreNotLoggedIn: 'You are not logged in',
     loginDesc: 'Login to access premium features and full tools.',
     loginNow: 'Login Now',
-    launchTheGame: 'Launch The Game',
-    launchingGame: 'Launching Game with Aim Engine...',
+    launchTheGame: 'Launch AimShot Engine',
+    launchAimShotEngine: 'Launch AimShot Engine',
+    installAimShotEngine: 'Install AimShot Engine',
+    aimshotEngineLaunched: 'AimShot Engine (com.alpha10.aimshot) launched successfully',
+    mainApkNotInstalledToast: 'Main AimShot Engine APK is not installed. Starting download...',
+    launchingGame: 'Launching AimShot Engine Core...',
     gameActive: 'Aim Assist Active',
     gameLocked: 'Locked • Pro Key Required',
     selectedGame: 'Selected Game',
@@ -236,8 +244,12 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     youAreNotLoggedIn: 'আপনি লগইন করেননি',
     loginDesc: 'প্রিমিয়াম ফিচার এবং সম্পূর্ণ টুলস পেতে লগইন করুন।',
     loginNow: 'লগইন করুন',
-    launchTheGame: 'লঞ্চ দ্য গেম',
-    launchingGame: 'এইম ইঞ্জিনের সাথে গেম চালু হচ্ছে...',
+    launchTheGame: 'এইমশট ইঞ্জিন চালু করুন',
+    launchAimShotEngine: 'এইমশট ইঞ্জিন চালু করুন',
+    installAimShotEngine: 'এইমশট ইঞ্জিন ইনস্টল করুন',
+    aimshotEngineLaunched: 'এইমশট ইঞ্জিন (com.alpha10.aimshot) সফলভাবে চালু হয়েছে',
+    mainApkNotInstalledToast: 'মেইন এইমশট ইঞ্জিন APK এখনো ইনস্টল করা নেই। ডাউনলোড শুরু হচ্ছে...',
+    launchingGame: 'এইমশট ইঞ্জিন কোর চালু হচ্ছে...',
     gameActive: 'এইম অ্যাসিস্ট সক্রিয়',
     gameLocked: 'লক করা • প্রো কি প্রয়োজন',
     selectedGame: 'নির্বাচিত গেম',
@@ -340,8 +352,12 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     youAreNotLoggedIn: 'आप लॉग इन नहीं हैं',
     loginDesc: 'प्रीमियम सुविधाओं और संपूर्ण टूल्स के लिए लॉग इन करें।',
     loginNow: 'लॉग इन करें',
-    launchTheGame: 'लॉन्च द गेम',
-    launchingGame: 'एम इंजन के साथ गेम शुरू हो रहा है...',
+    launchTheGame: 'एमশॉट इंजन शुरू करें',
+    launchAimShotEngine: 'एमশॉट इंजन शुरू करें',
+    installAimShotEngine: 'एमশॉट इंजन इंस्टॉल करें',
+    aimshotEngineLaunched: 'एमশॉट इंजन (com.alpha10.aimshot) सफलतापूर्वक शुरू किया गया',
+    mainApkNotInstalledToast: 'मुख्य एमशॉट इंजन एपीके अभी स्थापित नहीं है। डाउनलोड प्रारंभ हो रहा है...',
+    launchingGame: 'एमশॉट इंजन कोर शुरू हो रहा है...',
     gameActive: 'एम असिस्ट सक्रिय',
     gameLocked: 'लॉक है • प्रो की आवश्यक',
     selectedGame: 'चयनित गेम',

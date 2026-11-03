@@ -6,6 +6,8 @@ import android.content.Intent;
 import android.content.pm.PackageInstaller;
 import android.util.Log;
 
+import com.alpha10.aimshot.util.PackageInstallerHelper;
+
 /**
  * BroadcastReceiver for handling Android PackageInstaller session callbacks.
  * Receives status callbacks: STATUS_SUCCESS, STATUS_PENDING_USER_ACTION, STATUS_FAILURE, etc.
@@ -55,6 +57,7 @@ public class PackageInstallStatusReceiver extends BroadcastReceiver {
 
             case PackageInstaller.STATUS_SUCCESS:
                 Log.i(TAG, "Package installation succeeded officially.");
+                PackageInstallerHelper.setMainApkInstalled(context, true);
                 if (activeListener != null) {
                     activeListener.onInstallSuccess("com.alpha10.aimshot");
                 }

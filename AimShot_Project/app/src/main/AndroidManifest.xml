@@ -9,6 +9,7 @@
 
     <!-- Queries declaration for Android 11+ package visibility -->
     <queries>
+        <package android:name="com.alpha10.aimshot" />
         <package android:name="com.miniclip.carrom" />
         <package android:name="com.miniclip.eightballpool" />
         <package android:name="com.tencent.ig" />

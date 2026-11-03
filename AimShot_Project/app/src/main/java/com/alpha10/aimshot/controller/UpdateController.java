@@ -304,6 +304,8 @@ public class UpdateController implements PackageInstallStatusReceiver.InstallSta
                     .putLong("last_update_timestamp", System.currentTimeMillis())
                     .apply();
 
+            PackageInstallerHelper.setMainApkInstalled(context, true);
+
             // Clean up verified APK now that it has been installed
             if (pendingVerifiedApk != null && pendingVerifiedApk.exists()) {
                 try { pendingVerifiedApk.delete(); } catch (Exception ignored) {}

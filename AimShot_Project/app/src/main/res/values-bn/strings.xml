@@ -113,7 +113,12 @@
     <string name="notifications">নোটিফিকেশন</string>
 
     <!-- Game Launching and Network Gate -->
-    <string name="launch_the_game">▶  গেম চালু করুন</string>
+    <string name="launch_the_game">▶  এইমশট ইঞ্জিন চালু করুন</string>
+    <string name="launch_aimshot_engine">▶  এইমশট ইঞ্জিন চালু করুন</string>
+    <string name="install_aimshot_engine">▶  এইমশট ইঞ্জিন ইনস্টল করুন</string>
+    <string name="launching_aimshot_engine">এইমশট ইঞ্জিন (com.alpha10.aimshot) চালু হচ্ছে...</string>
+    <string name="failed_to_launch_main_apk">এইমশট ইঞ্জিন চালু করা যায়নি। অনুগ্রহ করে পুনরায় ইনস্টলেশন যাচাই করুন।</string>
+    <string name="main_apk_not_installed">মেইন এইমশট ইঞ্জিন APK এখনো ইনস্টল করা নেই। ডাউনলোড শুরু হচ্ছে...</string>
     <string name="no_internet_title">কোনো ইন্টারনেট সংযোগ নেই</string>
     <string name="no_internet_msg">অনুগ্রহ করে ইন্টারনেটের সাথে সংযুক্ত হোন এবং পুনরায় চেষ্টা করুন।</string>
     <string name="launching_game">%1$s চালু হচ্ছে...</string>

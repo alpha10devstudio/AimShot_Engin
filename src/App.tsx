@@ -58,6 +58,28 @@ export default function App() {
     status: 'initializing' | 'injecting' | 'running';
   } | null>(null);
 
+  // Track whether Main AimShot Engine APK (com.alpha10.aimshot) is installed
+  const [isMainApkInstalled, setIsMainApkInstalled] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('aimshot_main_apk_installed') === 'true';
+    }
+    return false;
+  });
+
+  // Track if Update & Install Modal is open from Launcher Button
+  const [isLauncherUpdateOpen, setIsLauncherUpdateOpen] = useState(false);
+  const [launcherUpdateStage, setLauncherUpdateStage] = useState<
+    'idle' | 'auth' | 'downloading' | 'verifying' | 'installing' | 'installed'
+  >('idle');
+  const [launcherUpdateProgress, setLauncherUpdateProgress] = useState(0);
+
+  // Active Main AimShot Engine session overlay (Package: com.alpha10.aimshot - NEVER Carrom Pool!)
+  const [launchingEngineSession, setLaunchingEngineSession] = useState<{
+    packageName: string;
+    versionName: string;
+    status: 'initializing' | 'injecting' | 'running';
+  } | null>(null);
+
   // Active membership state starting as Free / Logged Out
   const [membership, setMembership] = useState<MembershipState>(() => {
     const saved = localStorage.getItem('aimshot_membership');
@@ -354,6 +376,45 @@ export default function App() {
       });
       showToast(`${t.gameLaunchedSuccess} ${game.name}`);
     }, 2000);
+  };
+
+  const handleLaunchEngine = () => {
+    if (!membership.isLoggedIn) {
+      setIsLoginModalOpen(true);
+      return;
+    }
+
+    // 1. Mandatory Internet Check
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      showToast('No Internet Connection. Please connect to the internet and try again.');
+      return;
+    }
+
+    // Situation A: Main APK is already installed
+    if (isMainApkInstalled) {
+      // Launch Main APK: com.alpha10.aimshot (Under NO circumstances launch Carrom Pool!)
+      setLaunchingEngineSession({
+        packageName: 'com.alpha10.aimshot',
+        versionName: '1.0.1',
+        status: 'initializing'
+      });
+
+      setTimeout(() => {
+        setLaunchingEngineSession(prev => prev ? { ...prev, status: 'injecting' } : null);
+      }, 700);
+
+      setTimeout(() => {
+        setLaunchingEngineSession(prev => prev ? { ...prev, status: 'running' } : null);
+        showToast(t.aimshotEngineLaunched);
+      }, 1500);
+      return;
+    }
+
+    // Situation B: Main APK is not installed yet -> Open Alpha10 download & verification pipeline
+    showToast(t.mainApkNotInstalledToast);
+    setIsLauncherUpdateOpen(true);
+    setLauncherUpdateStage('idle');
+    setLauncherUpdateProgress(0);
   };
 
   const handleDownloadApk = async () => {
@@ -701,6 +762,8 @@ export default function App() {
                     setCurrentScreen('premium');
                   }}
                   onLaunchGame={handleLaunchGame}
+                  isMainApkInstalled={isMainApkInstalled}
+                  onLaunchEngine={handleLaunchEngine}
                 />
               )}
 
@@ -785,8 +848,8 @@ export default function App() {
                 onSuccess={handleLoginSuccess}
               />
 
-              {/* Game Launching HUD Simulation Overlay */}
-              {launchingGameSession && (
+              {/* Launcher Update & Installation Modal (Stage 1 to 9) */}
+              {isLauncherUpdateOpen && (
                 <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in select-none">
                   <div
                     className={`w-full max-w-xs rounded-2xl p-5 border text-center shadow-2xl relative ${
@@ -794,41 +857,182 @@ export default function App() {
                     }`}
                   >
                     <button
-                      onClick={() => setLaunchingGameSession(null)}
+                      onClick={() => {
+                        setIsLauncherUpdateOpen(false);
+                        setLauncherUpdateStage('idle');
+                        setLauncherUpdateProgress(0);
+                      }}
                       className="absolute top-3 right-3 p-1 rounded-lg text-slate-400 hover:text-white cursor-pointer"
                     >
                       <X className="w-4 h-4" />
                     </button>
 
-                    <div className="w-16 h-16 rounded-2xl mx-auto mb-3 p-2 bg-black/40 border border-white/10 flex items-center justify-center">
-                      <img
-                        src={launchingGameSession.game.logoUrl}
-                        alt={launchingGameSession.game.name}
-                        className="w-full h-full object-contain"
-                      />
+                    <div className="w-12 h-12 rounded-2xl bg-[#39B9FF]/15 text-[#39B9FF] flex items-center justify-center mx-auto mb-3 border border-[#39B9FF]/30">
+                      <Download className="w-6 h-6" />
                     </div>
 
-                    <h3 className="text-base font-bold">{launchingGameSession.game.name}</h3>
-                    <p className="text-xs text-[#39B9FF] font-mono mt-0.5 mb-3">
-                      Package: {launchingGameSession.game.packageName}
+                    <h3 className="text-base font-bold tracking-wide">
+                      {language === 'bn' ? 'মেইন এইমশট ইঞ্জিন ইনস্টলার' : language === 'hi' ? 'मुख्य एमशॉट इंजन इंस्टालर' : 'Main AimShot Engine Installer'}
+                    </h3>
+                    <span className="text-[10px] text-[#39B9FF] font-mono tracking-wider block mt-0.5 mb-2">
+                      PACKAGE: com.alpha10.aimshot
+                    </span>
+
+                    {/* Pipeline Status Box */}
+                    <div className="w-full bg-[#080C12] rounded-xl p-3 border border-white/10 text-left text-xs space-y-1 mb-4 font-mono">
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-slate-400">1. Internet &amp; Server:</span>
+                        <span className={launcherUpdateProgress >= 15 ? 'text-[#49DCA0] font-bold' : 'text-slate-500'}>
+                          {launcherUpdateProgress >= 15 ? 'ONLINE' : 'WAITING'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-slate-400">2. Alpha10 Token (60s):</span>
+                        <span className={launcherUpdateProgress >= 35 ? 'text-[#49DCA0] font-bold' : 'text-slate-500'}>
+                          {launcherUpdateProgress >= 35 ? 'OBTAINED' : 'PENDING'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-slate-400">3. Binary APK Download:</span>
+                        <span className={launcherUpdateProgress >= 65 ? 'text-[#49DCA0] font-bold' : 'text-slate-500'}>
+                          {launcherUpdateProgress >= 65 ? 'STREAMED' : 'PENDING'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-slate-400">4. SHA-256 Digest:</span>
+                        <span className={launcherUpdateProgress >= 85 ? 'text-[#49DCA0] font-bold' : 'text-slate-500'}>
+                          {launcherUpdateProgress >= 85 ? 'VERIFIED' : 'PENDING'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-slate-400">5. Permanent Certificate:</span>
+                        <span className={launcherUpdateProgress >= 95 ? 'text-[#49DCA0] font-bold' : 'text-slate-500'}>
+                          {launcherUpdateProgress >= 95 ? '1C:8D:56:83...' : 'PENDING'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-slate-400">6. OS PackageInstaller:</span>
+                        <span className={launcherUpdateStage === 'installed' ? 'text-[#49DCA0] font-bold' : 'text-slate-500'}>
+                          {launcherUpdateStage === 'installed' ? 'SUCCESS (Code 0)' : 'PENDING'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    {launcherUpdateStage !== 'idle' && launcherUpdateStage !== 'installed' && (
+                      <div className="w-full bg-[#1C2B42] h-2 rounded-full overflow-hidden mb-4">
+                        <div
+                          className="bg-[#39B9FF] h-full transition-all duration-300"
+                          style={{ width: `${launcherUpdateProgress}%` }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    {launcherUpdateStage === 'idle' && (
+                      <button
+                        onClick={() => {
+                          setLauncherUpdateStage('auth');
+                          setLauncherUpdateProgress(20);
+                          setTimeout(() => {
+                            setLauncherUpdateStage('downloading');
+                            setLauncherUpdateProgress(50);
+                            setTimeout(() => {
+                              setLauncherUpdateStage('verifying');
+                              setLauncherUpdateProgress(80);
+                              setTimeout(() => {
+                                setLauncherUpdateStage('installing');
+                                setLauncherUpdateProgress(95);
+                                setTimeout(() => {
+                                  setLauncherUpdateStage('installed');
+                                  setLauncherUpdateProgress(100);
+                                  setIsMainApkInstalled(true);
+                                  if (typeof window !== 'undefined') {
+                                    localStorage.setItem('aimshot_main_apk_installed', 'true');
+                                  }
+                                }, 900);
+                              }, 800);
+                            }, 900);
+                          }, 600);
+                        }}
+                        className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#1A85CC] via-[#39B9FF] to-[#1A85CC] text-[#0B0F17] text-xs font-black uppercase tracking-wider hover:opacity-95 cursor-pointer shadow-[0_0_15px_rgba(57,185,255,0.4)]"
+                      >
+                        {language === 'bn' ? 'ডাউনলোড ও ইনস্টল শুরু করুন' : language === 'hi' ? 'डाउनलोड एवं इंस्टॉल शुरू करें' : 'Download & Install APK'}
+                      </button>
+                    )}
+
+                    {launcherUpdateStage === 'installed' && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-center gap-1.5 text-xs text-[#49DCA0] font-bold">
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>{language === 'bn' ? 'ইনস্টলেশন সম্পন্ন হয়েছে!' : 'Installation Confirmed!'}</span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setIsLauncherUpdateOpen(false);
+                            setLauncherUpdateStage('idle');
+                            setLauncherUpdateProgress(0);
+                            setLaunchingEngineSession({
+                              packageName: 'com.alpha10.aimshot',
+                              versionName: '1.0.1',
+                              status: 'running'
+                            });
+                            showToast(t.aimshotEngineLaunched);
+                          }}
+                          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#1A85CC] via-[#39B9FF] to-[#1A85CC] text-[#0B0F17] text-xs font-black uppercase tracking-wider hover:opacity-95 cursor-pointer shadow-[0_0_20px_rgba(57,185,255,0.45)]"
+                        >
+                          {language === 'bn' ? 'মেইন এইমশট ইঞ্জিন চালু করুন' : 'OPEN AIMSHOT ENGINE'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Main AimShot Engine HUD Simulation Overlay (Package: com.alpha10.aimshot - NEVER Carrom Pool!) */}
+              {launchingEngineSession && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-md animate-fade-in select-none">
+                  <div
+                    className={`w-full max-w-xs rounded-2xl p-5 border text-center shadow-2xl relative ${
+                      theme === 'dark' ? 'bg-[#0E1524] border-[#39B9FF]/60 text-white' : 'bg-white border-[#0284C7]/60 text-[#0F172A]'
+                    }`}
+                  >
+                    <button
+                      onClick={() => setLaunchingEngineSession(null)}
+                      className="absolute top-3 right-3 p-1 rounded-lg text-slate-400 hover:text-white cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+
+                    <div className="w-16 h-16 rounded-2xl mx-auto mb-3 p-2 bg-[#142338] border border-[#39B9FF]/40 flex items-center justify-center shadow-[0_0_25px_rgba(57,185,255,0.3)]">
+                      <Sparkles className="w-8 h-8 text-[#39B9FF]" />
+                    </div>
+
+                    <h3 className="text-base font-bold tracking-wide">AimShot Engine</h3>
+                    <p className="text-xs text-[#39B9FF] font-mono mt-0.5 mb-3 font-semibold">
+                      Package: com.alpha10.aimshot
                     </p>
 
                     <div className="w-full bg-[#080C12] rounded-xl p-3 border border-white/10 text-left text-xs space-y-1.5 mb-4 font-mono">
                       <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-slate-400">Aim Assist Engine:</span>
-                        <span className="text-[#49DCA0] font-bold">READY</span>
+                        <span className="text-slate-400">Application Identity:</span>
+                        <span className="text-[#39B9FF] font-bold">Main Engine APK</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-400">Package Verification:</span>
+                        <span className="text-[#49DCA0] font-bold">MATCHED (com.alpha10.aimshot)</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-400">Guideline Core:</span>
+                        <span className="text-[#49DCA0] font-bold">120 FPS Realtime</span>
                       </div>
                       <div className="flex items-center justify-between text-[11px]">
                         <span className="text-slate-400">Hardware Touch Hook:</span>
-                        <span className="text-[#49DCA0] font-bold">INJECTED</span>
-                      </div>
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-slate-400">FPS Boost & Anti-Lag:</span>
-                        <span className="text-[#39B9FF] font-bold">120 FPS</span>
+                        <span className="text-[#49DCA0] font-bold">ACTIVE &amp; INJECTED</span>
                       </div>
                     </div>
 
-                    {launchingGameSession.status !== 'running' ? (
+                    {launchingEngineSession.status !== 'running' ? (
                       <div className="flex items-center justify-center gap-2 py-2 text-xs text-[#39B9FF] font-bold">
                         <span className="w-2 h-2 rounded-full bg-[#39B9FF] animate-ping" />
                         <span>{t.launchingGame}</span>
@@ -837,13 +1041,13 @@ export default function App() {
                       <div className="space-y-2">
                         <div className="flex items-center justify-center gap-1.5 text-xs text-[#49DCA0] font-bold">
                           <CheckCircle2 className="w-4 h-4" />
-                          <span>Game Running with AimShot Hook</span>
+                          <span>AimShot Engine Running Standalone</span>
                         </div>
                         <button
-                          onClick={() => setLaunchingGameSession(null)}
-                          className="w-full py-2 rounded-xl bg-[#39B9FF] text-[#0B0F17] text-xs font-bold hover:bg-[#2da5e6] cursor-pointer"
+                          onClick={() => setLaunchingEngineSession(null)}
+                          className="w-full py-2.5 rounded-xl bg-[#39B9FF] text-[#0B0F17] text-xs font-black uppercase tracking-wider hover:bg-[#2da5e6] cursor-pointer shadow-[0_0_15px_rgba(57,185,255,0.4)]"
                         >
-                          Return to Dashboard
+                          Minimize Engine HUD
                         </button>
                       </div>
                     )}
@@ -886,6 +1090,8 @@ export default function App() {
                       setCurrentScreen('premium');
                     }}
                     onLaunchGame={handleLaunchGame}
+                    isMainApkInstalled={isMainApkInstalled}
+                    onLaunchEngine={handleLaunchEngine}
                   />
                 )}
 

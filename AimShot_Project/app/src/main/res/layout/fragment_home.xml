@@ -673,7 +673,7 @@
                 android:elevation="4dp"
                 android:gravity="center"
                 android:stateListAnimator="@null"
-                android:text="▶  LAUNCH THE GAME"
+                android:text="@string/launch_aimshot_engine"
                 android:textAllCaps="true"
                 android:textColor="@color/bg_main"
                 android:textSize="14sp"
