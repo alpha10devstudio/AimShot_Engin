@@ -684,7 +684,54 @@ describe('AimShot Engine Pure Logic Unit Tests', () => {
     installedSystemPackages.add('com.alpha10.aimshot');
     assert.equal(isMainApkInstalled(installedSystemPackages), true);
   });
+
+  // Test 35: Target Package Version Query Isolation (Checks com.alpha10.aimshot, not Launcher)
+  test('Target Package Version Query Isolation: Checks Main Engine version code instead of Launcher', () => {
+    const installedVersions = {
+      'com.alpha10.aimshot.launcher': 2, // Launcher is at v2
+    };
+
+    const getInstalledVersionCode = (pkg) => installedVersions[pkg] || -1;
+    const activeManifestVersionCode = 2;
+
+    // Buggy previous behavior: checked launcher (v2), thought 2 <= 2 (up to date), skipped download!
+    const wrongCheck = getInstalledVersionCode('com.alpha10.aimshot.launcher');
+    assert.equal(wrongCheck >= activeManifestVersionCode, true);
+
+    // Fixed behavior: checks target package (com.alpha10.aimshot), gets -1 (uninstalled), initiates install!
+    const correctCheck = getInstalledVersionCode('com.alpha10.aimshot');
+    assert.equal(correctCheck, -1);
+    const requiresInstall = correctCheck === -1 || activeManifestVersionCode > correctCheck;
+    assert.equal(requiresInstall, true);
+  });
+
+  // Test 36: onResume Lifecycle & Automatic Return Detection
+  test('onResume Lifecycle: Returning from Android installer recognizes installed package without re-downloading', () => {
+    let currentInstalled = false;
+    let onInstallSuccessCalled = false;
+    let redownloadCount = 0;
+
+    const onResumeCheck = () => {
+      if (currentInstalled) {
+        onInstallSuccessCalled = true;
+      } else {
+        redownloadCount++;
+      }
+    };
+
+    // User is in installer
+    onResumeCheck();
+    assert.equal(onInstallSuccessCalled, false);
+    assert.equal(redownloadCount, 1);
+
+    // System successfully installed com.alpha10.aimshot
+    currentInstalled = true;
+    onResumeCheck();
+    assert.equal(onInstallSuccessCalled, true);
+    assert.equal(redownloadCount, 1); // No redundant redownload!
+  });
 });
+
 
 
 

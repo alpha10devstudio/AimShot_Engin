@@ -103,7 +103,11 @@
         <!-- PackageInstaller Session Status Receiver -->
         <receiver
             android:name=".receiver.PackageInstallStatusReceiver"
-            android:exported="false" />
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.alpha10.aimshot.INSTALL_STATUS" />
+            </intent-filter>
+        </receiver>
 
         <!-- Package Replaced Secondary Confirmation Receiver -->
         <receiver

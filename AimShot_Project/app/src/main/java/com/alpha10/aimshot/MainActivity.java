@@ -55,6 +55,7 @@ public class MainActivity extends BaseActivity
     private MembershipRepository membershipRepository;
 
     private boolean isLaunching = false;
+    private com.alpha10.aimshot.dialog.UpdateDialog activeUpdateDialog;
 
     private final android.os.Handler carouselHandler =
             new android.os.Handler(android.os.Looper.getMainLooper());
@@ -864,9 +865,8 @@ public class MainActivity extends BaseActivity
                     Toast.LENGTH_SHORT
             ).show();
 
-            UpdateDialog updateDialog = new UpdateDialog(this);
-
-            updateDialog.show();
+            activeUpdateDialog = new UpdateDialog(this, true);
+            activeUpdateDialog.show();
         }
     }
 
@@ -1220,6 +1220,11 @@ public class MainActivity extends BaseActivity
     protected void onResume() {
 
         super.onResume();
+
+        // Check if active update dialog is waiting for install confirmation or permission grant
+        if (activeUpdateDialog != null && activeUpdateDialog.isShowing()) {
+            activeUpdateDialog.onActivityResume();
+        }
 
         if (currentTab == Tab.HOME) {
 

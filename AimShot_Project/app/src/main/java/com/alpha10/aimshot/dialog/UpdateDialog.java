@@ -50,11 +50,17 @@ public class UpdateDialog extends Dialog implements UpdateController.UpdateListe
     private boolean isInstallSuccess = false;
     private int countdownSeconds = 3;
     private Runnable countdownRunnable;
+    private final boolean autoStart;
 
     public UpdateDialog(@NonNull Activity activity) {
+        this(activity, true);
+    }
+
+    public UpdateDialog(@NonNull Activity activity, boolean autoStart) {
         super(activity);
         this.activity = activity;
         this.controller = new UpdateController(activity);
+        this.autoStart = autoStart;
     }
 
     public UpdateController getController() {
@@ -105,13 +111,20 @@ public class UpdateDialog extends Dialog implements UpdateController.UpdateListe
             FontHelper.applyRegularFont(findViewById(android.R.id.content));
         }
 
-        // Auto-check for updates on first render
-        checkUpdateStatus();
+        boolean isInstalled = com.alpha10.aimshot.util.PackageInstallerHelper.isMainApkInstalled(activity);
+        if (!isInstalled || autoStart) {
+            startUpdateProcess();
+        } else {
+            checkUpdateStatus();
+        }
     }
 
     public void onActivityResume() {
         if (controller != null && isShowing()) {
             controller.onResumeCheck(activity);
+            if (com.alpha10.aimshot.util.PackageInstallerHelper.isMainApkInstalled(activity)) {
+                onInstallationSuccess();
+            }
         }
     }
 

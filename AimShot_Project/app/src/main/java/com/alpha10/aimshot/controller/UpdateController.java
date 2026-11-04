@@ -96,20 +96,15 @@ public class UpdateController implements PackageInstallStatusReceiver.InstallSta
     }
 
     public int getInstalledVersionCode() {
-        try {
-            PackageInfo pInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
-            return pInfo.versionCode;
-        } catch (Exception e) {
-            return 1;
-        }
+        return PackageInstallerHelper.getInstalledPackageVersionCode(context, PackageInstallerHelper.TARGET_PACKAGE_NAME);
     }
 
     public String getInstalledVersionName() {
         try {
-            PackageInfo pInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
+            PackageInfo pInfo = context.getPackageManager().getPackageInfo(PackageInstallerHelper.TARGET_PACKAGE_NAME, 0);
             return pInfo.versionName;
         } catch (Exception e) {
-            return "1.0.0";
+            return "Not Installed";
         }
     }
 
@@ -120,13 +115,16 @@ public class UpdateController implements PackageInstallStatusReceiver.InstallSta
         this.activeManifest = manifest != null ? manifest : getAuthoritativeReleaseManifest();
         int currentCode = getInstalledVersionCode();
 
-        if (activeManifest.getVersionCode() <= currentCode) {
+        if (currentCode != -1 && activeManifest.getVersionCode() <= currentCode) {
             if (listener != null) {
                 listener.onUpdateUpToDate(currentCode);
             }
         } else {
             if (listener != null) {
-                listener.onStageChanged(Stage.CHECKING_INTERNET, "New version v" + activeManifest.getVersionName() + " available", 0);
+                String label = currentCode == -1
+                        ? "AimShot Engine v" + activeManifest.getVersionName() + " ready to install"
+                        : "New version v" + activeManifest.getVersionName() + " available";
+                listener.onStageChanged(Stage.CHECKING_INTERNET, label, 0);
             }
         }
     }
@@ -262,11 +260,12 @@ public class UpdateController implements PackageInstallStatusReceiver.InstallSta
             }
         }
 
-        // 2. Checking if package was upgraded while backgrounded
+        // 2. Checking if package was installed or upgraded while backgrounded
+        boolean isNowInstalled = PackageInstallerHelper.isMainApkInstalled(context);
         int currentCode = getInstalledVersionCode();
-        if (baselineVersionCode > 0 && currentCode > baselineVersionCode) {
-            Log.i(TAG, "Detected version upgrade via onResume(): " + baselineVersionCode + " -> " + currentCode);
-            onInstallSuccess("com.alpha10.aimshot");
+        if (isNowInstalled && (baselineVersionCode == -1 || currentCode > baselineVersionCode || isRunning)) {
+            Log.i(TAG, "Detected Main APK installation via onResume(): " + currentCode);
+            onInstallSuccess(PackageInstallerHelper.TARGET_PACKAGE_NAME);
         }
     }
 
