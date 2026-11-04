@@ -269,8 +269,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </button>
       </div>
 
-      {/* 4-column Grid of Games with Real Logos from dedicated assets/images/games/ */}
-      <div className="grid grid-cols-4 gap-2 mb-4">
+      {/* 2-column Balanced Grid for Carrom and 8 Ball Pool */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
         {SUPPORTED_GAMES.map((game) => {
           const isSelected = selectedGame.id === game.id;
           const isGameActive = game.isActive === true;
@@ -279,10 +279,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <button
               key={game.id}
               onClick={() => onSelectGame(game)}
-              className={`flex flex-col items-center p-2 rounded-xl transition-all cursor-pointer relative group ${
+              className={`flex flex-col items-center p-3 rounded-2xl transition-all cursor-pointer relative group ${
                 isSelected
                   ? isDark
-                    ? 'bg-[#14283D] border-2 border-[#39B9FF] shadow-[0_0_12px_rgba(57,185,255,0.3)] ring-1 ring-[#39B9FF]/50 scale-[1.02]'
+                    ? 'bg-[#14283D] border-2 border-[#39B9FF] shadow-[0_0_14px_rgba(57,185,255,0.35)] ring-1 ring-[#39B9FF]/50 scale-[1.02]'
                     : 'bg-[#E0F2FE] border-2 border-[#0284C7] shadow-md scale-[1.02]'
                   : isDark
                   ? 'bg-[#111B2A] border border-[#1C2B42] hover:border-[#39B9FF]/40'
@@ -290,22 +290,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               }`}
             >
               {/* Game Logo Container */}
-              <div className="w-12 h-12 rounded-xl p-1 relative flex items-center justify-center overflow-hidden bg-black/30 border border-white/10">
+              <div className="w-14 h-14 rounded-xl p-1.5 relative flex items-center justify-center overflow-hidden bg-black/40 border border-white/10">
                 <img
                   src={game.logoUrl}
                   alt={game.name}
                   className="w-full h-full object-contain rounded-lg drop-shadow-sm group-hover:scale-105 transition-transform"
                   loading="lazy"
                   onError={(e) => {
-                    // Fallback to text initials if image fails
                     e.currentTarget.style.display = 'none';
                   }}
                 />
 
                 {/* Active Indicator Badge Dot */}
                 <div
-                  className={`absolute top-1 right-1 w-2.5 h-2.5 rounded-full ring-1 ring-white/60 ${
-                    isGameActive ? 'bg-[#49DCA0] shadow-[0_0_6px_#49DCA0]' : 'bg-[#64748B]'
+                  className={`absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full ring-2 ring-white/70 ${
+                    isGameActive ? 'bg-[#49DCA0] shadow-[0_0_8px_#49DCA0]' : 'bg-[#64748B]'
                   }`}
                   title={isGameActive ? t.activeStatus : t.lockedStatus}
                 />
@@ -313,7 +312,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
               {/* Game Name */}
               <span
-                className={`text-[10px] font-semibold mt-1 text-center leading-tight line-clamp-1 w-full ${
+                className={`text-xs font-bold mt-2 text-center leading-tight line-clamp-1 w-full ${
                   isSelected
                     ? isDark
                       ? 'text-[#39B9FF]'
@@ -326,10 +325,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 {game.name}
               </span>
 
-              {/* Small Status Tag */}
+              {/* Status Tag */}
               <span
-                className={`text-[8px] font-mono leading-none mt-0.5 ${
-                  isGameActive ? 'text-[#49DCA0] font-bold' : isDark ? 'text-[#8D9BB0]' : 'text-[#64748B]'
+                className={`text-[10px] font-mono leading-none mt-1 px-2 py-0.5 rounded-full ${
+                  isGameActive
+                    ? 'bg-[#49DCA0]/15 text-[#49DCA0] font-bold border border-[#49DCA0]/30'
+                    : isDark
+                    ? 'bg-slate-800/60 text-[#8D9BB0] border border-slate-700/50'
+                    : 'bg-slate-100 text-[#64748B] border border-slate-200'
                 }`}
               >
                 {isGameActive ? t.activeStatus : t.lockedStatus}

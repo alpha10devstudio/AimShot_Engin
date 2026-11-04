@@ -469,7 +469,7 @@ export default function App() {
           </span>
         </div>
 
-        {/* View Switcher Tabs */}
+        {/* View Switcher Tabs (Clean & Focused) */}
         <div
           className={`flex items-center gap-1 p-1 rounded-xl border ${
             theme === 'dark'
@@ -479,7 +479,7 @@ export default function App() {
         >
           <button
             onClick={() => setViewMode('phone')}
-            className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
               viewMode === 'phone'
                 ? 'bg-[#39B9FF] text-[#0B0F17] shadow-[0_0_10px_rgba(57,185,255,0.3)]'
                 : theme === 'dark'
@@ -488,26 +488,12 @@ export default function App() {
             }`}
           >
             <Smartphone className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Mobile</span>
-          </button>
-
-          <button
-            onClick={() => setViewMode('split')}
-            className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-              viewMode === 'split'
-                ? 'bg-[#39B9FF] text-[#0B0F17] shadow-[0_0_10px_rgba(57,185,255,0.3)]'
-                : theme === 'dark'
-                ? 'text-[#8D9BB0] hover:text-white'
-                : 'text-[#64748B] hover:text-[#0F172A]'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Dual Studio</span>
+            <span>Mobile</span>
           </button>
 
           <button
             onClick={() => setViewMode('code')}
-            className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
               viewMode === 'code'
                 ? 'bg-[#39B9FF] text-[#0B0F17] shadow-[0_0_10px_rgba(57,185,255,0.3)]'
                 : theme === 'dark'
@@ -518,216 +504,8 @@ export default function App() {
             <Code className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Android Code</span>
           </button>
-
-          <button
-            onClick={() => setViewMode('mockup')}
-            className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-              viewMode === 'mockup'
-                ? 'bg-[#39B9FF] text-[#0B0F17] shadow-[0_0_10px_rgba(57,185,255,0.3)]'
-                : theme === 'dark'
-                ? 'text-[#8D9BB0] hover:text-white'
-                : 'text-[#64748B] hover:text-[#0F172A]'
-            }`}
-          >
-            <ImageIcon className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Mockup</span>
-          </button>
-        </div>
-
-        {/* Action Group: Broadcast Admin, Download APK & Test Key */}
-        <div className="flex items-center gap-2">
-          {/* Website-to-App Broadcast Admin Button */}
-          <button
-            onClick={() => setIsAdminModalOpen(true)}
-            className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-              theme === 'dark'
-                ? 'bg-[#111B2A] border-[#39B9FF]/40 text-[#39B9FF] hover:bg-[#39B9FF]/20 shadow-[0_0_10px_rgba(57,185,255,0.2)]'
-                : 'bg-[#E0F2FE] border-[#39B9FF]/50 text-[#0284C7] hover:bg-[#BAE6FD]'
-            }`}
-            title="Open Website-to-App Notification Management"
-          >
-            <Megaphone className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Broadcast Admin</span>
-            {unreadNotificationsCount > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-[#39B9FF] text-[#0B0F17] font-black">
-                {unreadNotificationsCount}
-              </span>
-            )}
-          </button>
-
-          {/* Prominent Direct APK Download Button */}
-          <button
-            onClick={handleDownloadApk}
-            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#49DCA0] to-[#20C97F] hover:opacity-90 text-[#0B0F17] text-xs font-extrabold flex items-center gap-1.5 transition-all shadow-[0_0_12px_rgba(73,220,160,0.35)] cursor-pointer active:scale-95"
-            title="Download built APK package"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Download APK</span>
-            <span className="md:hidden">APK</span>
-          </button>
-
-          {/* Quick Test Key Toggle */}
-          {membership.isLoggedIn ? (
-            <button
-              onClick={handleLogout}
-              className="px-2.5 py-1.5 rounded-xl bg-red-950/40 border border-red-500/40 text-red-400 hover:bg-red-900/30 text-xs font-bold transition-all cursor-pointer"
-            >
-              Log Out
-            </button>
-          ) : (
-            <button
-              onClick={() => handleLoginSuccess('AIM-PRO-2025-X9')}
-              className={`hidden sm:flex px-2.5 py-1.5 rounded-xl border text-xs font-bold items-center gap-1.5 transition-all cursor-pointer ${
-                theme === 'dark'
-                  ? 'bg-[#39B9FF]/15 border-[#39B9FF]/40 text-[#39B9FF] hover:bg-[#39B9FF]/25'
-                  : 'bg-[#E0F2FE] border-[#39B9FF]/50 text-[#0284C7] hover:bg-[#BAE6FD]'
-              }`}
-            >
-              <KeyRound className="w-3.5 h-3.5" />
-              <span>Test 18-Day Key</span>
-            </button>
-          )}
         </div>
       </header>
-
-      {/* Screen Navigator & Responsive Device Sizer Toolbar */}
-      <div
-        className={`border-b px-3 sm:px-6 py-2 flex flex-wrap items-center justify-between text-xs overflow-x-auto select-none gap-2 shrink-0 ${
-          theme === 'dark'
-            ? 'bg-[#090D14] border-[#162234]'
-            : 'bg-[#F8FAFC] border-[#CBD5E1]'
-        }`}
-      >
-        {/* Screen Jump Links */}
-        <div className="flex items-center gap-1.5 shrink-0 overflow-x-auto">
-          <span
-            className={`font-bold text-[10px] uppercase mr-1 ${
-              theme === 'dark' ? 'text-[#55657E]' : 'text-[#64748B]'
-            }`}
-          >
-            Screens:
-          </span>
-          {(
-            [
-              { id: 'splash', label: '1. Splash' },
-              { id: 'home', label: '2. Home' },
-              { id: 'login_dialog', label: '3. Key Login' },
-              { id: 'premium', label: '4. Premium' },
-              { id: 'supported_games', label: '5. Games' },
-              { id: 'seller_contact', label: '6. Seller' },
-              { id: 'device_info', label: '7. Device' },
-              { id: 'settings', label: '8. Settings' },
-              { id: 'notifications', label: '9. Notifications' }
-            ] as const
-          ).map((item) => (
-            <button
-              key={item.id}
-              onClick={() => {
-                if (item.id === 'login_dialog') {
-                  setCurrentScreen('home');
-                  setCurrentTab('home');
-                  setIsLoginModalOpen(true);
-                } else if (item.id === 'premium') {
-                  setCurrentScreen('premium');
-                  setCurrentTab('premium');
-                } else {
-                  setCurrentScreen(item.id as ScreenId);
-                  if (item.id === 'home') setCurrentTab('home');
-                  if (item.id === 'settings') setCurrentTab('settings');
-                }
-              }}
-              className={`px-2 py-0.5 rounded-lg text-[10px] font-medium transition-colors shrink-0 cursor-pointer ${
-                currentScreen === item.id || (item.id === 'login_dialog' && isLoginModalOpen)
-                  ? 'bg-[#14283D] text-[#39B9FF] border border-[#39B9FF]/40'
-                  : theme === 'dark'
-                  ? 'text-[#8D9BB0] hover:bg-[#111B2A] hover:text-white'
-                  : 'text-[#64748B] hover:bg-[#E2E8F0] hover:text-[#0F172A]'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Mobile Device Preset Sizer */}
-        <div className="flex items-center gap-2 shrink-0">
-          <span
-            className={`font-bold text-[10px] uppercase ${
-              theme === 'dark' ? 'text-[#55657E]' : 'text-[#64748B]'
-            }`}
-          >
-            Device Size:
-          </span>
-          <div
-            className={`flex items-center gap-1 p-0.5 rounded-lg border ${
-              theme === 'dark'
-                ? 'bg-[#111B2A] border-[#1C2B42]'
-                : 'bg-white border-[#CBD5E1]'
-            }`}
-          >
-            <button
-              onClick={() => {
-                setDevicePreset('responsive');
-                showToast('Auto Responsive Mode (Adapts to any screen)');
-              }}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
-                devicePreset === 'responsive'
-                  ? 'bg-[#39B9FF] text-[#0B0F17]'
-                  : theme === 'dark'
-                  ? 'text-[#8D9BB0] hover:text-white'
-                  : 'text-[#64748B] hover:text-[#0F172A]'
-              }`}
-            >
-              Responsive
-            </button>
-            <button
-              onClick={() => {
-                setDevicePreset('small');
-                showToast('Compact Mobile: 360px × 740px');
-              }}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
-                devicePreset === 'small'
-                  ? 'bg-[#39B9FF] text-[#0B0F17]'
-                  : theme === 'dark'
-                  ? 'text-[#8D9BB0] hover:text-white'
-                  : 'text-[#64748B] hover:text-[#0F172A]'
-              }`}
-            >
-              360px
-            </button>
-            <button
-              onClick={() => {
-                setDevicePreset('standard');
-                showToast('Standard Mobile: 390px × 800px');
-              }}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
-                devicePreset === 'standard'
-                  ? 'bg-[#39B9FF] text-[#0B0F17]'
-                  : theme === 'dark'
-                  ? 'text-[#8D9BB0] hover:text-white'
-                  : 'text-[#64748B] hover:text-[#0F172A]'
-              }`}
-            >
-              390px
-            </button>
-            <button
-              onClick={() => {
-                setDevicePreset('large');
-                showToast('Large Mobile: 430px × 880px');
-              }}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
-                devicePreset === 'large'
-                  ? 'bg-[#39B9FF] text-[#0B0F17]'
-                  : theme === 'dark'
-                  ? 'text-[#8D9BB0] hover:text-white'
-                  : 'text-[#64748B] hover:text-[#0F172A]'
-              }`}
-            >
-              430px
-            </button>
-          </div>
-        </div>
-      </div>
 
       {/* Main Content Viewport */}
       <main className="flex-1 overflow-auto p-2 sm:p-4 md:p-6 flex items-center justify-center relative">

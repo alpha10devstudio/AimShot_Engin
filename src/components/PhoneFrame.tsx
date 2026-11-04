@@ -30,15 +30,14 @@ export const PhoneFrame: React.FC<PhoneFrameProps> = ({
   // Responsive device styling presets
   const getFrameDimensions = () => {
     switch (devicePreset) {
-      case 'responsive':
-        return 'w-full h-full max-w-md min-h-[600px] md:rounded-[40px] md:border-4 md:border-[#1C2B42]';
       case 'small':
         return 'w-[360px] h-[740px] rounded-[44px] border-4 border-[#1C2B42]';
       case 'large':
         return 'w-[430px] h-[880px] rounded-[52px] border-4 border-[#1C2B42]';
+      case 'responsive':
       case 'standard':
       default:
-        return 'w-full max-w-[390px] h-[800px] rounded-[48px] border-4 border-[#1C2B42]';
+        return 'w-full max-w-[390px] h-[calc(100dvh-5.5rem)] max-h-[820px] min-h-[560px] rounded-[38px] md:rounded-[48px] border-2 md:border-4 border-[#1C2B42]';
     }
   };
 
@@ -91,13 +90,15 @@ export const PhoneFrame: React.FC<PhoneFrameProps> = ({
           </div>
         )}
 
-        {/* Dynamic Screen Viewport with smooth scrollbar */}
+        {/* Dynamic Screen Viewport with smooth scrollbar and slide transition */}
         <div
           className={`relative flex-1 w-full overflow-hidden transition-colors duration-200 ${
             isDark ? 'bg-[#0B0F17]' : 'bg-[#F1F5F9]'
           }`}
         >
-          {children}
+          <div key={currentScreen} className="w-full h-full animate-slide-in-right">
+            {children}
+          </div>
         </div>
 
         {/* Persistent Native Bottom Navigation Bar */}
