@@ -15,7 +15,7 @@ import com.alpha10.aimshot.model.SellerInfo;
 /**
  * Screen presenting verified seller channels with reliable external intents.
  */
-public class SellerContactActivity extends AppCompatActivity {
+public class SellerContactActivity extends BaseActivity {
 
     private SellerInfo sellerInfo;
 

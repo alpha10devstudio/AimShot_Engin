@@ -4,12 +4,9 @@ import android.app.Dialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.view.View;
 import android.view.Window;
-import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
@@ -17,6 +14,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 
 import com.alpha10.aimshot.R;
 import com.alpha10.aimshot.model.VerificationResult;
@@ -24,10 +22,12 @@ import com.alpha10.aimshot.repository.MembershipRepository;
 import com.alpha10.aimshot.service.DeviceIdManager;
 import com.alpha10.aimshot.service.LicenseVerificationService;
 import com.alpha10.aimshot.service.VerificationCallback;
+import com.alpha10.aimshot.util.DialogUiHelper;
 import com.alpha10.aimshot.util.FontHelper;
 
 /**
- * Tactical verification key modal dialog with right-aligned Paste button.
+ * Tactical verification key modal dialog with uniform 24dp screen margins,
+ * rounded tactical icon badge, and right-aligned Paste button.
  */
 public class VerificationKeyDialog extends Dialog {
 
@@ -62,15 +62,7 @@ public class VerificationKeyDialog extends Dialog {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.dialog_verification_key);
-
-        if (getWindow() != null) {
-            getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-            getWindow().setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
-            WindowManager.LayoutParams lp = getWindow().getAttributes();
-            lp.dimAmount = 0.68f;
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-            getWindow().setAttributes(lp);
-        }
+        DialogUiHelper.prepareDialogWindowBeforeShow(this);
 
         editKey = findViewById(R.id.edit_verification_key);
         btnPaste = findViewById(R.id.btn_paste_key);
@@ -79,40 +71,26 @@ public class VerificationKeyDialog extends Dialog {
         tvError = findViewById(R.id.tv_dialog_error);
         progressBar = findViewById(R.id.progress_verification);
 
-        // Apply regular typography
         if (findViewById(android.R.id.content) != null) {
             FontHelper.applyRegularFont(findViewById(android.R.id.content));
         }
 
-        // Paste button listener
         if (btnPaste != null) {
-            btnPaste.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    handlePasteFromClipboard();
-                }
-            });
+            btnPaste.setOnClickListener(v -> handlePasteFromClipboard());
         }
 
-        btnLogin.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                attemptVerification();
-            }
-        });
+        btnLogin.setOnClickListener(v -> attemptVerification());
 
-        tvClose.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                dismiss();
-            }
-        });
+        tvClose.setOnClickListener(v -> dismiss());
     }
 
-    /**
-     * Reads clipboard text, replaces verification key field content,
-     * positions cursor at the end, and preserves editability without auto-submitting.
-     */
+    @Override
+    public void show() {
+        DialogUiHelper.prepareDialogWindowBeforeShow(this);
+        super.show();
+        DialogUiHelper.applyPostShowWindowMetrics(this);
+    }
+
     private void handlePasteFromClipboard() {
         try {
             ClipboardManager clipboard = (ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
@@ -183,6 +161,10 @@ public class VerificationKeyDialog extends Dialog {
         if (btnLogin != null) {
             btnLogin.setEnabled(!isLoading);
             btnLogin.setText(isLoading ? "Verifying..." : getContext().getString(R.string.btn_login));
+            btnLogin.setTextColor(ContextCompat.getColor(
+                    getContext(),
+                    isLoading ? R.color.text_muted : R.color.text_on_accent
+            ));
         }
         if (editKey != null) {
             editKey.setEnabled(!isLoading);

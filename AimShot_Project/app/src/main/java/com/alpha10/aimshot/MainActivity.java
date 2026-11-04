@@ -1,14 +1,9 @@
-
 package com.alpha10.aimshot;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.Window;
-import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -28,13 +23,14 @@ import com.alpha10.aimshot.model.GameItem;
 import com.alpha10.aimshot.model.MembershipStatus;
 import com.alpha10.aimshot.repository.GameRepository;
 import com.alpha10.aimshot.repository.MembershipRepository;
+import com.alpha10.aimshot.util.DialogUiHelper;
 import com.alpha10.aimshot.util.FontHelper;
 import com.alpha10.aimshot.util.NetworkUtil;
 import com.alpha10.aimshot.util.PackageInstallerHelper;
 
 /**
- * Main dashboard hosting Home and Premium destinations
- * with persistent Bottom Navigation.
+ * Main dashboard hosting Home and Premium destinations, persistent Bottom Navigation,
+ * Private Vault Engine setup/launch gate, and Legacy Exposed App Copy cleanup detection.
  */
 public class MainActivity extends BaseActivity
         implements MembershipRepository.MembershipChangeListener {
@@ -59,8 +55,9 @@ public class MainActivity extends BaseActivity
     private MembershipRepository membershipRepository;
 
     private boolean isLaunching = false;
-    private com.alpha10.aimshot.dialog.UpdateDialog activeUpdateDialog;
+    private UpdateDialog activeUpdateDialog;
     private AlertDialog activeNetworkCheckDialog;
+    private AlertDialog activeLegacyCleanupDialog;
 
     private final android.os.Handler carouselHandler =
             new android.os.Handler(android.os.Looper.getMainLooper());
@@ -70,7 +67,6 @@ public class MainActivity extends BaseActivity
     private android.widget.ViewFlipper currentFlipper;
 
     private ImageView currentDot1, currentDot2, currentDot3;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -89,25 +85,19 @@ public class MainActivity extends BaseActivity
         handleIncomingIntent(getIntent());
     }
 
-
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-
         setIntent(intent);
-
         handleIncomingIntent(intent);
     }
-
 
     private void handleIncomingIntent(Intent intent) {
         if (intent != null &&
                 "PREMIUM".equals(intent.getStringExtra("TARGET_TAB"))) {
-
             navigateToTab(Tab.PREMIUM);
         }
     }
-
 
     @Override
     protected void onDestroy() {
@@ -115,15 +105,14 @@ public class MainActivity extends BaseActivity
 
         stopCarouselTimer();
         dismissVerifyingConnectionDialog();
+        dismissLegacyCleanupDialog();
 
         if (membershipRepository != null) {
             membershipRepository.removeListener(this);
         }
     }
 
-
     private void initViews() {
-
         fragmentContainer = findViewById(R.id.fragment_container);
 
         navBtnHome = findViewById(R.id.nav_btn_home);
@@ -136,16 +125,14 @@ public class MainActivity extends BaseActivity
 
         tvNavHome = findViewById(R.id.tv_nav_home);
         tvNavPremium = findViewById(R.id.tv_nav_premium);
-        tvNavSettings = findViewById(R.id.tv_nav_settings);
+        tvNavSettings = findViewById(R.id.nav_btn_settings != 0 ? R.id.tv_nav_settings : R.id.tv_nav_settings);
 
         navDotHome = findViewById(R.id.nav_dot_home);
         navDotPremium = findViewById(R.id.nav_dot_premium);
         navDotSettings = findViewById(R.id.nav_dot_settings);
     }
 
-
     private void setupNavigation() {
-
         navBtnHome.setOnClickListener(v -> {
             if (currentTab != Tab.HOME) {
                 navigateToTab(Tab.HOME);
@@ -158,119 +145,62 @@ public class MainActivity extends BaseActivity
             }
         });
 
-        navBtnSettings.setOnClickListener(v -> {
-            startActivity(
-                    new Intent(MainActivity.this, SettingsActivity.class)
-            );
-        });
+        navBtnSettings.setOnClickListener(v -> startActivity(
+                new Intent(MainActivity.this, SettingsActivity.class)
+        ));
     }
 
-
     public void navigateToTab(Tab tab) {
-
         currentTab = tab;
-
         updateNavUi();
-
         stopCarouselTimer();
-
         fragmentContainer.removeAllViews();
 
         if (tab == Tab.HOME) {
-
             renderHomeScreen();
-
         } else if (tab == Tab.PREMIUM) {
-
             renderPremiumScreen();
         }
     }
 
-
     private void updateNavUi() {
+        int colorActive = ContextCompat.getColor(this, R.color.accent_primary);
+        int colorInactive = ContextCompat.getColor(this, R.color.nav_inactive);
 
-        int colorActive = ContextCompat.getColor(
-                this, R.color.accent_primary
-        );
-
-        int colorInactive = ContextCompat.getColor(
-                this, R.color.nav_inactive
-        );
-
-        // Home
-        ivNavHome.setColorFilter(
-                currentTab == Tab.HOME ? colorActive : colorInactive
-        );
-
-        tvNavHome.setTextColor(
-                currentTab == Tab.HOME ? colorActive : colorInactive
-        );
-
+        ivNavHome.setColorFilter(currentTab == Tab.HOME ? colorActive : colorInactive);
+        tvNavHome.setTextColor(currentTab == Tab.HOME ? colorActive : colorInactive);
         if (navDotHome != null) {
-            navDotHome.setVisibility(
-                    currentTab == Tab.HOME ? View.VISIBLE : View.INVISIBLE
-            );
+            navDotHome.setVisibility(currentTab == Tab.HOME ? View.VISIBLE : View.INVISIBLE);
         }
 
-        // Premium
-        ivNavPremium.setColorFilter(
-                currentTab == Tab.PREMIUM ? colorActive : colorInactive
-        );
-
-        tvNavPremium.setTextColor(
-                currentTab == Tab.PREMIUM ? colorActive : colorInactive
-        );
-
+        ivNavPremium.setColorFilter(currentTab == Tab.PREMIUM ? colorActive : colorInactive);
+        tvNavPremium.setTextColor(currentTab == Tab.PREMIUM ? colorActive : colorInactive);
         if (navDotPremium != null) {
-            navDotPremium.setVisibility(
-                    currentTab == Tab.PREMIUM ? View.VISIBLE : View.INVISIBLE
-            );
+            navDotPremium.setVisibility(currentTab == Tab.PREMIUM ? View.VISIBLE : View.INVISIBLE);
         }
 
-        // Settings
-        ivNavSettings.setColorFilter(
-                currentTab == Tab.SETTINGS ? colorActive : colorInactive
-        );
-
-        tvNavSettings.setTextColor(
-                currentTab == Tab.SETTINGS ? colorActive : colorInactive
-        );
-
+        ivNavSettings.setColorFilter(currentTab == Tab.SETTINGS ? colorActive : colorInactive);
+        tvNavSettings.setTextColor(currentTab == Tab.SETTINGS ? colorActive : colorInactive);
         if (navDotSettings != null) {
-            navDotSettings.setVisibility(
-                    currentTab == Tab.SETTINGS ? View.VISIBLE : View.INVISIBLE
-            );
+            navDotSettings.setVisibility(currentTab == Tab.SETTINGS ? View.VISIBLE : View.INVISIBLE);
         }
     }
 
-
-    // =========================================================
-    // CAROUSEL TIMER
-    // =========================================================
-
     private void startCarouselTimer() {
-
         stopCarouselTimer();
-
         if (currentFlipper == null) return;
 
         carouselRunnable = new Runnable() {
-
             @Override
             public void run() {
-
-                if (currentFlipper != null &&
-                        currentTab == Tab.HOME) {
-
+                if (currentFlipper != null && currentTab == Tab.HOME) {
                     currentFlipper.showNext();
-
                     updateCarouselIndicators(
                             currentFlipper.getDisplayedChild(),
                             currentDot1,
                             currentDot2,
                             currentDot3
                     );
-
                     carouselHandler.postDelayed(this, 4000);
                 }
             }
@@ -279,34 +209,20 @@ public class MainActivity extends BaseActivity
         carouselHandler.postDelayed(carouselRunnable, 4000);
     }
 
-
     private void stopCarouselTimer() {
-
         if (carouselRunnable != null) {
-
             carouselHandler.removeCallbacks(carouselRunnable);
-
             carouselRunnable = null;
         }
     }
 
-
     private void resetCarouselTimer() {
-
         stopCarouselTimer();
-
         startCarouselTimer();
     }
 
-
-    // =========================================================
-    // NOTIFICATION BADGE
-    // =========================================================
-
     private void updateNotificationBadge() {
-
         try {
-
             int unread = com.alpha10.aimshot.repository
                     .NotificationsRepository.getInstance(this)
                     .getUnreadCount();
@@ -328,18 +244,11 @@ public class MainActivity extends BaseActivity
                     }
                 }
             }
-
         } catch (Exception ignored) {
         }
     }
 
-
-    // =========================================================
-    // HOME SCREEN
-    // =========================================================
-
     private void renderHomeScreen() {
-
         View homeView = LayoutInflater.from(this).inflate(
                 R.layout.fragment_home,
                 fragmentContainer,
@@ -348,54 +257,23 @@ public class MainActivity extends BaseActivity
 
         fragmentContainer.addView(homeView);
 
-
-        // Notifications
-        View btnNotifications = homeView.findViewById(
-                R.id.btn_notifications
-        );
-
+        View btnNotifications = homeView.findViewById(R.id.btn_notifications);
         if (btnNotifications != null) {
-
-            btnNotifications.setOnClickListener(v -> {
-
-                startActivity(
-                        new Intent(
-                                MainActivity.this,
-                                NotificationsActivity.class
-                        )
-                );
-            });
+            btnNotifications.setOnClickListener(v -> startActivity(
+                    new Intent(MainActivity.this, NotificationsActivity.class)
+            ));
         }
 
         updateNotificationBadge();
 
-
-        // View All Games
-        View tvViewAll = homeView.findViewById(
-                R.id.tv_view_all_games
-        );
-
+        View tvViewAll = homeView.findViewById(R.id.tv_view_all_games);
         if (tvViewAll != null) {
-
-            tvViewAll.setOnClickListener(v -> {
-
-                startActivity(
-                        new Intent(
-                                MainActivity.this,
-                                SupportedGamesActivity.class
-                        )
-                );
-            });
+            tvViewAll.setOnClickListener(v -> startActivity(
+                    new Intent(MainActivity.this, SupportedGamesActivity.class)
+            ));
         }
 
-
-        // =====================================================
-        // HOME CAROUSEL
-        // =====================================================
-
-        final android.widget.ViewFlipper flipper =
-                homeView.findViewById(R.id.home_carousel_flipper);
-
+        final android.widget.ViewFlipper flipper = homeView.findViewById(R.id.home_carousel_flipper);
         final ImageView dot1 = homeView.findViewById(R.id.dot_1);
         final ImageView dot2 = homeView.findViewById(R.id.dot_2);
         final ImageView dot3 = homeView.findViewById(R.id.dot_3);
@@ -404,105 +282,57 @@ public class MainActivity extends BaseActivity
         View btnNext = homeView.findViewById(R.id.btn_carousel_next);
 
         currentFlipper = flipper;
-
         currentDot1 = dot1;
         currentDot2 = dot2;
         currentDot3 = dot3;
 
-
         if (flipper != null) {
-
             updateCarouselIndicators(0, dot1, dot2, dot3);
 
-
-            // Previous
             if (btnPrev != null) {
-
                 btnPrev.setOnClickListener(v -> {
-
                     flipper.showPrevious();
-
-                    updateCarouselIndicators(
-                            flipper.getDisplayedChild(),
-                            dot1, dot2, dot3
-                    );
-
+                    updateCarouselIndicators(flipper.getDisplayedChild(), dot1, dot2, dot3);
                     resetCarouselTimer();
                 });
             }
 
-
-            // Next
             if (btnNext != null) {
-
                 btnNext.setOnClickListener(v -> {
-
                     flipper.showNext();
-
-                    updateCarouselIndicators(
-                            flipper.getDisplayedChild(),
-                            dot1, dot2, dot3
-                    );
-
+                    updateCarouselIndicators(flipper.getDisplayedChild(), dot1, dot2, dot3);
                     resetCarouselTimer();
                 });
             }
 
-
-            // Dot 1
             if (dot1 != null) {
-
                 dot1.setOnClickListener(v -> {
-
                     flipper.setDisplayedChild(0);
-
-                    updateCarouselIndicators(
-                            0, dot1, dot2, dot3
-                    );
-
+                    updateCarouselIndicators(0, dot1, dot2, dot3);
                     resetCarouselTimer();
                 });
             }
 
-
-            // Dot 2
             if (dot2 != null) {
-
                 dot2.setOnClickListener(v -> {
-
                     flipper.setDisplayedChild(1);
-
-                    updateCarouselIndicators(
-                            1, dot1, dot2, dot3
-                    );
-
+                    updateCarouselIndicators(1, dot1, dot2, dot3);
                     resetCarouselTimer();
                 });
             }
 
-
-            // Dot 3
             if (dot3 != null) {
-
                 dot3.setOnClickListener(v -> {
-
                     flipper.setDisplayedChild(2);
-
-                    updateCarouselIndicators(
-                            2, dot1, dot2, dot3
-                    );
-
+                    updateCarouselIndicators(2, dot1, dot2, dot3);
                     resetCarouselTimer();
                 });
             }
 
-
-            // Swipe Gesture
             final android.view.GestureDetector gestureDetector =
                     new android.view.GestureDetector(
                             this,
                             new android.view.GestureDetector.SimpleOnGestureListener() {
-
                                 private static final int SWIPE_THRESHOLD = 50;
                                 private static final int SWIPE_VELOCITY_THRESHOLD = 80;
 
@@ -513,322 +343,157 @@ public class MainActivity extends BaseActivity
                                         float velocityX,
                                         float velocityY
                                 ) {
-
-                                    if (e1 == null || e2 == null) {
-                                        return false;
-                                    }
-
+                                    if (e1 == null || e2 == null) return false;
                                     float diffX = e2.getX() - e1.getX();
-
                                     float diffY = e2.getY() - e1.getY();
-
                                     if (Math.abs(diffX) > Math.abs(diffY)) {
-
                                         if (Math.abs(diffX) > SWIPE_THRESHOLD &&
                                                 Math.abs(velocityX) > SWIPE_VELOCITY_THRESHOLD) {
-
                                             if (diffX > 0) {
-
                                                 flipper.showPrevious();
-
                                             } else {
-
                                                 flipper.showNext();
                                             }
-
-                                            updateCarouselIndicators(
-                                                    flipper.getDisplayedChild(),
-                                                    dot1, dot2, dot3
-                                            );
-
+                                            updateCarouselIndicators(flipper.getDisplayedChild(), dot1, dot2, dot3);
                                             resetCarouselTimer();
-
                                             return true;
                                         }
                                     }
-
                                     return false;
                                 }
                             }
                     );
 
-
-            flipper.setOnTouchListener(
-                    (v, event) ->
-                            gestureDetector.onTouchEvent(event)
-            );
-
-
+            flipper.setOnTouchListener((v, event) -> gestureDetector.onTouchEvent(event));
             startCarouselTimer();
         }
 
-
-        // =====================================================
-        // GAME GRID
-        // =====================================================
-
-        RecyclerView rvGrid = homeView.findViewById(
-                R.id.rv_games_grid
-        );
-
+        RecyclerView rvGrid = homeView.findViewById(R.id.rv_games_grid);
         if (rvGrid != null) {
-
-            rvGrid.setLayoutManager(
-                    new GridLayoutManager(this, 4)
-            );
-
+            rvGrid.setLayoutManager(new GridLayoutManager(this, 4));
             final GameGridAdapter adapter = new GameGridAdapter(
                     GameRepository.getInstance().getAllGames(),
-
-                    new GameGridAdapter.OnGameClickListener() {
-
-                        @Override
-                        public void onGameClick(GameItem item) {
-
-                            if (item.isActive()) {
-
-                                Toast.makeText(
-                                        MainActivity.this,
-                                        "Aim Assist Ready for " + item.getName(),
-                                        Toast.LENGTH_SHORT
-                                ).show();
-
-                            } else {
-
-                                Toast.makeText(
-                                        MainActivity.this,
-                                        item.getName() +
-                                                " is currently locked / Pro Key required",
-                                        Toast.LENGTH_SHORT
-                                ).show();
-                            }
+                    item -> {
+                        if (item.isActive()) {
+                            Toast.makeText(
+                                    MainActivity.this,
+                                    "Aim Assist Ready for " + item.getName(),
+                                    Toast.LENGTH_SHORT
+                            ).show();
+                        } else {
+                            Toast.makeText(
+                                    MainActivity.this,
+                                    item.getName() + " is currently locked / Pro Key required",
+                                    Toast.LENGTH_SHORT
+                            ).show();
                         }
                     }
             );
-
             rvGrid.setAdapter(adapter);
         }
 
-
-        // Login / Launch Card
         updateHomeLoginCard(homeView);
-
-
-        // Fonts
         FontHelper.applyRegularFont(homeView);
     }
 
-
-    // =========================================================
-    // CAROUSEL INDICATORS
-    // =========================================================
-
-    private void updateCarouselIndicators(
-            int index,
-            ImageView d1,
-            ImageView d2,
-            ImageView d3
-    ) {
-
-        if (d1 == null || d2 == null || d3 == null) {
-            return;
-        }
+    private void updateCarouselIndicators(int index, ImageView d1, ImageView d2, ImageView d3) {
+        if (d1 == null || d2 == null || d3 == null) return;
 
         float density = getResources().getDisplayMetrics().density;
-
         int activeWidth = (int) (20 * density);
         int inactiveWidth = (int) (6 * density);
         int height = (int) (6 * density);
 
-
-        // Dot 1
-        d1.setImageResource(
-                index == 0
-                        ? R.drawable.indicator_dot_active
-                        : R.drawable.indicator_dot_inactive
-        );
-
+        d1.setImageResource(index == 0 ? R.drawable.indicator_dot_active : R.drawable.indicator_dot_inactive);
         android.widget.LinearLayout.LayoutParams lp1 =
-                new android.widget.LinearLayout.LayoutParams(
-                        index == 0 ? activeWidth : inactiveWidth,
-                        height
-                );
-
-        lp1.setMargins(
-                (int) (3 * density), 0,
-                (int) (3 * density), 0
-        );
-
+                new android.widget.LinearLayout.LayoutParams(index == 0 ? activeWidth : inactiveWidth, height);
+        lp1.setMargins((int) (3 * density), 0, (int) (3 * density), 0);
         d1.setLayoutParams(lp1);
 
-
-        // Dot 2
-        d2.setImageResource(
-                index == 1
-                        ? R.drawable.indicator_dot_active
-                        : R.drawable.indicator_dot_inactive
-        );
-
+        d2.setImageResource(index == 1 ? R.drawable.indicator_dot_active : R.drawable.indicator_dot_inactive);
         android.widget.LinearLayout.LayoutParams lp2 =
-                new android.widget.LinearLayout.LayoutParams(
-                        index == 1 ? activeWidth : inactiveWidth,
-                        height
-                );
-
-        lp2.setMargins(
-                (int) (3 * density), 0,
-                (int) (3 * density), 0
-        );
-
+                new android.widget.LinearLayout.LayoutParams(index == 1 ? activeWidth : inactiveWidth, height);
+        lp2.setMargins((int) (3 * density), 0, (int) (3 * density), 0);
         d2.setLayoutParams(lp2);
 
-
-        // Dot 3
-        d3.setImageResource(
-                index == 2
-                        ? R.drawable.indicator_dot_active
-                        : R.drawable.indicator_dot_inactive
-        );
-
+        d3.setImageResource(index == 2 ? R.drawable.indicator_dot_active : R.drawable.indicator_dot_inactive);
         android.widget.LinearLayout.LayoutParams lp3 =
-                new android.widget.LinearLayout.LayoutParams(
-                        index == 2 ? activeWidth : inactiveWidth,
-                        height
-                );
-
-        lp3.setMargins(
-                (int) (3 * density), 0,
-                (int) (3 * density), 0
-        );
-
+                new android.widget.LinearLayout.LayoutParams(index == 2 ? activeWidth : inactiveWidth, height);
+        lp3.setMargins((int) (3 * density), 0, (int) (3 * density), 0);
         d3.setLayoutParams(lp3);
     }
 
-
-    // =========================================================
-    // LOGIN / LAUNCH CARD
-    // =========================================================
-
     private void updateHomeLoginCard(View homeView) {
+        final MembershipStatus status = membershipRepository.getCurrentStatus();
 
-        final MembershipStatus status =
-                membershipRepository.getCurrentStatus();
-
-        View cardLoginStatus = homeView.findViewById(
-                R.id.card_login_status
-        );
-
-        View cardLaunchGame = homeView.findViewById(
-                R.id.card_launch_game
-        );
-
-        Button btnLaunchGame = homeView.findViewById(
-                R.id.btn_launch_game
-        );
-
-        Button btnLogin = homeView.findViewById(
-                R.id.btn_home_login
-        );
-
+        View cardLoginStatus = homeView.findViewById(R.id.card_login_status);
+        View cardLaunchGame = homeView.findViewById(R.id.card_launch_game);
+        Button btnLaunchGame = homeView.findViewById(R.id.btn_launch_game);
+        Button btnLogin = homeView.findViewById(R.id.btn_home_login);
 
         if (status.getState() == MembershipStatus.State.ACTIVE) {
-
-            // Logged in
             if (cardLoginStatus != null) {
                 cardLoginStatus.setVisibility(View.GONE);
             }
-
             if (cardLaunchGame != null) {
-
                 cardLaunchGame.setVisibility(View.VISIBLE);
-
-                TextView tvDays = homeView.findViewById(
-                        R.id.tv_active_days_remaining
-                );
-
+                TextView tvDays = homeView.findViewById(R.id.tv_active_days_remaining);
                 if (tvDays != null) {
-
-                    tvDays.setText(
-                            status.getRemainingDays() + " Days"
-                    );
+                    tvDays.setText(status.getRemainingDays() + " Days");
                 }
-
                 updateLauncherButtonState(btnLaunchGame);
-
                 if (btnLaunchGame != null) {
-
-                    btnLaunchGame.setOnClickListener(v -> {
-                        handleLauncherButtonClick();
-                    });
+                    btnLaunchGame.setOnClickListener(v -> handleLauncherButtonClick());
                 }
             }
-
         } else {
-
-            // Not logged in
             if (cardLoginStatus != null) {
                 cardLoginStatus.setVisibility(View.VISIBLE);
             }
-
             if (cardLaunchGame != null) {
                 cardLaunchGame.setVisibility(View.GONE);
             }
-
             if (btnLogin != null) {
-
-                btnLogin.setOnClickListener(v -> {
-                    showVerificationDialog();
-                });
+                btnLogin.setOnClickListener(v -> showVerificationDialog());
             }
         }
     }
 
-
-    // =========================================================
-    // LAUNCHER BUTTON STATE
-    // =========================================================
-
     private void updateLauncherButtonState(Button btnLaunchGame) {
-
         if (btnLaunchGame == null) return;
 
-        boolean isInstalled =
-                PackageInstallerHelper.isMainApkInstalled(this);
-
-        if (isInstalled) {
-
-            btnLaunchGame.setText(
-                    R.string.launch_aimshot_engine
-            );
-
+        boolean isInstalledInVault = PackageInstallerHelper.isMainApkInstalled(this);
+        if (isInstalledInVault) {
+            btnLaunchGame.setText(R.string.launch_aimshot_engine);
         } else {
-
-            btnLaunchGame.setText(
-                    R.string.install_aimshot_engine
-            );
+            btnLaunchGame.setText(R.string.install_aimshot_engine);
         }
     }
 
-
-    // =========================================================
-    // INSTALLATION / LAUNCH WORKFLOW (4-STEP NETWORK & SERVER GATE)
-    // =========================================================
-
+    /**
+     * Enforces:
+     * 0. Cleanup of any old exposed OS-installed standalone copy of com.alpha10.aimshot
+     * 1. Active radio network check
+     * 2 & 3. Live internet + Alpha10 Server reachability probe
+     * 4. Private Vault Engine launch inside AimShot Launcher (or Private Vault download/setup)
+     */
     private void handleLauncherButtonClick() {
+        if (PackageInstallerHelper.isLegacyStandaloneAppInstalled(this)) {
+            showLegacyStandaloneCleanupDialog();
+            return;
+        }
 
         if (isLaunching) {
             return;
         }
         isLaunching = true;
 
-        // Step 1: Fast synchronous radio check (Wi-Fi / Mobile Data / VPN)
         if (!NetworkUtil.isNetworkConnected(this)) {
             isLaunching = false;
             showConnectivityErrorDialog(NetworkUtil.ConnectivityStatus.NO_NETWORK);
             return;
         }
 
-        // Steps 2 & 3: Live HTTP 204 Internet Probe + Alpha10 Server HTTPS Reachability Check
         showVerifyingConnectionDialog();
 
         NetworkUtil.verifyFullLaunchConnectivity(this, status -> {
@@ -845,10 +510,9 @@ public class MainActivity extends BaseActivity
                 return;
             }
 
-            // Step 4: Verified active internet + reachable Alpha10 Server -> Launch or Download
-            boolean isInstalled = PackageInstallerHelper.isMainApkInstalled(MainActivity.this);
+            boolean isInstalledInVault = PackageInstallerHelper.isMainApkInstalled(MainActivity.this);
 
-            if (isInstalled) {
+            if (isInstalledInVault) {
                 boolean launched = PackageInstallerHelper.launchInstalledApp(MainActivity.this);
                 if (launched) {
                     Toast.makeText(
@@ -884,21 +548,82 @@ public class MainActivity extends BaseActivity
         });
     }
 
+    /**
+     * Prompts the user to remove any exposed standalone OS copy of com.alpha10.aimshot left over
+     * from earlier testing so no duplicate AimShot icon remains in the App Drawer.
+     */
+    private void checkLegacyStandaloneAppOnResume() {
+        if (isFinishing() || isDestroyed()) return;
+        if (PackageInstallerHelper.isLegacyStandaloneAppInstalled(this)) {
+            if (activeLegacyCleanupDialog == null || !activeLegacyCleanupDialog.isShowing()) {
+                showLegacyStandaloneCleanupDialog();
+            }
+        } else {
+            dismissLegacyCleanupDialog();
+        }
+    }
 
-    // =========================================================
-    // SOLID TACTICAL CONNECTIVITY CHECK & ERROR DIALOGS
-    // =========================================================
+    private void showLegacyStandaloneCleanupDialog() {
+        dismissLegacyCleanupDialog();
+        if (isFinishing() || isDestroyed()) return;
+
+        View dialogView = DialogUiHelper.inflateDialogView(this, R.layout.dialog_tactical_confirm);
+        activeLegacyCleanupDialog = DialogUiHelper.createTacticalAlertDialog(this, dialogView);
+
+        ImageView ivIcon = dialogView.findViewById(R.id.iv_confirm_icon);
+        View pbLoading = dialogView.findViewById(R.id.pb_confirm_loading);
+        TextView tvTitle = dialogView.findViewById(R.id.tv_confirm_title);
+        TextView tvMsg = dialogView.findViewById(R.id.tv_confirm_message);
+        Button btnLater = dialogView.findViewById(R.id.btn_confirm_negative);
+        Button btnUninstall = dialogView.findViewById(R.id.btn_confirm_positive);
+
+        if (ivIcon != null) {
+            ivIcon.setVisibility(View.VISIBLE);
+            ivIcon.setImageResource(R.drawable.ic_shield);
+            ivIcon.clearColorFilter();
+        }
+        if (pbLoading != null) {
+            pbLoading.setVisibility(View.GONE);
+        }
+        if (tvTitle != null) {
+            tvTitle.setText(R.string.legacy_app_detected_title);
+        }
+        if (tvMsg != null) {
+            tvMsg.setText(R.string.legacy_app_detected_msg);
+        }
+        if (btnLater != null) {
+            btnLater.setText(R.string.action_close);
+            btnLater.setOnClickListener(v -> dismissLegacyCleanupDialog());
+        }
+        if (btnUninstall != null) {
+            btnUninstall.setText(R.string.btn_uninstall_legacy);
+            btnUninstall.setOnClickListener(v -> {
+                dismissLegacyCleanupDialog();
+                PackageInstallerHelper.requestUninstallLegacyStandaloneApp(MainActivity.this);
+            });
+        }
+
+        DialogUiHelper.showStyledDialog(activeLegacyCleanupDialog);
+    }
+
+    private void dismissLegacyCleanupDialog() {
+        if (activeLegacyCleanupDialog != null) {
+            try {
+                if (activeLegacyCleanupDialog.isShowing()) {
+                    activeLegacyCleanupDialog.dismiss();
+                }
+            } catch (Exception ignored) {
+            }
+            activeLegacyCleanupDialog = null;
+        }
+    }
 
     private void showVerifyingConnectionDialog() {
         dismissVerifyingConnectionDialog();
         if (isFinishing() || isDestroyed()) return;
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(
-                this,
-                R.style.Theme_AimShotEngine_CustomDialog
-        );
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_tactical_confirm, null);
-        builder.setView(dialogView);
+        View dialogView = DialogUiHelper.inflateDialogView(this, R.layout.dialog_tactical_confirm);
+        activeNetworkCheckDialog = DialogUiHelper.createTacticalAlertDialog(this, dialogView);
 
         View ivIcon = dialogView.findViewById(R.id.iv_confirm_icon);
         View pbLoading = dialogView.findViewById(R.id.pb_confirm_loading);
@@ -912,14 +637,9 @@ public class MainActivity extends BaseActivity
         if (tvMsg != null) tvMsg.setText(R.string.verifying_network_msg);
         if (layoutButtons != null) layoutButtons.setVisibility(View.GONE);
 
-        FontHelper.applyRegularFont(dialogView);
-
-        activeNetworkCheckDialog = builder.create();
         activeNetworkCheckDialog.setCancelable(false);
         activeNetworkCheckDialog.setCanceledOnTouchOutside(false);
-        styleTacticalDialogWindow(activeNetworkCheckDialog);
-        activeNetworkCheckDialog.show();
-        applyTacticalDialogDim(activeNetworkCheckDialog);
+        DialogUiHelper.showStyledDialog(activeNetworkCheckDialog);
     }
 
     private void dismissVerifyingConnectionDialog() {
@@ -937,15 +657,8 @@ public class MainActivity extends BaseActivity
     private void showConnectivityErrorDialog(NetworkUtil.ConnectivityStatus status) {
         if (isFinishing() || isDestroyed()) return;
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(
-                this,
-                R.style.Theme_AimShotEngine_CustomDialog
-        );
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_tactical_confirm, null);
-        builder.setView(dialogView);
-
-        final AlertDialog dialog = builder.create();
-        styleTacticalDialogWindow(dialog);
+        View dialogView = DialogUiHelper.inflateDialogView(this, R.layout.dialog_tactical_confirm);
+        final AlertDialog dialog = DialogUiHelper.createTacticalAlertDialog(this, dialogView);
 
         ImageView ivIcon = dialogView.findViewById(R.id.iv_confirm_icon);
         View pbLoading = dialogView.findViewById(R.id.pb_confirm_loading);
@@ -957,6 +670,7 @@ public class MainActivity extends BaseActivity
         if (ivIcon != null) {
             ivIcon.setVisibility(View.VISIBLE);
             ivIcon.setImageResource(R.drawable.ic_globe);
+            ivIcon.setColorFilter(ContextCompat.getColor(this, R.color.accent_primary));
         }
         if (pbLoading != null) {
             pbLoading.setVisibility(View.GONE);
@@ -985,37 +699,10 @@ public class MainActivity extends BaseActivity
             });
         }
 
-        FontHelper.applyRegularFont(dialogView);
-        dialog.show();
-        applyTacticalDialogDim(dialog);
+        DialogUiHelper.showStyledDialog(dialog);
     }
-
-    private static void styleTacticalDialogWindow(AlertDialog dialog) {
-        Window window = dialog.getWindow();
-        if (window != null) {
-            window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-            window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
-        }
-    }
-
-    private static void applyTacticalDialogDim(AlertDialog dialog) {
-        Window window = dialog.getWindow();
-        if (window != null) {
-            window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
-            WindowManager.LayoutParams lp = window.getAttributes();
-            lp.dimAmount = 0.68f;
-            window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-            window.setAttributes(lp);
-        }
-    }
-
-
-    // =========================================================
-    // PREMIUM SCREEN
-    // =========================================================
 
     private void renderPremiumScreen() {
-
         View premiumView = LayoutInflater.from(this).inflate(
                 R.layout.fragment_premium,
                 fragmentContainer,
@@ -1024,67 +711,31 @@ public class MainActivity extends BaseActivity
 
         fragmentContainer.addView(premiumView);
 
-
-        // Notifications
-        View btnNotifications = premiumView.findViewById(
-                R.id.btn_premium_notifications
-        );
-
+        View btnNotifications = premiumView.findViewById(R.id.btn_premium_notifications);
         if (btnNotifications != null) {
-
-            btnNotifications.setOnClickListener(v -> {
-
-                startActivity(
-                        new Intent(
-                                MainActivity.this,
-                                NotificationsActivity.class
-                        )
-                );
-            });
+            btnNotifications.setOnClickListener(v -> startActivity(
+                    new Intent(MainActivity.this, NotificationsActivity.class)
+            ));
         }
 
-
-        // Upgrade / Renew
-        View btnRenew = premiumView.findViewById(
-                R.id.btn_upgrade_renew
-        );
-
+        View btnRenew = premiumView.findViewById(R.id.btn_upgrade_renew);
         if (btnRenew != null) {
-
-            btnRenew.setOnClickListener(v -> {
-
-                startActivity(
-                        new Intent(
-                                MainActivity.this,
-                                SellerContactActivity.class
-                        )
-                );
-            });
+            btnRenew.setOnClickListener(v -> startActivity(
+                    new Intent(MainActivity.this, SellerContactActivity.class)
+            ));
         }
 
-
-        // Free Key
-        View btnFreeKey = premiumView.findViewById(
-                R.id.btn_get_free_key
-        );
-
+        View btnFreeKey = premiumView.findViewById(R.id.btn_get_free_key);
         if (btnFreeKey != null) {
-
             btnFreeKey.setOnClickListener(v -> {
-
                 try {
-
                     String url = getString(R.string.free_key_url);
-
                     Intent browserIntent = new Intent(
                             Intent.ACTION_VIEW,
                             android.net.Uri.parse(url)
                     );
-
                     startActivity(browserIntent);
-
                 } catch (Exception e) {
-
                     Toast.makeText(
                             MainActivity.this,
                             "Opening Free Key Portal",
@@ -1094,25 +745,12 @@ public class MainActivity extends BaseActivity
             });
         }
 
-
-        // Paid Key
-        View btnPaidKey = premiumView.findViewById(
-                R.id.btn_get_paid_key
-        );
-
+        View btnPaidKey = premiumView.findViewById(R.id.btn_get_paid_key);
         if (btnPaidKey != null) {
-
-            btnPaidKey.setOnClickListener(v -> {
-
-                startActivity(
-                        new Intent(
-                                MainActivity.this,
-                                SellerContactActivity.class
-                        )
-                );
-            });
+            btnPaidKey.setOnClickListener(v -> startActivity(
+                    new Intent(MainActivity.this, SellerContactActivity.class)
+            ));
         }
-
 
         populatePremiumData(premiumView);
         updateNotificationBadge();
@@ -1120,265 +758,137 @@ public class MainActivity extends BaseActivity
         FontHelper.applyRegularFont(premiumView);
     }
 
-
-    // =========================================================
-    // PREMIUM DATA
-    // =========================================================
-
     private void populatePremiumData(View premiumView) {
+        MembershipStatus status = membershipRepository.getCurrentStatus();
 
-        MembershipStatus status =
-                membershipRepository.getCurrentStatus();
-
-        TextView tvBadge = premiumView.findViewById(
-                R.id.tv_badge_status
-        );
-
-        TextView tvDaysRemaining = premiumView.findViewById(
-                R.id.tv_premium_remaining_days
-        );
-
-        TextView tvExpirySub = premiumView.findViewById(
-                R.id.tv_premium_expiry_date_sub
-        );
-
-        ProgressBar progressBar = premiumView.findViewById(
-                R.id.progress_license_duration
-        );
-
-        View layoutFeaturesUnlocked = premiumView.findViewById(
-                R.id.layout_features_unlocked
-        );
-
-        TextView tvPlan = premiumView.findViewById(
-                R.id.tv_detail_plan_type
-        );
-
-        TextView tvStart = premiumView.findViewById(
-                R.id.tv_detail_start_date
-        );
-
-        TextView tvExpiry = premiumView.findViewById(
-                R.id.tv_detail_expiry_date
-        );
-
-        TextView tvRemainingDaysRow = premiumView.findViewById(
-                R.id.tv_detail_days_remaining
-        );
-
+        TextView tvBadge = premiumView.findViewById(R.id.tv_badge_status);
+        TextView tvDaysRemaining = premiumView.findViewById(R.id.tv_premium_remaining_days);
+        TextView tvExpirySub = premiumView.findViewById(R.id.tv_premium_expiry_date_sub);
+        ProgressBar progressBar = premiumView.findViewById(R.id.progress_license_duration);
+        View layoutFeaturesUnlocked = premiumView.findViewById(R.id.layout_features_unlocked);
+        TextView tvPlan = premiumView.findViewById(R.id.tv_detail_plan_type);
+        TextView tvStart = premiumView.findViewById(R.id.tv_detail_start_date);
+        TextView tvExpiry = premiumView.findViewById(R.id.tv_detail_expiry_date);
+        TextView tvRemainingDaysRow = premiumView.findViewById(R.id.tv_detail_days_remaining);
 
         if (status.getState() == MembershipStatus.State.ACTIVE) {
-
             if (tvBadge != null) {
-
                 tvBadge.setText(R.string.status_active);
-
-                tvBadge.setBackgroundResource(
-                        R.drawable.bg_badge_active
-                );
-                tvBadge.setTextColor(
-                        ContextCompat.getColor(
-                                this,
-                                R.color.badge_active_text
-                        )
-                );
+                tvBadge.setBackgroundResource(R.drawable.bg_badge_active);
+                tvBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_active_text));
             }
 
             int remainingDays = status.getRemainingDays();
-
             if (tvDaysRemaining != null) {
                 tvDaysRemaining.setText(remainingDays + " Days");
             }
-
             if (tvExpirySub != null) {
-
-                tvExpirySub.setText(
-                        "( " + status.getFormattedExpiryDate() + " )"
-                );
+                tvExpirySub.setText("( " + status.getFormattedExpiryDate() + " )");
             }
-
             if (tvRemainingDaysRow != null) {
-
-                tvRemainingDaysRow.setText(
-                        remainingDays + " Days"
-                );
+                tvRemainingDaysRow.setText(remainingDays + " Days");
             }
-
             if (progressBar != null) {
-
-                progressBar.setProgress(
-                        Math.max(10, Math.min(100, remainingDays * 3))
-                );
+                progressBar.setProgress(Math.max(10, Math.min(100, remainingDays * 3)));
             }
-
             if (layoutFeaturesUnlocked != null) {
-
                 layoutFeaturesUnlocked.setVisibility(View.VISIBLE);
             }
-
             if (tvPlan != null) {
                 tvPlan.setText(status.getPlanType());
             }
-
             if (tvStart != null) {
                 tvStart.setText(status.getFormattedStartDate());
             }
-
             if (tvExpiry != null) {
                 tvExpiry.setText(status.getFormattedExpiryDate());
             }
-
         } else {
-
             if (tvBadge != null) {
-
                 tvBadge.setText(
                         status.getState() == MembershipStatus.State.EXPIRED
                                 ? R.string.status_expired
                                 : R.string.status_free
                 );
-
-                tvBadge.setBackgroundResource(
-                        R.drawable.bg_badge_inactive
-                );
-                tvBadge.setTextColor(
-                        ContextCompat.getColor(
-                                this,
-                                R.color.badge_inactive_text
-                        )
-                );
+                tvBadge.setBackgroundResource(R.drawable.bg_badge_inactive);
+                tvBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_inactive_text));
             }
-
             if (tvDaysRemaining != null) {
                 tvDaysRemaining.setText("0 Days");
             }
-
             if (tvExpirySub != null) {
                 tvExpirySub.setText("( Not Activated )");
             }
-
             if (tvRemainingDaysRow != null) {
                 tvRemainingDaysRow.setText("0 Days");
             }
-
             if (progressBar != null) {
                 progressBar.setProgress(0);
             }
-
             if (layoutFeaturesUnlocked != null) {
                 layoutFeaturesUnlocked.setVisibility(View.GONE);
             }
-
             if (tvPlan != null) {
                 tvPlan.setText("Free / Not Activated");
             }
-
             if (tvStart != null) {
                 tvStart.setText("--");
             }
-
             if (tvExpiry != null) {
                 tvExpiry.setText("--");
             }
         }
     }
 
-
-    // =========================================================
-    // VERIFICATION DIALOG
-    // =========================================================
-
     private void showVerificationDialog() {
-
-        VerificationKeyDialog dialog =
-                new VerificationKeyDialog(this);
-
-        dialog.setOnLoginSuccessListener(
-                new VerificationKeyDialog.OnLoginSuccessListener() {
-
-                    @Override
-                    public void onLoginSuccess() {
-
-                        if (currentTab == Tab.HOME) {
-
-                            navigateToTab(Tab.HOME);
-
-                        } else if (currentTab == Tab.PREMIUM) {
-
-                            navigateToTab(Tab.PREMIUM);
-                        }
-                    }
-                }
-        );
-
+        VerificationKeyDialog dialog = new VerificationKeyDialog(this);
+        dialog.setOnLoginSuccessListener(() -> {
+            if (currentTab == Tab.HOME) {
+                navigateToTab(Tab.HOME);
+            } else if (currentTab == Tab.PREMIUM) {
+                navigateToTab(Tab.PREMIUM);
+            }
+        });
         dialog.show();
     }
 
-
-    // =========================================================
-    // MEMBERSHIP CHANGE LISTENER
-    // =========================================================
-
     @Override
     public void onMembershipChanged(MembershipStatus newStatus) {
-
         runOnUiThread(() -> {
-
             if (currentTab == Tab.HOME) {
-
                 renderHomeScreen();
-
             } else if (currentTab == Tab.PREMIUM) {
-
                 renderPremiumScreen();
             }
         });
     }
 
-
-    // =========================================================
-    // ACTIVITY LIFECYCLE
-    // ONLY ONE onResume() METHOD
-    // =========================================================
-
     @Override
     protected void onResume() {
-
         super.onResume();
 
         updateNavUi();
 
-        // Check if active update dialog is waiting for install confirmation or permission grant
         if (activeUpdateDialog != null && activeUpdateDialog.isShowing()) {
             activeUpdateDialog.onActivityResume();
         }
 
         if (currentTab == Tab.HOME) {
-
             fragmentContainer.removeAllViews();
-
-            // Refresh Home Screen and Membership-dependent UI
             renderHomeScreen();
-
-            // Refresh notification badge
             updateNotificationBadge();
-
-            // Restart carousel timer
             startCarouselTimer();
-
         } else if (currentTab == Tab.PREMIUM) {
-
             fragmentContainer.removeAllViews();
             renderPremiumScreen();
         }
-    }
 
+        checkLegacyStandaloneAppOnResume();
+    }
 
     @Override
     protected void onPause() {
-
         super.onPause();
-
         stopCarouselTimer();
     }
 }

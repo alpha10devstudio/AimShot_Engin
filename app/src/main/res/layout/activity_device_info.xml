@@ -89,9 +89,9 @@
                     android:textSize="15sp"
                     android:textStyle="bold" />
 
-                <Button
+                <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/btn_copy_device_id"
-                    android:layout_width="72dp"
+                    android:layout_width="76dp"
                     android:layout_height="36dp"
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"
@@ -100,7 +100,7 @@
                     android:stateListAnimator="@null"
                     android:text="@string/action_copy"
                     android:textAllCaps="false"
-                    android:textColor="@color/bg_main"
+                    android:textColor="@color/text_on_accent"
                     android:textSize="13sp"
                     android:textStyle="bold" />
             </RelativeLayout>
@@ -268,7 +268,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="24dp"
-            android:background="#1439B9FF"
+            android:background="@color/icon_tint_box_bg"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:padding="16dp">

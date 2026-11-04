@@ -89,13 +89,13 @@ public class GameGridAdapter extends RecyclerView.Adapter<GameGridAdapter.ViewHo
         // Active vs Locked status dot and label
         if (item.isActive()) {
             holder.ivStatusDot.setImageResource(R.drawable.dot_game_active);
-            holder.tvGameStatus.setText("Active");
-            holder.tvGameStatus.setTextColor(Color.parseColor("#49DCA0"));
+            holder.tvGameStatus.setText(R.string.status_unlocked);
+            holder.tvGameStatus.setTextColor(ContextCompat.getColor(context, R.color.color_success));
             holder.itemView.setAlpha(1.0f);
         } else {
             holder.ivStatusDot.setImageResource(R.drawable.dot_game_locked);
-            holder.tvGameStatus.setText("Locked");
-            holder.tvGameStatus.setTextColor(Color.parseColor("#8D9BB0"));
+            holder.tvGameStatus.setText(R.string.status_locked);
+            holder.tvGameStatus.setTextColor(ContextCompat.getColor(context, R.color.text_secondary));
             holder.itemView.setAlpha(isSelected ? 1.0f : 0.85f);
         }
 

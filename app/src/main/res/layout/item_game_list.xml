@@ -13,7 +13,7 @@
         android:id="@+id/iv_item_game_icon"
         android:layout_width="48dp"
         android:layout_height="48dp"
-        android:background="#1A39B9FF"
+        android:background="@drawable/bg_game_icon_container"
         android:contentDescription="Game"
         android:padding="6dp"
         android:src="@drawable/ic_aimshot_logo" />

@@ -1,145 +1,45 @@
 package com.alpha10.aimshot.util;
 
 import android.app.Activity;
-import android.app.PendingIntent;
 import android.content.Context;
-import android.content.Intent;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageInstaller;
-import android.content.pm.PackageManager;
-import android.net.Uri;
-import android.os.Build;
-import android.provider.Settings;
 import android.util.Log;
 
-import com.alpha10.aimshot.receiver.PackageInstallStatusReceiver;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
+import com.alpha10.aimshot.runtime.PrivateEngineRuntime;
+import com.alpha10.aimshot.runtime.PrivateEngineVault;
 
 /**
- * Handles official Android PackageInstaller Session installation, Unknown App Sources permission
- * redirection, authoritative OS package presence checks, and Main AimShot Engine launching.
+ * Facade delegating Main AimShot Engine ("com.alpha10.aimshot") presence checks, version queries,
+ * and launches exclusively to the hidden Private Engine Vault & In-App Runtime Container.
+ *
+ * Also provides detection and one-tap removal for any legacy standalone OS-installed copy from
+ * earlier builds so zero duplicate icons remain in the phone's App Drawer.
  */
-public class PackageInstallerHelper {
+public final class PackageInstallerHelper {
 
-    private static final String TAG = "AimShot_InstallerHelper";
-    public static final String TARGET_PACKAGE_NAME = "com.alpha10.aimshot";
-    public static final int REQUEST_CODE_UNKNOWN_APPS = 1001;
+    private static final String TAG = "AimShot_VaultFacade";
+    public static final String TARGET_PACKAGE_NAME = PrivateEngineVault.TARGET_ENGINE_PACKAGE;
 
-    public static boolean canInstallPackages(Context context) {
-        if (context == null) return false;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            return context.getPackageManager().canRequestPackageInstalls();
-        }
-        return true;
+    private PackageInstallerHelper() {
     }
 
-    public static void requestInstallPermission(Activity activity) {
-        if (activity == null) return;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            try {
-                Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
-                intent.setData(Uri.parse("package:" + activity.getPackageName()));
-                activity.startActivityForResult(intent, REQUEST_CODE_UNKNOWN_APPS);
-            } catch (Exception e) {
-                Intent fallback = new Intent(Settings.ACTION_SECURITY_SETTINGS);
-                activity.startActivity(fallback);
-            }
-        }
-    }
-
-    public static int installApkWithSession(Context context,
-                                            File apkFile,
-                                            PackageInstallStatusReceiver.InstallStatusListener listener) {
-        if (context == null || apkFile == null || !apkFile.exists() || apkFile.length() == 0) {
-            return -1;
-        }
-
-        PackageInstaller packageInstaller = null;
-        int sessionId = -1;
-
-        try {
-            PackageManager pm = context.getPackageManager();
-            packageInstaller = pm.getPackageInstaller();
-
-            PackageInstaller.SessionParams params =
-                    new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
-            params.setAppPackageName(TARGET_PACKAGE_NAME);
-            params.setSize(apkFile.length());
-
-            sessionId = packageInstaller.createSession(params);
-            PackageInstallStatusReceiver.registerActiveSession(sessionId, listener);
-
-            try (PackageInstaller.Session session = packageInstaller.openSession(sessionId)) {
-                try (OutputStream out = session.openWrite("AimShot_Main_Engine", 0, apkFile.length());
-                     InputStream in = new FileInputStream(apkFile)) {
-                    byte[] buffer = new byte[65536];
-                    int len;
-                    while ((len = in.read(buffer)) != -1) {
-                        out.write(buffer, 0, len);
-                    }
-                    session.fsync(out);
-                }
-
-                Intent broadcastIntent = new Intent(context, PackageInstallStatusReceiver.class);
-                broadcastIntent.setAction(PackageInstallStatusReceiver.ACTION_INSTALL_STATUS);
-                broadcastIntent.setPackage(context.getPackageName());
-
-                int flags = PendingIntent.FLAG_UPDATE_CURRENT;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    flags |= PendingIntent.FLAG_MUTABLE;
-                }
-                PendingIntent pendingIntent = PendingIntent.getBroadcast(context, sessionId, broadcastIntent, flags);
-
-                session.commit(pendingIntent.getIntentSender());
-            }
-
-            return sessionId;
-
-        } catch (Exception e) {
-            Log.e(TAG, "Official PackageInstaller.Session failed: " + e.getMessage(), e);
-            PackageInstallStatusReceiver.clearStatusListener();
-            if (packageInstaller != null && sessionId != -1) {
-                try { packageInstaller.abandonSession(sessionId); } catch (Exception ignored) {}
-            }
-            return -1;
-        }
-    }
-
+    /**
+     * Returns true strictly when Main AimShot Engine is verified and stored inside
+     * AimShot Launcher's private internal vault.
+     */
     public static boolean isMainApkInstalled(Context context) {
-        if (context == null) return false;
-        if (context.getPackageName().equals(TARGET_PACKAGE_NAME)) {
-            return false;
-        }
-
-        try {
-            PackageManager pm = context.getPackageManager();
-            PackageInfo info = pm.getPackageInfo(TARGET_PACKAGE_NAME, 0);
-            if (info == null) return false;
-
-            Intent launchIntent = pm.getLaunchIntentForPackage(TARGET_PACKAGE_NAME);
-            return launchIntent != null;
-        } catch (PackageManager.NameNotFoundException e) {
-            return false;
-        } catch (Exception e) {
-            Log.w(TAG, "Error querying OS PackageManager for " + TARGET_PACKAGE_NAME + ": " + e.getMessage());
-            return false;
-        }
+        return PrivateEngineVault.isEngineInstalledInVault(context);
     }
 
     public static int getInstalledPackageVersionCode(Context context, String packageName) {
-        if (context == null || packageName == null) return -1;
-        try {
-            PackageInfo info = context.getPackageManager().getPackageInfo(packageName, 0);
-            return info != null ? info.versionCode : -1;
-        } catch (PackageManager.NameNotFoundException e) {
-            return -1;
-        } catch (Exception e) {
-            return -1;
+        if (TARGET_PACKAGE_NAME.equals(packageName)) {
+            return PrivateEngineVault.getInstalledVersionCode(context);
         }
+        return -1;
+    }
+
+    public static String getInstalledEngineVersionName(Context context) {
+        String ver = PrivateEngineVault.getInstalledVersionName(context);
+        return (ver != null && !ver.trim().isEmpty()) ? ver : null;
     }
 
     public static boolean launchInstalledApp(Context context) {
@@ -148,43 +48,18 @@ public class PackageInstallerHelper {
 
     public static boolean launchInstalledApp(Context context, String trustedCertFingerprint) {
         if (context == null) return false;
-
-        if (context.getPackageName().equals(TARGET_PACKAGE_NAME)) {
-            Log.e(TAG, "Blocked self-launch: Launcher and target share identical package ID.");
+        if (!PrivateEngineVault.isEngineInstalledInVault(context)) {
+            Log.w(TAG, "Main AimShot Engine is not yet provisioned in the private vault.");
             return false;
         }
+        return PrivateEngineRuntime.launchEngineFromVault(context);
+    }
 
-        if (!isMainApkInstalled(context)) {
-            Log.w(TAG, "Main AimShot Engine (" + TARGET_PACKAGE_NAME + ") is not installed.");
-            return false;
-        }
+    public static boolean isLegacyStandaloneAppInstalled(Context context) {
+        return PrivateEngineVault.isLegacyStandaloneAppInstalled(context);
+    }
 
-        if (trustedCertFingerprint != null && !trustedCertFingerprint.trim().isEmpty()) {
-            boolean certValid = ApkSecurityVerifier.verifyInstalledPackageCertificate(
-                    context,
-                    TARGET_PACKAGE_NAME,
-                    trustedCertFingerprint
-            );
-            if (!certValid) {
-                Log.e(TAG, "Blocked launch: installed " + TARGET_PACKAGE_NAME + " failed signing certificate verification.");
-                return false;
-            }
-        }
-
-        try {
-            PackageManager pm = context.getPackageManager();
-            Intent launchIntent = pm.getLaunchIntentForPackage(TARGET_PACKAGE_NAME);
-            if (launchIntent != null) {
-                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-                        | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
-                        | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                context.startActivity(launchIntent);
-                Log.i(TAG, "Launched Main AimShot Engine: " + TARGET_PACKAGE_NAME);
-                return true;
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to launch Main AimShot Engine: " + e.getMessage(), e);
-        }
-        return false;
+    public static void requestUninstallLegacyStandaloneApp(Activity activity) {
+        PrivateEngineVault.requestUninstallLegacyStandaloneApp(activity);
     }
 }

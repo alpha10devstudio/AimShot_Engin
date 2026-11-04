@@ -16,7 +16,7 @@ import com.alpha10.aimshot.service.DeviceIdManager;
 /**
  * Screen presenting device hardware diagnostics and privacy-safe app-scoped identifier.
  */
-public class DeviceInfoActivity extends AppCompatActivity {
+public class DeviceInfoActivity extends BaseActivity {
 
     private DeviceIdManager deviceIdManager;
 

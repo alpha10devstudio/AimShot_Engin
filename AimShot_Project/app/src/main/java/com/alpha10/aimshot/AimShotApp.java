@@ -6,11 +6,13 @@ import android.content.SharedPreferences;
 
 import androidx.appcompat.app.AppCompatDelegate;
 
+import com.alpha10.aimshot.runtime.PrivateEngineRuntime;
 import com.alpha10.aimshot.util.FontHelper;
 import com.alpha10.aimshot.util.LocaleHelper;
 
 /**
- * Custom Application class ensuring theme persistence, font caching, and locale integrity.
+ * Custom Application class ensuring theme persistence, font caching, locale integrity,
+ * and early initialization of the Private Engine Runtime Instrumentation hook.
  */
 public class AimShotApp extends Application {
 
@@ -20,18 +22,22 @@ public class AimShotApp extends Application {
     @Override
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(LocaleHelper.onAttach(base));
+        PrivateEngineRuntime.installInstrumentationHook(this);
     }
 
     @Override
     public void onCreate() {
         super.onCreate();
 
-        // 1. Restore saved theme before any activity renders
+        // 1. Ensure Private Engine Instrumentation hook is active
+        PrivateEngineRuntime.installInstrumentationHook(this);
+
+        // 2. Restore saved theme before any activity renders
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         boolean isDarkMode = prefs.getBoolean(KEY_DARK_MODE, true);
         AppCompatDelegate.setDefaultNightMode(isDarkMode ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
 
-        // 2. Pre-cache fonts
+        // 3. Pre-cache fonts
         FontHelper.getBrandFont(this);
         FontHelper.getRegularFont(this);
     }

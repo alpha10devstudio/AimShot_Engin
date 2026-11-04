@@ -2,29 +2,28 @@ package com.alpha10.aimshot.dialog;
 
 import android.app.Activity;
 import android.app.Dialog;
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.view.View;
 import android.view.Window;
-import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import java.util.Locale;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 
 import com.alpha10.aimshot.R;
 import com.alpha10.aimshot.controller.UpdateController;
+import com.alpha10.aimshot.util.DialogUiHelper;
 import com.alpha10.aimshot.util.FontHelper;
 import com.alpha10.aimshot.util.PackageInstallerHelper;
 
 /**
- * Tactical HUD Dialog displaying real-time progress across all installation stages.
- * Displays the "OPEN AIMSHOT ENGINE" button upon confirmed installation and launches
- * Main AimShot Engine strictly upon explicit user tap (no unsolicited auto-launch countdown).
+ * Tactical HUD Dialog displaying real-time progress across Private Vault download,
+ * SHA-256 verification, native engine extraction, and in-app container launch.
  */
 public class UpdateDialog extends Dialog implements UpdateController.UpdateListener {
 
@@ -73,18 +72,7 @@ public class UpdateDialog extends Dialog implements UpdateController.UpdateListe
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.dialog_update);
-
-        if (getWindow() != null) {
-            getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-            getWindow().setLayout(
-                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT
-            );
-            WindowManager.LayoutParams lp = getWindow().getAttributes();
-            lp.dimAmount = 0.68f;
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-            getWindow().setAttributes(lp);
-        }
+        DialogUiHelper.prepareDialogWindowBeforeShow(this);
 
         setCancelable(false);
         setCanceledOnTouchOutside(false);
@@ -117,11 +105,23 @@ public class UpdateDialog extends Dialog implements UpdateController.UpdateListe
         }
     }
 
+    @Override
+    public void show() {
+        DialogUiHelper.prepareDialogWindowBeforeShow(this);
+        super.show();
+        DialogUiHelper.applyPostShowWindowMetrics(this);
+    }
+
     private void bindPrimaryActionButton() {
         if (btnPrimary == null) return;
         btnPrimary.setOnClickListener(v -> {
             if (isInstallSuccess) {
-                boolean launched = controller.launchInstalledApp();
+                if (PackageInstallerHelper.isLegacyStandaloneAppInstalled(activity)) {
+                    Toast.makeText(activity, R.string.legacy_app_detected_title, Toast.LENGTH_LONG).show();
+                    PackageInstallerHelper.requestUninstallLegacyStandaloneApp(activity);
+                    return;
+                }
+                boolean launched = controller.launchInstalledApp(activity);
                 if (launched) {
                     dismiss();
                 } else {
@@ -131,18 +131,26 @@ public class UpdateDialog extends Dialog implements UpdateController.UpdateListe
             }
             if (isUpdating) return;
 
-            // If a verified APK is already staged (e.g. user cancelled system prompt and tapped Retry),
-            // proceed directly to PackageInstaller without consuming another network download.
             if (controller.getPendingVerifiedApk() != null && controller.getPendingVerifiedApk().exists()) {
                 isUpdating = true;
                 tvErrorBox.setVisibility(View.GONE);
-                btnPrimary.setEnabled(false);
+                setPrimaryButtonState(false, R.string.update_btn_download);
                 controller.proceedToInstallation(activity);
                 return;
             }
 
             startUpdateProcess();
         });
+    }
+
+    private void setPrimaryButtonState(boolean enabled, int textResId) {
+        if (btnPrimary == null) return;
+        btnPrimary.setEnabled(enabled);
+        btnPrimary.setText(textResId);
+        btnPrimary.setTextColor(ContextCompat.getColor(
+                getContext(),
+                enabled ? R.color.text_on_accent : R.color.text_muted
+        ));
     }
 
     public void onActivityResume() {
@@ -155,8 +163,7 @@ public class UpdateDialog extends Dialog implements UpdateController.UpdateListe
         tvStatusMessage.setText(R.string.update_checking);
         progressBar.setIndeterminate(true);
         tvErrorBox.setVisibility(View.GONE);
-        btnPrimary.setText(R.string.update_btn_check);
-        btnPrimary.setEnabled(false);
+        setPrimaryButtonState(false, R.string.update_btn_check);
 
         controller.checkForUpdates(null, this);
     }
@@ -167,9 +174,7 @@ public class UpdateDialog extends Dialog implements UpdateController.UpdateListe
         tvErrorBox.setVisibility(View.GONE);
         progressBar.setIndeterminate(false);
         progressBar.setProgress(0);
-        btnPrimary.setEnabled(false);
-        btnPrimary.setText(R.string.update_btn_download);
-        btnPrimary.setTextColor(ContextCompat.getColor(getContext(), R.color.text_on_accent));
+        setPrimaryButtonState(false, R.string.update_btn_download);
         btnCancel.setEnabled(true);
         btnCancel.setText(R.string.btn_cancel);
         btnCancel.setTextColor(ContextCompat.getColor(getContext(), R.color.text_primary));
@@ -223,7 +228,7 @@ public class UpdateDialog extends Dialog implements UpdateController.UpdateListe
                     tvVersionInfo.setText(R.string.stage_9_open);
                     break;
                 default:
-                    tvVersionInfo.setText("AIMSHOT INSTALLER HUD");
+                    tvVersionInfo.setText("PRIVATE ENGINE VAULT");
                     break;
             }
         }
@@ -236,7 +241,7 @@ public class UpdateDialog extends Dialog implements UpdateController.UpdateListe
                 float mbDownloaded = bytesDownloaded / (1024f * 1024f);
                 float mbTotal = totalBytes / (1024f * 1024f);
                 tvProgressDetail.setVisibility(View.VISIBLE);
-                tvProgressDetail.setText(String.format("%.1f MB / %.1f MB (%d%%)", mbDownloaded, mbTotal, percent));
+                tvProgressDetail.setText(String.format(Locale.US, "%.1f MB / %.1f MB (%d%%)", mbDownloaded, mbTotal, percent));
             } else {
                 tvProgressDetail.setVisibility(View.GONE);
             }
@@ -262,13 +267,8 @@ public class UpdateDialog extends Dialog implements UpdateController.UpdateListe
             tvStatusMessage.setText(R.string.stage_8_success);
         }
 
-        // Show OPEN AIMSHOT ENGINE button and wait for explicit user permission/click
-        if (btnPrimary != null) {
-            btnPrimary.setText(R.string.btn_open_app);
-            btnPrimary.setEnabled(true);
-            btnPrimary.setTextColor(ContextCompat.getColor(getContext(), R.color.text_on_accent));
-            bindPrimaryActionButton();
-        }
+        setPrimaryButtonState(true, R.string.btn_open_app);
+        bindPrimaryActionButton();
 
         if (btnCancel != null) {
             btnCancel.setText(R.string.action_close);
@@ -290,14 +290,10 @@ public class UpdateDialog extends Dialog implements UpdateController.UpdateListe
             progressBar.setProgress(0);
         }
         if (tvStatusMessage != null) {
-            tvStatusMessage.setText("Installation was cancelled by user.");
+            tvStatusMessage.setText("Setup was cancelled by user.");
         }
-        if (btnPrimary != null) {
-            btnPrimary.setEnabled(true);
-            btnPrimary.setText(R.string.btn_retry);
-            btnPrimary.setTextColor(ContextCompat.getColor(getContext(), R.color.text_on_accent));
-            bindPrimaryActionButton();
-        }
+        setPrimaryButtonState(true, R.string.btn_retry);
+        bindPrimaryActionButton();
     }
 
     @Override
@@ -312,12 +308,9 @@ public class UpdateDialog extends Dialog implements UpdateController.UpdateListe
         if (tvStatusMessage != null) {
             tvStatusMessage.setText(getContext().getString(R.string.update_up_to_date, controller.getInstalledVersionName()));
         }
-        if (btnPrimary != null) {
-            btnPrimary.setText(R.string.btn_open_app);
-            btnPrimary.setEnabled(true);
-            btnPrimary.setTextColor(ContextCompat.getColor(getContext(), R.color.text_on_accent));
-            bindPrimaryActionButton();
-        }
+        setPrimaryButtonState(true, R.string.btn_open_app);
+        bindPrimaryActionButton();
+
         if (btnCancel != null) {
             btnCancel.setText(R.string.action_close);
             btnCancel.setTextColor(ContextCompat.getColor(getContext(), R.color.text_primary));
@@ -337,12 +330,10 @@ public class UpdateDialog extends Dialog implements UpdateController.UpdateListe
             tvErrorBox.setVisibility(View.VISIBLE);
         }
         if (tvStatusMessage != null) {
-            tvStatusMessage.setText("Verification / Installation Halted");
+            tvStatusMessage.setText("Verification / Vault Setup Halted");
         }
         if (btnPrimary != null) {
-            btnPrimary.setEnabled(true);
-            btnPrimary.setText(canRetry ? R.string.btn_retry : R.string.action_close);
-            btnPrimary.setTextColor(ContextCompat.getColor(getContext(), R.color.text_on_accent));
+            setPrimaryButtonState(true, canRetry ? R.string.btn_retry : R.string.action_close);
             if (canRetry) {
                 bindPrimaryActionButton();
             } else {

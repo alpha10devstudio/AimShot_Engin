@@ -4,8 +4,6 @@ import android.app.Dialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.view.View;
 import android.view.Window;
@@ -16,6 +14,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 
 import com.alpha10.aimshot.R;
 import com.alpha10.aimshot.model.VerificationResult;
@@ -23,13 +22,17 @@ import com.alpha10.aimshot.repository.MembershipRepository;
 import com.alpha10.aimshot.service.DeviceIdManager;
 import com.alpha10.aimshot.service.LicenseVerificationService;
 import com.alpha10.aimshot.service.VerificationCallback;
+import com.alpha10.aimshot.util.DialogUiHelper;
+import com.alpha10.aimshot.util.FontHelper;
 
 /**
- * Tactical verification key modal dialog matching the reference mockup.
+ * Tactical verification key modal dialog with uniform 24dp screen margins,
+ * rounded tactical icon badge, and right-aligned Paste button.
  */
 public class VerificationKeyDialog extends Dialog {
 
     private EditText editKey;
+    private View btnPaste;
     private Button btnLogin;
     private TextView tvClose;
     private TextView tvError;
@@ -45,7 +48,7 @@ public class VerificationKeyDialog extends Dialog {
     private OnLoginSuccessListener successListener;
 
     public VerificationKeyDialog(@NonNull Context context) {
-        super(context);
+        super(context, R.style.Theme_AimShotEngine_CustomDialog);
         this.verificationService = new LicenseVerificationService();
         this.deviceIdManager = new DeviceIdManager(context);
     }
@@ -59,50 +62,57 @@ public class VerificationKeyDialog extends Dialog {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.dialog_verification_key);
-
-        if (getWindow() != null) {
-            getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-            getWindow().setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
-        }
+        DialogUiHelper.prepareDialogWindowBeforeShow(this);
 
         editKey = findViewById(R.id.edit_verification_key);
+        btnPaste = findViewById(R.id.btn_paste_key);
         btnLogin = findViewById(R.id.btn_dialog_login);
         tvClose = findViewById(R.id.tv_dialog_close);
         tvError = findViewById(R.id.tv_dialog_error);
         progressBar = findViewById(R.id.progress_verification);
 
-        // Check clipboard for auto-suggest if available
-        checkClipboardForQuickPaste();
+        if (findViewById(android.R.id.content) != null) {
+            FontHelper.applyRegularFont(findViewById(android.R.id.content));
+        }
 
-        btnLogin.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                attemptVerification();
-            }
-        });
+        if (btnPaste != null) {
+            btnPaste.setOnClickListener(v -> handlePasteFromClipboard());
+        }
 
-        tvClose.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                dismiss();
-            }
-        });
+        btnLogin.setOnClickListener(v -> attemptVerification());
+
+        tvClose.setOnClickListener(v -> dismiss());
     }
 
-    private void checkClipboardForQuickPaste() {
+    @Override
+    public void show() {
+        DialogUiHelper.prepareDialogWindowBeforeShow(this);
+        super.show();
+        DialogUiHelper.applyPostShowWindowMetrics(this);
+    }
+
+    private void handlePasteFromClipboard() {
         try {
             ClipboardManager clipboard = (ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
             if (clipboard != null && clipboard.hasPrimaryClip()) {
                 ClipData clipData = clipboard.getPrimaryClip();
                 if (clipData != null && clipData.getItemCount() > 0) {
-                    CharSequence clipText = clipData.getItemAt(0).getText();
-                    if (clipText != null && clipText.toString().startsWith("AIM-")) {
-                        editKey.setText(clipText.toString().trim());
+                    ClipData.Item item = clipData.getItemAt(0);
+                    CharSequence clipText = (item != null) ? item.getText() : null;
+                    if (clipText != null && clipText.length() > 0) {
+                        String pastedKey = clipText.toString().trim();
+                        editKey.setText(pastedKey);
                         editKey.setSelection(editKey.getText().length());
+                        editKey.requestFocus();
+                        Toast.makeText(getContext(), R.string.pasted_from_clipboard, Toast.LENGTH_SHORT).show();
+                        return;
                     }
                 }
             }
-        } catch (Exception ignored) {}
+            Toast.makeText(getContext(), R.string.clipboard_empty, Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Toast.makeText(getContext(), "Unable to access clipboard", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void attemptVerification() {
@@ -151,9 +161,16 @@ public class VerificationKeyDialog extends Dialog {
         if (btnLogin != null) {
             btnLogin.setEnabled(!isLoading);
             btnLogin.setText(isLoading ? "Verifying..." : getContext().getString(R.string.btn_login));
+            btnLogin.setTextColor(ContextCompat.getColor(
+                    getContext(),
+                    isLoading ? R.color.text_muted : R.color.text_on_accent
+            ));
         }
         if (editKey != null) {
             editKey.setEnabled(!isLoading);
+        }
+        if (btnPaste != null) {
+            btnPaste.setEnabled(!isLoading);
         }
     }
 

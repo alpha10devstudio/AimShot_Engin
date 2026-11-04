@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -9,7 +10,7 @@
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_above="@id/settings_bottom_navigation"
+        android:layout_above="@id/settings_nav_top_divider"
         android:fillViewport="true">
 
         <LinearLayout
@@ -172,10 +173,11 @@
                 <ImageView
                     android:layout_width="32dp"
                     android:layout_height="32dp"
-                    android:background="#2039B9FF"
+                    android:background="@color/icon_tint_box_bg"
                     android:contentDescription="Bell"
                     android:padding="6dp"
-                    android:src="@drawable/ic_bell" />
+                    android:src="@drawable/ic_bell"
+                    app:tint="@color/accent_primary" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -345,7 +347,7 @@
                     android:src="@drawable/ic_chevron_right" />
             </LinearLayout>
 
-            <!-- Setting Row 6: Help & Support -->
+            <!-- Setting Row 7: Help & Support -->
             <LinearLayout
                 android:id="@+id/row_setting_help"
                 android:layout_width="match_parent"
@@ -384,7 +386,60 @@
                     android:src="@drawable/ic_chevron_right" />
             </LinearLayout>
 
-            <!-- Setting Row 7: About App -->
+            <!-- Setting Row 8: Check for Updates & Security -->
+            <LinearLayout
+                android:id="@+id/row_setting_update"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:layout_marginBottom="10dp"
+                android:background="@drawable/bg_tactical_card"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp">
+
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:background="#2039B9FF"
+                    android:contentDescription="Update"
+                    android:padding="6dp"
+                    android:src="@drawable/ic_download" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/setting_update_title"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tv_setting_update_status"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/setting_update_desc"
+                        android:textColor="@color/accent_primary"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:contentDescription="Check"
+                    android:src="@drawable/ic_chevron_right" />
+            </LinearLayout>
+
+            <!-- Setting Row 9: About App -->
             <LinearLayout
                 android:id="@+id/row_setting_about"
                 android:layout_width="match_parent"
@@ -432,7 +487,7 @@
             </LinearLayout>
 
             <!-- Log Out Action Button -->
-            <Button
+            <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/btn_settings_logout"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
@@ -451,10 +506,17 @@
                 android:textStyle="bold" />
 
         </LinearLayout>
-
     </ScrollView>
 
-    <!-- Persistent Bottom Navigation Bar with Active Indicator for Settings -->
+    <!-- Top Separator Line for Bottom Navigation -->
+    <View
+        android:id="@+id/settings_nav_top_divider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_above="@id/settings_bottom_navigation"
+        android:background="@color/border_subtle" />
+
+    <!-- Persistent Bottom Navigation Bar -->
     <LinearLayout
         android:id="@+id/settings_bottom_navigation"
         android:layout_width="match_parent"
@@ -519,7 +581,7 @@
                 android:textSize="11sp" />
         </LinearLayout>
 
-        <!-- Nav Item 3: Settings (Active with Glowing Dot) -->
+        <!-- Nav Item 3: Settings Active -->
         <LinearLayout
             android:id="@+id/settings_nav_settings"
             android:layout_width="0dp"
@@ -544,13 +606,13 @@
                 android:textSize="11sp"
                 android:textStyle="bold" />
 
-            <!-- Active Selection Indicator Dot (Image 3) -->
+            <!-- Active Selection Indicator -->
             <ImageView
                 android:layout_width="4dp"
                 android:layout_height="4dp"
                 android:layout_marginTop="2dp"
-                android:src="@drawable/bg_nav_active_indicator"
-                android:contentDescription="Active" />
+                android:contentDescription="Active"
+                android:src="@drawable/bg_nav_active_indicator" />
         </LinearLayout>
 
     </LinearLayout>

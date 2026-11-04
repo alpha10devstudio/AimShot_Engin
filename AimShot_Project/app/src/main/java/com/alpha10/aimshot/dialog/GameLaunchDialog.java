@@ -4,16 +4,12 @@ import android.app.Dialog;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.view.Window;
-import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -21,15 +17,17 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
 
 import com.alpha10.aimshot.R;
 import com.alpha10.aimshot.model.GameItem;
+import com.alpha10.aimshot.util.DialogUiHelper;
 import com.alpha10.aimshot.util.FontHelper;
 import com.alpha10.aimshot.util.NetworkUtil;
 
 /**
  * Tactical Launch Dialog orchestrating strict 4-step internet & Alpha10 Server verification,
- * HUD status updates, and game package launch intent execution with solid opaque dialogs.
+ * HUD status updates, and game package launch intent execution with uniform 24dp dialog margins.
  */
 public class GameLaunchDialog extends Dialog {
 
@@ -59,15 +57,7 @@ public class GameLaunchDialog extends Dialog {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.dialog_game_launch);
-
-        if (getWindow() != null) {
-            getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-            getWindow().setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
-            WindowManager.LayoutParams lp = getWindow().getAttributes();
-            lp.dimAmount = 0.68f;
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-            getWindow().setAttributes(lp);
-        }
+        DialogUiHelper.prepareDialogWindowBeforeShow(this);
 
         setCancelable(false);
         setCanceledOnTouchOutside(false);
@@ -97,13 +87,19 @@ public class GameLaunchDialog extends Dialog {
         startLaunchSequence();
     }
 
+    @Override
+    public void show() {
+        DialogUiHelper.prepareDialogWindowBeforeShow(this);
+        super.show();
+        DialogUiHelper.applyPostShowWindowMetrics(this);
+    }
+
     private void startLaunchSequence() {
         isAborted = false;
         if (tvStatusMessage != null) {
             tvStatusMessage.setText(R.string.verifying_network_msg);
         }
 
-        // Enforce full 4-step active internet + Alpha10 server verification before launching
         NetworkUtil.verifyFullLaunchConnectivity(getContext(), status -> {
             if (isAborted || !isShowing()) return;
 
@@ -122,31 +118,23 @@ public class GameLaunchDialog extends Dialog {
                 tvStatusMessage.setText(R.string.launching_status_init);
             }
 
-            // Step 2: Sync overlay state at 600ms
-            step2Runnable = new Runnable() {
-                @Override
-                public void run() {
-                    if (isAborted || !isShowing()) return;
+            step2Runnable = () -> {
+                if (isAborted || !isShowing()) return;
 
-                    if (!NetworkUtil.isNetworkConnected(getContext())) {
-                        abortLaunch(getContext().getString(R.string.connection_lost));
-                        return;
-                    }
-
-                    if (tvStatusMessage != null) {
-                        tvStatusMessage.setText(R.string.launching_status_sync);
-                    }
-
-                    // Step 3: Trigger game package launch at 1200ms
-                    step3Runnable = new Runnable() {
-                        @Override
-                        public void run() {
-                            if (isAborted || !isShowing()) return;
-                            executeGameLaunch();
-                        }
-                    };
-                    handler.postDelayed(step3Runnable, 600);
+                if (!NetworkUtil.isNetworkConnected(getContext())) {
+                    abortLaunch(getContext().getString(R.string.connection_lost));
+                    return;
                 }
+
+                if (tvStatusMessage != null) {
+                    tvStatusMessage.setText(R.string.launching_status_sync);
+                }
+
+                step3Runnable = () -> {
+                    if (isAborted || !isShowing()) return;
+                    executeGameLaunch();
+                };
+                handler.postDelayed(step3Runnable, 600);
             };
             handler.postDelayed(step2Runnable, 600);
         });
@@ -219,12 +207,8 @@ public class GameLaunchDialog extends Dialog {
 
     private void showConnectivityFailureDialog(NetworkUtil.ConnectivityStatus status) {
         Context ctx = getContext();
-        AlertDialog.Builder builder = new AlertDialog.Builder(ctx, R.style.Theme_AimShotEngine_CustomDialog);
-        View dialogView = LayoutInflater.from(ctx).inflate(R.layout.dialog_tactical_confirm, null);
-        builder.setView(dialogView);
-
-        final AlertDialog dialog = builder.create();
-        configureSolidWindow(dialog);
+        View dialogView = DialogUiHelper.inflateDialogView(ctx, R.layout.dialog_tactical_confirm);
+        final AlertDialog dialog = DialogUiHelper.createTacticalAlertDialog(ctx, dialogView);
 
         ImageView ivIcon = dialogView.findViewById(R.id.iv_confirm_icon);
         TextView tvTitle = dialogView.findViewById(R.id.tv_confirm_title);
@@ -232,7 +216,10 @@ public class GameLaunchDialog extends Dialog {
         Button btnClose = dialogView.findViewById(R.id.btn_confirm_negative);
         Button btnRetry = dialogView.findViewById(R.id.btn_confirm_positive);
 
-        if (ivIcon != null) ivIcon.setImageResource(R.drawable.ic_globe);
+        if (ivIcon != null) {
+            ivIcon.setImageResource(R.drawable.ic_globe);
+            ivIcon.setColorFilter(ContextCompat.getColor(ctx, R.color.accent_primary));
+        }
         if (status == NetworkUtil.ConnectivityStatus.SERVER_UNREACHABLE) {
             if (tvTitle != null) tvTitle.setText(R.string.server_connection_failed_title);
             if (tvMsg != null) tvMsg.setText(R.string.server_connection_failed_msg);
@@ -256,22 +243,13 @@ public class GameLaunchDialog extends Dialog {
             });
         }
 
-        FontHelper.applyRegularFont(dialogView);
-        dialog.show();
-        applySolidDim(dialog);
+        DialogUiHelper.showStyledDialog(dialog);
     }
 
-    /**
-     * Solid Tactical Dialog shown when targeted game is not found on device.
-     */
     private void showNotInstalledDialog() {
         Context ctx = getContext();
-        AlertDialog.Builder builder = new AlertDialog.Builder(ctx, R.style.Theme_AimShotEngine_CustomDialog);
-        View dialogView = LayoutInflater.from(ctx).inflate(R.layout.dialog_tactical_confirm, null);
-        builder.setView(dialogView);
-
-        final AlertDialog dialog = builder.create();
-        configureSolidWindow(dialog);
+        View dialogView = DialogUiHelper.inflateDialogView(ctx, R.layout.dialog_tactical_confirm);
+        final AlertDialog dialog = DialogUiHelper.createTacticalAlertDialog(ctx, dialogView);
 
         TextView tvTitle = dialogView.findViewById(R.id.tv_confirm_title);
         TextView tvMsg = dialogView.findViewById(R.id.tv_confirm_message);
@@ -301,27 +279,6 @@ public class GameLaunchDialog extends Dialog {
             });
         }
 
-        FontHelper.applyRegularFont(dialogView);
-        dialog.show();
-        applySolidDim(dialog);
-    }
-
-    private static void configureSolidWindow(AlertDialog dialog) {
-        Window window = dialog.getWindow();
-        if (window != null) {
-            window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-            window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
-        }
-    }
-
-    private static void applySolidDim(AlertDialog dialog) {
-        Window window = dialog.getWindow();
-        if (window != null) {
-            window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
-            WindowManager.LayoutParams lp = window.getAttributes();
-            lp.dimAmount = 0.68f;
-            window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-            window.setAttributes(lp);
-        }
+        DialogUiHelper.showStyledDialog(dialog);
     }
 }

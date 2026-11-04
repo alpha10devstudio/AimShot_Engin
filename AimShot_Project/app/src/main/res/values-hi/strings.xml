@@ -161,9 +161,9 @@
     <string name="stage_3_auth">3. सर्वर प्रमाणीकरण</string>
     <string name="stage_4_download">4. AimShot Engine डाउनलोड हो रहा है</string>
     <string name="stage_5_verify">5. APK सुरक्षा एवं प्रमाणपत्र सत्यापन</string>
-    <string name="stage_6_confirm">6. इंस्टॉलेशन पुष्टि की प्रतीक्षा</string>
-    <string name="stage_7_install">7. AimShot Engine इंस्टॉल हो रहा है</string>
-    <string name="stage_8_success">8. इंस्टॉलेशन सफल रहा</string>
+    <string name="stage_6_confirm">6. प्राइवेट वॉल्ट तैयार किया जा रहा है</string>
+    <string name="stage_7_install">7. प्राइवेट वॉल्ट में इंजन सुरक्षित हो रहा है</string>
+    <string name="stage_8_success">8. प्राइवेट वॉल्ट तैयार है</string>
     <string name="stage_9_open">9. AimShot Engine खोला जा रहा है</string>
     <string name="btn_open_app">OPEN AIMSHOT ENGINE</string>
     <string name="auto_launching_countdown">%1$d सेकंड में खोला जा रहा है...</string>
@@ -176,4 +176,7 @@
     <string name="server_connection_failed_title">सर्वर कनेक्शन विफल</string>
     <string name="server_connection_failed_msg">इंटरनेट चालू है, लेकिन Alpha10 सर्वर से संपर्क नहीं हो सका। कृपया पुनः प्रयास करें।</string>
     <string name="btn_understood">ठीक है</string>
+    <string name="legacy_app_detected_title">पुराना अलग ऐप हटाएं</string>
+    <string name="legacy_app_detected_msg">आपके फोन में पुराना अलग AimShot ऐप आइकन अभी भी इंस्टॉल है। सुरक्षा बनाए रखने के लिए कृपया उसे अनइंस्टॉल करें ताकि इंजन केवल लॉन्चर के प्राइवेट वॉल्ट के अंदर चले।</string>
+    <string name="btn_uninstall_legacy">अनइंस्टॉल करें</string>
 </resources>

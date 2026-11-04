@@ -1,145 +1,157 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_gravity="center"
-    android:layout_margin="24dp"
-    android:background="@drawable/bg_dialog_card"
-    android:gravity="center_horizontal"
-    android:orientation="vertical"
-    android:padding="24dp">
+    android:background="@android:color/transparent"
+    android:paddingStart="24dp"
+    android:paddingTop="16dp"
+    android:paddingEnd="24dp"
+    android:paddingBottom="16dp">
 
-    <!-- Glowing AimShot Engine System Icon -->
-    <RelativeLayout
-        android:layout_width="60dp"
-        android:layout_height="60dp"
-        android:layout_marginBottom="12dp">
-
-        <ImageView
-            android:id="@+id/iv_update_icon"
-            android:layout_width="52dp"
-            android:layout_height="52dp"
-            android:layout_centerInParent="true"
-            android:background="@drawable/bg_game_icon_container"
-            android:contentDescription="AimShot Engine Update"
-            android:padding="8dp"
-            android:src="@mipmap/ic_launcher" />
-    </RelativeLayout>
-
-    <!-- Dialog Title -->
-    <TextView
-        android:id="@+id/tv_update_title"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/update_dialog_title"
-        android:textColor="@color/text_primary"
-        android:textSize="17sp"
-        android:textStyle="bold" />
-
-    <!-- Subtitle: Tactical Version info -->
-    <TextView
-        android:id="@+id/tv_update_version_info"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="3dp"
-        android:text="SECURE RELEASE VERIFICATION"
-        android:textColor="@color/accent_primary"
-        android:textSize="11sp"
-        android:textStyle="bold" />
-
-    <!-- Progress Container -->
     <LinearLayout
-        android:id="@+id/layout_update_progress"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_gravity="center"
+        android:background="@drawable/bg_dialog_card"
         android:gravity="center_horizontal"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:padding="22dp">
 
-        <!-- Progress Bar (Determinate / Indeterminate) -->
-        <ProgressBar
-            android:id="@+id/progress_update_bar"
-            style="@android:style/Widget.ProgressBar.Horizontal"
-            android:layout_width="match_parent"
-            android:layout_height="8dp"
-            android:layout_marginStart="8dp"
-            android:layout_marginEnd="8dp"
-            android:indeterminate="true"
-            android:indeterminateTint="@color/accent_primary"
-            android:progressBackgroundTint="@color/border_subtle"
-            android:progressTint="@color/accent_primary" />
+        <!-- Glowing AimShot Engine System Icon -->
+        <RelativeLayout
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginBottom="12dp">
 
+            <ImageView
+                android:id="@+id/iv_update_icon"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:layout_centerInParent="true"
+                android:background="@drawable/bg_dialog_icon_badge"
+                android:contentDescription="AimShot Engine Update"
+                android:padding="8dp"
+                android:src="@mipmap/ic_launcher" />
+        </RelativeLayout>
+
+        <!-- Dialog Title -->
         <TextView
-            android:id="@+id/tv_update_progress_detail"
+            android:id="@+id/tv_update_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:textColor="@color/text_muted"
-            android:textSize="11sp"
-            android:visibility="gone" />
-    </LinearLayout>
-
-    <!-- Dynamic Status Message -->
-    <TextView
-        android:id="@+id/tv_update_status_message"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:gravity="center"
-        android:text="@string/update_checking"
-        android:textColor="@color/text_secondary"
-        android:textSize="12.5sp" />
-
-    <!-- Error / Info Warning Box -->
-    <TextView
-        android:id="@+id/tv_update_error_box"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:background="@drawable/bg_error_box"
-        android:gravity="center"
-        android:padding="10dp"
-        android:textColor="@color/error_box_text"
-        android:textSize="12sp"
-        android:visibility="gone" />
-
-    <!-- Action Buttons (AppCompatButton prevents MaterialComponents cyan backgroundTint collision) -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        android:gravity="center"
-        android:orientation="horizontal">
-
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btn_update_cancel"
-            android:layout_width="0dp"
-            android:layout_height="44dp"
-            android:layout_marginEnd="6dp"
-            android:layout_weight="1"
-            android:background="@drawable/bg_button_tactical_border"
-            android:elevation="0dp"
-            android:stateListAnimator="@null"
-            android:text="@string/btn_cancel"
-            android:textAllCaps="false"
+            android:gravity="center"
+            android:text="@string/update_dialog_title"
             android:textColor="@color/text_primary"
-            android:textSize="12.5sp"
+            android:textSize="17.5sp"
             android:textStyle="bold" />
 
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btn_update_primary"
-            android:layout_width="0dp"
-            android:layout_height="44dp"
-            android:layout_marginStart="6dp"
-            android:layout_weight="1"
-            android:background="@drawable/bg_button_accent"
-            android:elevation="0dp"
-            android:stateListAnimator="@null"
-            android:text="@string/update_btn_check"
-            android:textAllCaps="false"
-            android:textColor="@color/text_on_accent"
-            android:textSize="12.5sp"
+        <!-- Subtitle: Tactical Version info -->
+        <TextView
+            android:id="@+id/tv_update_version_info"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:gravity="center"
+            android:text="PRIVATE VAULT ENGINE SETUP"
+            android:textColor="@color/accent_primary"
+            android:textSize="11.5sp"
             android:textStyle="bold" />
+
+        <!-- Progress Container -->
+        <LinearLayout
+            android:id="@+id/layout_update_progress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <!-- Progress Bar (Determinate / Indeterminate) -->
+            <ProgressBar
+                android:id="@+id/progress_update_bar"
+                style="@android:style/Widget.ProgressBar.Horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="8dp"
+                android:layout_marginStart="6dp"
+                android:layout_marginEnd="6dp"
+                android:indeterminate="true"
+                android:indeterminateTint="@color/accent_primary"
+                android:progressBackgroundTint="@color/border_subtle"
+                android:progressTint="@color/accent_primary" />
+
+            <TextView
+                android:id="@+id/tv_update_progress_detail"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:textColor="@color/text_muted"
+                android:textSize="11sp"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- Dynamic Status Message -->
+        <TextView
+            android:id="@+id/tv_update_status_message"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:gravity="center"
+            android:lineSpacingExtra="2dp"
+            android:text="@string/update_checking"
+            android:textColor="@color/text_secondary"
+            android:textSize="12.5sp" />
+
+        <!-- Error / Info Warning Box -->
+        <TextView
+            android:id="@+id/tv_update_error_box"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/bg_error_box"
+            android:gravity="center"
+            android:padding="10dp"
+            android:textColor="@color/error_box_text"
+            android:textSize="12sp"
+            android:visibility="gone" />
+
+        <!-- Action Buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btn_update_cancel"
+                android:layout_width="0dp"
+                android:layout_height="46dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_button_tactical_border"
+                android:elevation="0dp"
+                android:stateListAnimator="@null"
+                android:text="@string/btn_cancel"
+                android:textAllCaps="false"
+                android:textColor="@color/text_primary"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btn_update_primary"
+                android:layout_width="0dp"
+                android:layout_height="46dp"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_button_accent"
+                android:elevation="0dp"
+                android:stateListAnimator="@null"
+                android:text="@string/update_btn_check"
+                android:textAllCaps="false"
+                android:textColor="@color/text_on_accent"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
     </LinearLayout>
-
-</LinearLayout>
+</FrameLayout>

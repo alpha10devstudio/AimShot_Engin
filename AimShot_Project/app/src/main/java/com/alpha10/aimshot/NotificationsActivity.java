@@ -1,11 +1,7 @@
 package com.alpha10.aimshot;
 
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
@@ -13,19 +9,20 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.alpha10.aimshot.adapter.NotificationAdapter;
 import com.alpha10.aimshot.model.NotificationItem;
 import com.alpha10.aimshot.repository.NotificationsRepository;
+import com.alpha10.aimshot.util.DialogUiHelper;
 
 import java.util.List;
 
 /**
  * Dedicated Notifications Activity displaying official announcements, updates,
- * synchronization states, and read tracking.
+ * synchronization states, and read tracking with uniformly inset tactical detail popups.
  */
 public class NotificationsActivity extends BaseActivity {
 
@@ -135,15 +132,8 @@ public class NotificationsActivity extends BaseActivity {
     }
 
     private void showNotificationDetailDialog(NotificationItem item) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.Theme_AimShotEngine_CustomDialog);
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_custom_info, null);
-        builder.setView(dialogView);
-
-        final AlertDialog dialog = builder.create();
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-            dialog.getWindow().setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
-        }
+        View dialogView = DialogUiHelper.inflateDialogView(this, R.layout.dialog_custom_info);
+        final AlertDialog dialog = DialogUiHelper.createTacticalAlertDialog(this, dialogView);
 
         TextView tvTitle = dialogView.findViewById(R.id.tv_dialog_info_title);
         TextView tvMsg = dialogView.findViewById(R.id.tv_dialog_info_message);
@@ -160,20 +150,13 @@ public class NotificationsActivity extends BaseActivity {
         }
         if (ivIcon != null) {
             ivIcon.setImageResource(R.drawable.ic_bell);
+            ivIcon.setColorFilter(ContextCompat.getColor(this, R.color.accent_primary));
         }
         if (btnOk != null) {
             btnOk.setText(R.string.action_close);
             btnOk.setOnClickListener(v -> dialog.dismiss());
         }
 
-        com.alpha10.aimshot.util.FontHelper.applyRegularFont(dialogView);
-        dialog.show();
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
-            WindowManager.LayoutParams lp = dialog.getWindow().getAttributes();
-            lp.dimAmount = 0.68f;
-            dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-            dialog.getWindow().setAttributes(lp);
-        }
+        DialogUiHelper.showStyledDialog(dialog);
     }
 }

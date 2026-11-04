@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Essential permissions: network for license verification & launch checks, vibrate for tactical haptic feedback -->
+    <!-- Essential permissions: network, haptics, private engine overlay hosting, and legacy exposed app cleanup -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
 
     <!-- Queries declaration for Android 11+ package visibility -->
     <queries>
@@ -35,7 +39,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AimShotEngine">
 
-        <!-- Splash Activity: Application entry launcher -->
+        <!-- Splash Activity: Single Application Launcher Entry -->
         <activity
             android:name=".SplashActivity"
             android:exported="true"
@@ -89,36 +93,22 @@
             android:screenOrientation="portrait"
             android:theme="@style/Theme.AimShotEngine.NoActionBar" />
 
-        <!-- Secure FileProvider for private APK installation -->
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.fileprovider"
+        <!-- Private In-App Engine Container Host Activity (Non-Exported, Zero App Drawer Icon) -->
+        <activity
+            android:name=".runtime.EngineHostActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout|uiMode"
             android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
-        </provider>
+            android:theme="@style/Theme.AimShotEngine.NoActionBar" />
 
-        <!-- PackageInstaller Session Status Receiver (app-scoped PendingIntent delivery) -->
-        <receiver
-            android:name=".receiver.PackageInstallStatusReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.alpha10.aimshot.launcher.INSTALL_STATUS" />
-            </intent-filter>
-        </receiver>
-
-        <!-- Secondary OS Package Observer (no auto-launch) -->
-        <receiver
-            android:name=".receiver.PackageInstallReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.PACKAGE_ADDED" />
-                <action android:name="android.intent.action.PACKAGE_REPLACED" />
-                <data android:scheme="package" />
-            </intent-filter>
-        </receiver>
+        <!-- Private In-App Engine Overlay / Guideline Host Service (Non-Exported) -->
+        <service
+            android:name=".runtime.EngineHostService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="aimshot_private_engine_overlay_runtime" />
+        </service>
 
     </application>
 

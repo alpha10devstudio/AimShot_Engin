@@ -161,9 +161,9 @@
     <string name="stage_3_auth">3. Authenticating</string>
     <string name="stage_4_download">4. Downloading AimShot Engine</string>
     <string name="stage_5_verify">5. Verifying APK Security</string>
-    <string name="stage_6_confirm">6. Waiting for Installation Confirmation</string>
-    <string name="stage_7_install">7. Installing AimShot Engine</string>
-    <string name="stage_8_success">8. Installation Successful</string>
+    <string name="stage_6_confirm">6. Preparing Private Vault</string>
+    <string name="stage_7_install">7. Securing AimShot Engine in Vault</string>
+    <string name="stage_8_success">8. Private Vault Ready</string>
     <string name="stage_9_open">9. Opening AimShot Engine</string>
     <string name="btn_open_app">OPEN AIMSHOT ENGINE</string>
     <string name="auto_launching_countdown">Launching AimShot Engine in %1$ds...</string>
@@ -176,4 +176,7 @@
     <string name="server_connection_failed_title">Server Connection Failed</string>
     <string name="server_connection_failed_msg">Internet is connected, but Alpha10 Server could not be reached. Please try again shortly.</string>
     <string name="btn_understood">Understood</string>
+    <string name="legacy_app_detected_title">Remove Exposed App Copy</string>
+    <string name="legacy_app_detected_msg">An older standalone AimShot app icon is still installed on your phone. Please uninstall that exposed copy so AimShot Engine runs privately and securely inside AimShot Launcher only.</string>
+    <string name="btn_uninstall_legacy">Uninstall Copy</string>
 </resources>

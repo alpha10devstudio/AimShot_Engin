@@ -2,33 +2,34 @@ package com.alpha10.aimshot.controller;
 
 import android.app.Activity;
 import android.content.Context;
-import android.content.Intent;
-import android.content.pm.PackageInfo;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
 import com.alpha10.aimshot.BuildConfig;
 import com.alpha10.aimshot.model.ReleaseManifest;
-import com.alpha10.aimshot.receiver.PackageInstallStatusReceiver;
+import com.alpha10.aimshot.runtime.PrivateEngineRuntime;
+import com.alpha10.aimshot.runtime.PrivateEngineVault;
 import com.alpha10.aimshot.service.ApkDownloadService;
 import com.alpha10.aimshot.service.UpdateAuthService;
 import com.alpha10.aimshot.util.ApkSecurityVerifier;
 import com.alpha10.aimshot.util.NetworkUtil;
-import com.alpha10.aimshot.util.PackageInstallerHelper;
 
 import java.io.File;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
- * Coordinates the complete AimShot Engine download, verification, installation & launch flow:
+ * Coordinates the complete AimShot Engine download, verification, private vault provisioning,
+ * and hidden in-app runtime launch flow:
  * 1. Internet & Alpha10 Website Connection Check
- * 2. Direct Authentication with https://alpha10.freedev.app/api/auth.php (64-char secret key + aes.js bypass)
+ * 2. Direct Authentication with https://alpha10.freedev.app/api/auth.php
  * 3. Direct APK Binary Streaming into Private Internal Storage
  * 4. APK Package ID ("com.alpha10.aimshot") & Integrity Verification
- * 5. Official Android PackageInstaller.Session Execution & Unknown Sources Permission Handling
- * 6. User-Consented Main AimShot Engine Launch
+ * 5. Hidden Private Vault Storage (Read-Only DEX + ABI Native .so Extraction — Zero OS Install)
+ * 6. License-Gated In-App Execution inside AimShot Launcher
  */
-public class UpdateController implements PackageInstallStatusReceiver.InstallStatusListener {
+public class UpdateController {
 
     private static final String TAG = "AimShot_UpdateCtrl";
 
@@ -57,17 +58,15 @@ public class UpdateController implements PackageInstallStatusReceiver.InstallSta
     private final Context context;
     private final UpdateAuthService authService;
     private final ApkDownloadService downloadService;
+    private final ExecutorService vaultExecutor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     private ReleaseManifest activeManifest;
     private UpdateListener listener;
-    private Activity attachedActivity;
 
     private File pendingVerifiedApk = null;
-    private boolean isRunning = false;
-    private boolean isWaitingForPermission = false;
-    private boolean isSessionCommitted = false;
-    private int baselineVersionCode = -1;
+    private ApkSecurityVerifier.VerificationResult pendingVerifyResult = null;
+    private volatile boolean isRunning = false;
 
     public UpdateController(Context context) {
         this.context = context.getApplicationContext();
@@ -85,10 +84,7 @@ public class UpdateController implements PackageInstallStatusReceiver.InstallSta
 
     public void cancel() {
         downloadService.cancelDownload();
-        PackageInstallStatusReceiver.clearStatusListener();
         isRunning = false;
-        isWaitingForPermission = false;
-        isSessionCommitted = false;
         cleanupPendingApk();
     }
 
@@ -97,16 +93,12 @@ public class UpdateController implements PackageInstallStatusReceiver.InstallSta
     }
 
     public int getInstalledVersionCode() {
-        return PackageInstallerHelper.getInstalledPackageVersionCode(context, PackageInstallerHelper.TARGET_PACKAGE_NAME);
+        return PrivateEngineVault.getInstalledVersionCode(context);
     }
 
     public String getInstalledVersionName() {
-        try {
-            PackageInfo pInfo = context.getPackageManager().getPackageInfo(PackageInstallerHelper.TARGET_PACKAGE_NAME, 0);
-            return pInfo.versionName;
-        } catch (Exception e) {
-            return "Not Installed";
-        }
+        String ver = PrivateEngineVault.getInstalledVersionName(context);
+        return ver != null ? ver : "Not Installed";
     }
 
     public void checkForUpdates(final ReleaseManifest manifest, final UpdateListener listener) {
@@ -120,7 +112,7 @@ public class UpdateController implements PackageInstallStatusReceiver.InstallSta
         } else {
             if (listener != null) {
                 String label = currentCode == -1
-                        ? "Main AimShot Engine ready to download & install"
+                        ? "Main AimShot Engine ready for Private Vault setup"
                         : "New version v" + activeManifest.getVersionName() + " available";
                 listener.onStageChanged(Stage.CHECKING_INTERNET, label, 0);
             }
@@ -130,11 +122,7 @@ public class UpdateController implements PackageInstallStatusReceiver.InstallSta
     public void startUpdatePipeline(final Activity activity, final UpdateListener listener) {
         if (isRunning) return;
         isRunning = true;
-        isWaitingForPermission = false;
-        isSessionCommitted = false;
-        this.attachedActivity = activity;
         this.listener = listener;
-        this.baselineVersionCode = getInstalledVersionCode();
 
         if (activeManifest == null) {
             activeManifest = createBaselineManifest();
@@ -194,7 +182,7 @@ public class UpdateController implements PackageInstallStatusReceiver.InstallSta
                                                     UpdateController.this.listener.onDownloadProgress(bytesDownloaded, totalBytes, percent);
                                                     UpdateController.this.listener.onStageChanged(
                                                             Stage.DOWNLOADING,
-                                                            "Downloading APK: " + percent + "%",
+                                                            "Downloading Engine Package: " + percent + "%",
                                                             mappedPercent
                                                     );
                                                 }
@@ -203,7 +191,9 @@ public class UpdateController implements PackageInstallStatusReceiver.InstallSta
                                             @Override
                                             public void onDownloadComplete(File stagedApkFile) {
                                                 if (!isRunning) {
-                                                    if (stagedApkFile != null && stagedApkFile.exists()) stagedApkFile.delete();
+                                                    if (stagedApkFile != null && stagedApkFile.exists()) {
+                                                        stagedApkFile.delete();
+                                                    }
                                                     return;
                                                 }
 
@@ -221,29 +211,7 @@ public class UpdateController implements PackageInstallStatusReceiver.InstallSta
                                                     );
                                                 }
 
-                                                notifyStage(Stage.VERIFYING_SECURITY,
-                                                        "Verifying AimShot Engine APK package...", 80);
-
-                                                ApkSecurityVerifier.VerificationResult verifyResult =
-                                                        ApkSecurityVerifier.verifyApk(context, stagedApkFile, activeManifest);
-
-                                                if (!verifyResult.isSuccess()) {
-                                                    if (stagedApkFile.exists()) stagedApkFile.delete();
-                                                    isRunning = false;
-                                                    notifyError("APK verification failed: " + verifyResult.getErrorMessage(), true);
-                                                    return;
-                                                }
-
-                                                File finalApkFile = new File(
-                                                        stagedApkFile.getParentFile(),
-                                                        "AimShot_Engine_v" + verifyResult.getParsedVersionCode() + ".apk"
-                                                );
-                                                if (finalApkFile.exists()) finalApkFile.delete();
-
-                                                boolean renamed = stagedApkFile.renameTo(finalApkFile);
-                                                pendingVerifiedApk = renamed ? finalApkFile : stagedApkFile;
-
-                                                proceedToInstallation(attachedActivity);
+                                                provisionIntoPrivateVaultAsync(stagedApkFile);
                                             }
 
                                             @Override
@@ -267,147 +235,108 @@ public class UpdateController implements PackageInstallStatusReceiver.InstallSta
         });
     }
 
+    /**
+     * Verifies the downloaded APK and installs it directly into AimShot Launcher's hidden
+     * Private Vault on a background worker thread (no OS PackageInstaller or second app icon).
+     */
+    private void provisionIntoPrivateVaultAsync(final File stagedApkFile) {
+        notifyStage(Stage.VERIFYING_SECURITY, "Verifying AimShot Engine integrity & signature...", 80);
+
+        vaultExecutor.execute(() -> {
+            try {
+                ApkSecurityVerifier.VerificationResult verifyResult =
+                        ApkSecurityVerifier.verifyApk(context, stagedApkFile, activeManifest);
+
+                if (!verifyResult.isSuccess()) {
+                    if (stagedApkFile != null && stagedApkFile.exists()) {
+                        stagedApkFile.delete();
+                    }
+                    mainHandler.post(() -> {
+                        isRunning = false;
+                        notifyError("APK verification failed: " + verifyResult.getErrorMessage(), true);
+                    });
+                    return;
+                }
+
+                pendingVerifiedApk = stagedApkFile;
+                pendingVerifyResult = verifyResult;
+
+                mainHandler.post(() -> notifyStage(
+                        Stage.INSTALLING,
+                        "Securing AimShot Engine inside Private Vault...",
+                        90
+                ));
+
+                PrivateEngineVault.installVerifiedApkIntoVault(context, stagedApkFile, verifyResult);
+
+                // Pre-warm isolated DexClassLoader & Resources so first launch is instant
+                PrivateEngineRuntime.ensureLoaded(context);
+
+                pendingVerifiedApk = null;
+                pendingVerifyResult = null;
+
+                mainHandler.post(() -> {
+                    if (!isRunning) return;
+                    isRunning = false;
+
+                    context.getSharedPreferences("aimshot_update_prefs", Context.MODE_PRIVATE)
+                            .edit()
+                            .putBoolean("last_update_success", true)
+                            .putLong("last_update_timestamp", System.currentTimeMillis())
+                            .apply();
+
+                    notifyStage(
+                            Stage.INSTALL_SUCCESS,
+                            "AimShot Engine secured in Private Vault! Tap OPEN AIMSHOT ENGINE to launch.",
+                            100
+                    );
+
+                    if (listener != null) {
+                        listener.onInstallationSuccess();
+                    }
+                });
+
+            } catch (Throwable t) {
+                Log.e(TAG, "Private Vault provisioning error: " + t.getMessage(), t);
+                mainHandler.post(() -> {
+                    isRunning = false;
+                    notifyError("Private Vault setup failed: " + t.getMessage(), true);
+                });
+            }
+        });
+    }
+
     public void proceedToInstallation(final Activity activity) {
-        if (pendingVerifiedApk == null || !pendingVerifiedApk.exists()) {
-            isRunning = false;
-            notifyError("Verified APK is missing from private storage.", true);
-            return;
-        }
-
-        if (activity != null && !PackageInstallerHelper.canInstallPackages(activity)) {
-            isWaitingForPermission = true;
-            isSessionCommitted = false;
-            notifyStage(Stage.WAITING_CONFIRMATION,
-                    "Unknown App Installation permission required. Opening Settings...", 84);
-            PackageInstallerHelper.requestInstallPermission(activity);
-            return;
-        }
-
-        isWaitingForPermission = false;
-        notifyStage(Stage.WAITING_CONFIRMATION, "Preparing Android PackageInstaller session...", 88);
-        notifyStage(Stage.INSTALLING, "Opening Android PackageInstaller...", 92);
-
-        int sessionId = PackageInstallerHelper.installApkWithSession(
-                activity != null ? activity : context,
-                pendingVerifiedApk,
-                this
-        );
-
-        if (sessionId == -1) {
-            isRunning = false;
-            isSessionCommitted = false;
-            notifyError("Failed to create Android PackageInstaller session.", true);
+        if (pendingVerifiedApk != null && pendingVerifiedApk.exists() && pendingVerifyResult != null) {
+            isRunning = true;
+            provisionIntoPrivateVaultAsync(pendingVerifiedApk);
         } else {
-            isSessionCommitted = true;
+            startUpdatePipeline(activity, listener);
         }
     }
 
     public void onResumeCheck(Activity activity) {
-        this.attachedActivity = activity;
-
-        if (isWaitingForPermission) {
-            if (pendingVerifiedApk != null && pendingVerifiedApk.exists()) {
-                if (PackageInstallerHelper.canInstallPackages(activity)) {
-                    Log.i(TAG, "Unknown apps permission granted. Resuming PackageInstaller session.");
-                    proceedToInstallation(activity);
-                } else {
-                    Log.w(TAG, "Unknown apps permission denied by user.");
-                    isWaitingForPermission = false;
-                    isRunning = false;
-                    notifyError("Unknown App Installation permission was not granted. Tap Retry after enabling permission.", true);
-                }
-            }
-            return;
-        }
-
-        if (isSessionCommitted && isRunning) {
-            boolean isNowInstalled = PackageInstallerHelper.isMainApkInstalled(context);
-            int currentCode = getInstalledVersionCode();
-            if (isNowInstalled && (baselineVersionCode == -1 || currentCode > baselineVersionCode)) {
-                Log.i(TAG, "Confirmed Main AimShot Engine installation on OS resume (vCode " + currentCode + ").");
-                onInstallSuccess(PackageInstallerHelper.TARGET_PACKAGE_NAME);
-            }
-        }
+        // Private Vault provisioning completes in-process without external OS installer handoffs.
     }
 
-    @Override
-    public void onUserActionRequired(Intent confirmationIntent) {
-        mainHandler.post(() -> {
-            notifyStage(Stage.WAITING_CONFIRMATION, "Please confirm installation in the Android system dialog...", 90);
-            try {
-                if (attachedActivity != null && !attachedActivity.isFinishing()) {
-                    attachedActivity.startActivity(confirmationIntent);
-                } else {
-                    confirmationIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    context.startActivity(confirmationIntent);
-                }
-            } catch (Exception e) {
-                isRunning = false;
-                isSessionCommitted = false;
-                notifyError("Unable to open system installation confirmation prompt: " + e.getMessage(), true);
-            }
-        });
-    }
-
-    @Override
-    public void onInstallSuccess(String packageName) {
-        mainHandler.post(() -> {
-            if (!isRunning && !isSessionCommitted) {
-                return;
-            }
-            isRunning = false;
-            isSessionCommitted = false;
-
-            notifyStage(Stage.INSTALL_SUCCESS,
-                    "Main AimShot Engine installed successfully! Tap OPEN AIMSHOT ENGINE to launch.", 100);
-
-            context.getSharedPreferences("aimshot_update_prefs", Context.MODE_PRIVATE)
-                    .edit()
-                    .putBoolean("last_update_success", true)
-                    .putLong("last_update_timestamp", System.currentTimeMillis())
-                    .apply();
-
-            cleanupPendingApk();
-
-            if (listener != null) {
-                listener.onInstallationSuccess();
-            }
-        });
-    }
-
-    @Override
-    public void onInstallFailed(int statusCode, String message) {
-        mainHandler.post(() -> {
-            isRunning = false;
-            isSessionCommitted = false;
-            cleanupPendingApk();
-            notifyError("Installation failed: " + message, true);
-        });
-    }
-
-    @Override
-    public void onInstallAborted() {
-        mainHandler.post(() -> {
-            isRunning = false;
-            isSessionCommitted = false;
-            notifyStage(Stage.ERROR, "Installation cancelled by user.", 0);
-            if (listener != null) {
-                listener.onInstallationAborted();
-            }
-        });
+    public boolean launchInstalledApp(Context launchContext) {
+        notifyStage(Stage.OPENING_APP, "Opening AimShot Engine from Private Vault...", 100);
+        return PrivateEngineRuntime.launchEngineFromVault(launchContext != null ? launchContext : context);
     }
 
     public boolean launchInstalledApp() {
-        notifyStage(Stage.OPENING_APP, "Opening AimShot Engine...", 100);
-        String trustedCert = activeManifest != null ? activeManifest.getTrustedCertFingerprint() : null;
-        return PackageInstallerHelper.launchInstalledApp(context, trustedCert);
+        return launchInstalledApp(context);
     }
 
     private void cleanupPendingApk() {
         if (pendingVerifiedApk != null && pendingVerifiedApk.exists()) {
-            try { pendingVerifiedApk.delete(); } catch (Exception ignored) {}
+            try {
+                pendingVerifiedApk.delete();
+            } catch (Exception ignored) {
+            }
         }
         pendingVerifiedApk = null;
+        pendingVerifyResult = null;
         ApkDownloadService.cleanupPrivateDownloads(context);
     }
 
@@ -465,7 +394,7 @@ public class UpdateController implements PackageInstallStatusReceiver.InstallSta
                 ApkDownloadService.DOWNLOAD_ENDPOINT,
                 configuredSha256,
                 null,
-                "Main AimShot Engine (com.alpha10.aimshot) installation package.",
+                "Main AimShot Engine (com.alpha10.aimshot) private container package.",
                 0L
         );
     }

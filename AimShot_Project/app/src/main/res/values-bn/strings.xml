@@ -161,9 +161,9 @@
     <string name="stage_3_auth">৩. সার্ভার প্রমাণীকরণ</string>
     <string name="stage_4_download">৪. AimShot Engine ডাউনলোড হচ্ছে</string>
     <string name="stage_5_verify">৫. APK নিরাপত্তা ও সার্টিফিকেট যাচাই</string>
-    <string name="stage_6_confirm">৬. ইনস্টলেশন নিশ্চিতকরণের অপেক্ষা</string>
-    <string name="stage_7_install">৭. AimShot Engine ইনস্টল হচ্ছে</string>
-    <string name="stage_8_success">৮. ইনস্টলেশন সফল হয়েছে</string>
+    <string name="stage_6_confirm">৬. প্রাইভেট ভল্ট প্রস্তুত করা হচ্ছে</string>
+    <string name="stage_7_install">৭. প্রাইভেট ভল্টে ইঞ্জিন সংরক্ষণ হচ্ছে</string>
+    <string name="stage_8_success">৮. প্রাইভেট ভল্ট সেটআপ সম্পন্ন</string>
     <string name="stage_9_open">৯. AimShot Engine চালু করা হচ্ছে</string>
     <string name="btn_open_app">OPEN AIMSHOT ENGINE</string>
     <string name="auto_launching_countdown">%1$d সেকেন্ডে চালু হচ্ছে...</string>
@@ -176,4 +176,7 @@
     <string name="server_connection_failed_title">সার্ভার সংযোগ ব্যর্থ</string>
     <string name="server_connection_failed_msg">ইন্টারনেট সচল আছে, কিন্তু Alpha10 সার্ভারে সংযোগ করা যাচ্ছে না। অনুগ্রহ করে একটু পর আবার চেষ্টা করুন।</string>
     <string name="btn_understood">ঠিক আছে</string>
+    <string name="legacy_app_detected_title">পুরাতন আলাদা অ্যাপ সরান</string>
+    <string name="legacy_app_detected_msg">আপনার ফোনে আগের টেস্টের একটি আলাদা AimShot আইকন ইনস্টল করা আছে। ভেরিফিকেশন সুরক্ষা বজায় রাখতে পুরাতন অ্যাপটি আনইনস্টল করুন, যাতে মেইন ইঞ্জিন শুধুমাত্র লঞ্চারের প্রাইভেট ভল্ট থেকেই গোপনে চলে।</string>
+    <string name="btn_uninstall_legacy">আনইনস্টল করুন</string>
 </resources>

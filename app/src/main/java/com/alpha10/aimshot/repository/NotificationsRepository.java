@@ -76,6 +76,16 @@ public class NotificationsRepository {
     private void populateSeedAnnouncements() {
         Set<String> readIds = getReadIds();
         memoryList.add(new NotificationItem(
+                "notif-100",
+                "AimShot Engine v1.0.1 Ready",
+                "New release v1.0.1 with authenticated single-use token streaming and permanent release signing is ready to install.",
+                "update",
+                "Just now",
+                readIds.contains("notif-100"),
+                "high"
+        ));
+
+        memoryList.add(new NotificationItem(
                 "notif-101",
                 "AimShot Engine v1.0.0 Global Release",
                 "Welcome to AimShot Engine! Enhanced auto-aim guidelines, millimeter precision physics, and 120 FPS frame pacing are active.",

@@ -6,6 +6,7 @@ import android.text.TextWatcher;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -20,7 +21,7 @@ import java.util.List;
 /**
  * Screen presenting all supported games, their optimization profiles, and search capability.
  */
-public class SupportedGamesActivity extends AppCompatActivity {
+public class SupportedGamesActivity extends BaseActivity {
 
     private RecyclerView rvGames;
     private GameListAdapter adapter;
