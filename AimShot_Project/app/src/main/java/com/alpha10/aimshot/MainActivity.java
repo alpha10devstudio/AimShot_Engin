@@ -866,6 +866,12 @@ public class MainActivity extends BaseActivity
             ).show();
 
             activeUpdateDialog = new UpdateDialog(this, true);
+            activeUpdateDialog.setOnInstallStateChangedListener(() -> {
+                if (currentTab == Tab.HOME) {
+                    Button btnLaunchGame = findViewById(R.id.btn_launch_game);
+                    updateLauncherButtonState(btnLaunchGame);
+                }
+            });
             activeUpdateDialog.show();
         }
     }

@@ -4,18 +4,27 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Downloads the binary release APK from GET https://alpha10.freedev.app/api/aimshot-download.php
- * using the single-use Bearer token, strictly enforcing the 60-second expiration window
- * and writing directly into app-private internal storage.
+ * Downloads the Main AimShot Engine APK binary from the existing unmodified Alpha10 endpoint:
+ * GET https://alpha10.freedev.app/api/aimshot-download.php
+ *
+ * Enforces:
+ * - Single-use Authorization: Bearer TEMPORARY_TOKEN header with zero auto-redirect token leakage
+ * - Strict 60-second expiration window validation
+ * - Private internal storage staging (context.getFilesDir()/downloads/ — invisible to File Managers)
+ * - Binary content-type & ZIP/APK magic-byte verification
  */
 public class ApkDownloadService {
 
@@ -30,14 +39,29 @@ public class ApkDownloadService {
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
-    private boolean isCancelled = false;
+    private volatile boolean isCancelled = false;
 
     public void cancelDownload() {
         this.isCancelled = true;
     }
 
     /**
-     * Downloads the APK file to app-private storage context.getFilesDir()/downloads/
+     * Purges any leftover temporary or previously staged APK files in private internal storage.
+     */
+    public static void cleanupPrivateDownloads(Context context) {
+        if (context == null) return;
+        File downloadsDir = new File(context.getFilesDir(), "downloads");
+        if (!downloadsDir.exists()) return;
+        File[] files = downloadsDir.listFiles();
+        if (files != null) {
+            for (File f : files) {
+                try { f.delete(); } catch (Exception ignored) {}
+            }
+        }
+    }
+
+    /**
+     * Streams the protected APK into app-private internal storage: context.getFilesDir()/downloads/
      */
     public void downloadApk(final Context context,
                             final String bearerToken,
@@ -47,15 +71,22 @@ public class ApkDownloadService {
                             final DownloadCallback callback) {
         if (callback == null || context == null) return;
 
-        // Verify token is not expired before initiating connection
+        if (bearerToken == null || bearerToken.trim().isEmpty()) {
+            callback.onDownloadError("Missing temporary download token.", -100);
+            return;
+        }
+
+        // Enforce 60-second single-use token expiration window before opening network stream
         long now = System.currentTimeMillis();
-        long tokenLifespanMillis = tokenExpiresInSeconds > 0 ? (tokenExpiresInSeconds * 1000) : 60000;
+        long tokenLifespanMillis = tokenExpiresInSeconds > 0 ? (tokenExpiresInSeconds * 1000L) : 60000L;
         if (now > tokenIssuedAt + tokenLifespanMillis) {
-            callback.onDownloadError("Temporary token expired (exceeded 60s window). Please re-authenticate.", -101);
+            callback.onDownloadError("Temporary download token expired (60s limit exceeded). Please retry.", -101);
             return;
         }
 
         this.isCancelled = false;
+        final Context appContext = context.getApplicationContext();
+
         executor.execute(new Runnable() {
             @Override
             public void run() {
@@ -64,17 +95,17 @@ public class ApkDownloadService {
                 FileOutputStream fos = null;
                 File stagedFile = null;
 
-                // Token is single-use: copy locally and advise immediate caller-side disposal
-                String activeToken = bearerToken;
+                // Single-use token: copy locally and clear reference immediately after setting header
+                String oneTimeToken = bearerToken.trim();
 
                 try {
-                    // Ensure private downloads directory exists
-                    File downloadsDir = new File(context.getFilesDir(), "downloads");
-                    if (!downloadsDir.exists()) {
-                        downloadsDir.mkdirs();
+                    File downloadsDir = new File(appContext.getFilesDir(), "downloads");
+                    if (!downloadsDir.exists() && !downloadsDir.mkdirs()) {
+                        mainHandler.post(() -> callback.onDownloadError("Unable to initialize private internal storage directory.", -2));
+                        return;
                     }
 
-                    // Clean up any stale partial files
+                    // Remove any stale .tmp files from prior interrupted attempts
                     File[] staleFiles = downloadsDir.listFiles((dir, name) -> name.endsWith(".tmp"));
                     if (staleFiles != null) {
                         for (File stale : staleFiles) {
@@ -82,44 +113,52 @@ public class ApkDownloadService {
                         }
                     }
 
-                    // Staging file with .tmp extension
-                    stagedFile = new File(downloadsDir, "AimShot_v" + targetVersionCode + ".apk.tmp");
+                    int safeVersion = Math.max(1, targetVersionCode);
+                    stagedFile = new File(downloadsDir, "AimShot_Engine_v" + safeVersion + ".apk.tmp");
                     if (stagedFile.exists()) {
                         stagedFile.delete();
                     }
 
                     URL url = new URL(DOWNLOAD_ENDPOINT);
                     conn = (HttpURLConnection) url.openConnection();
+                    // Prevent automatic redirects from dropping Authorization header or consuming single-use token twice
+                    conn.setInstanceFollowRedirects(false);
                     conn.setRequestMethod("GET");
-                    conn.setRequestProperty("User-Agent", "AimShotEngine/1.0 (Android)");
-                    conn.setRequestProperty("Authorization", "Bearer " + activeToken);
-                    conn.setRequestProperty("Accept", "application/octet-stream");
-                    conn.setConnectTimeout(10000);
-                    conn.setReadTimeout(15000);
+                    conn.setRequestProperty("User-Agent", "AimShotLauncher/1.0 (Android)");
+                    conn.setRequestProperty("Authorization", "Bearer " + oneTimeToken);
+                    conn.setRequestProperty("Accept", "application/vnd.android.package-archive, application/octet-stream");
+                    conn.setConnectTimeout(12000);
+                    conn.setReadTimeout(20000);
 
-                    // Clear token reference immediately
-                    activeToken = null;
+                    // Immediately clear token from local variable
+                    oneTimeToken = null;
 
-                    int responseCode = conn.getResponseCode();
+                    final int responseCode = conn.getResponseCode();
                     if (responseCode != 200) {
+                        String errSnippet = readShortErrorStream(conn.getErrorStream());
                         cleanupFile(stagedFile);
-                        mainHandler.post(() -> callback.onDownloadError("Download request failed (HTTP " + responseCode + ")", responseCode));
+                        final String errMsg = errSnippet.isEmpty()
+                                ? "APK download rejected by server (HTTP " + responseCode + ")"
+                                : "APK download rejected (HTTP " + responseCode + "): " + errSnippet;
+                        mainHandler.post(() -> callback.onDownloadError(errMsg, responseCode));
                         return;
                     }
 
                     String contentType = conn.getContentType();
-                    if (contentType != null && (contentType.contains("text/html") || contentType.contains("application/json"))) {
-                        cleanupFile(stagedFile);
-                        mainHandler.post(() -> callback.onDownloadError("Server returned non-binary error page instead of APK", -102));
-                        return;
+                    if (contentType != null) {
+                        String lowerType = contentType.toLowerCase();
+                        if (lowerType.contains("text/html") || lowerType.contains("application/json")) {
+                            cleanupFile(stagedFile);
+                            mainHandler.post(() -> callback.onDownloadError("Server returned non-binary response (" + contentType + ") instead of APK.", -102));
+                            return;
+                        }
                     }
 
-                    long contentLength = conn.getContentLength();
-                    // Storage check: ensure sufficient internal space
-                    long minRequiredSpace = contentLength > 0 ? (contentLength + (10 * 1024 * 1024)) : (30 * 1024 * 1024);
-                    if (context.getFilesDir().getUsableSpace() < minRequiredSpace) {
+                    long contentLength = BuildCompatContentLength(conn);
+                    long minRequiredSpace = contentLength > 0 ? (contentLength + (15L * 1024L * 1024L)) : (40L * 1024L * 1024L);
+                    if (appContext.getFilesDir().getUsableSpace() < minRequiredSpace) {
                         cleanupFile(stagedFile);
-                        mainHandler.post(() -> callback.onDownloadError("Insufficient internal storage to store update", -2));
+                        mainHandler.post(() -> callback.onDownloadError("Insufficient internal storage space to stage Main AimShot Engine APK.", -2));
                         return;
                     }
 
@@ -134,7 +173,7 @@ public class ApkDownloadService {
                     while ((bytesRead = is.read(buffer)) != -1) {
                         if (isCancelled) {
                             cleanupFile(stagedFile);
-                            mainHandler.post(() -> callback.onDownloadError("Download cancelled by user", -3));
+                            mainHandler.post(() -> callback.onDownloadError("Download cancelled by user.", -3));
                             return;
                         }
 
@@ -142,7 +181,7 @@ public class ApkDownloadService {
                         bytesDownloaded += bytesRead;
 
                         if (contentLength > 0) {
-                            int percent = (int) ((bytesDownloaded * 100) / contentLength);
+                            int percent = (int) ((bytesDownloaded * 100L) / contentLength);
                             if (percent != lastReportedPercent) {
                                 lastReportedPercent = percent;
                                 final long currentBytes = bytesDownloaded;
@@ -152,11 +191,19 @@ public class ApkDownloadService {
                     }
 
                     fos.flush();
+                    fos.getFD().sync();
+                    fos.close();
+                    fos = null;
 
-                    // Verification that download is complete
                     if (stagedFile.length() == 0 || (contentLength > 0 && stagedFile.length() < contentLength)) {
                         cleanupFile(stagedFile);
-                        mainHandler.post(() -> callback.onDownloadError("Incomplete download received from server", -4));
+                        mainHandler.post(() -> callback.onDownloadError("Incomplete APK binary received from server.", -4));
+                        return;
+                    }
+
+                    if (!hasValidApkZipHeader(stagedFile)) {
+                        cleanupFile(stagedFile);
+                        mainHandler.post(() -> callback.onDownloadError("Downloaded payload is not a valid Android APK package.", -5));
                         return;
                     }
 
@@ -165,8 +212,10 @@ public class ApkDownloadService {
 
                 } catch (Exception e) {
                     cleanupFile(stagedFile);
-                    mainHandler.post(() -> callback.onDownloadError("Download error: " + e.getMessage(), -1));
+                    final String msg = e.getMessage() != null ? e.getMessage() : "Stream interrupted";
+                    mainHandler.post(() -> callback.onDownloadError("Download error: " + msg, -1));
                 } finally {
+                    oneTimeToken = null;
                     try { if (fos != null) fos.close(); } catch (Exception ignored) {}
                     try { if (is != null) is.close(); } catch (Exception ignored) {}
                     if (conn != null) {
@@ -175,6 +224,37 @@ public class ApkDownloadService {
                 }
             }
         });
+    }
+
+    private static long BuildCompatContentLength(HttpURLConnection conn) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            return conn.getContentLengthLong();
+        }
+        return conn.getContentLength();
+    }
+
+    private static boolean hasValidApkZipHeader(File file) {
+        if (file == null || file.length() < 4) return false;
+        byte[] magic = new byte[4];
+        try (FileInputStream fis = new FileInputStream(file)) {
+            if (fis.read(magic) != 4) return false;
+            return magic[0] == 0x50 && magic[1] == 0x4B && magic[2] == 0x03 && magic[3] == 0x04;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static String readShortErrorStream(InputStream errStream) {
+        if (errStream == null) return "";
+        StringBuilder sb = new StringBuilder();
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(errStream, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = br.readLine()) != null && sb.length() < 200) {
+                sb.append(line);
+            }
+        } catch (Exception ignored) {
+        }
+        return sb.toString().trim();
     }
 
     private static void cleanupFile(File file) {

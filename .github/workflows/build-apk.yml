@@ -72,6 +72,10 @@ jobs:
             echo "$KEYSTORE_BASE64" | base64 -d > keystore/aimshot-release.p12
             echo "Permanent release keystore restored from GitHub Secret KEYSTORE_BASE64."
           fi
+          if [ ! -f "keystore/aimshot-release.p12" ]; then
+            echo "ERROR: Permanent release keystore (keystore/aimshot-release.p12) is missing! Refusing to generate a new release keystore to preserve signing certificate identity."
+            exit 1
+          fi
           if [ ! -f "debug.keystore" ]; then
             keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           fi

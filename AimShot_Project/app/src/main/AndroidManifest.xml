@@ -100,21 +100,23 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <!-- PackageInstaller Session Status Receiver -->
+        <!-- PackageInstaller Session Status Receiver (app-scoped PendingIntent delivery) -->
         <receiver
             android:name=".receiver.PackageInstallStatusReceiver"
-            android:exported="true">
+            android:exported="false">
             <intent-filter>
-                <action android:name="com.alpha10.aimshot.INSTALL_STATUS" />
+                <action android:name="com.alpha10.aimshot.launcher.INSTALL_STATUS" />
             </intent-filter>
         </receiver>
 
-        <!-- Package Replaced Secondary Confirmation Receiver -->
+        <!-- Secondary OS Package Observer (no auto-launch) -->
         <receiver
             android:name=".receiver.PackageInstallReceiver"
-            android:exported="true">
+            android:exported="false">
             <intent-filter>
-                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.PACKAGE_ADDED" />
+                <action android:name="android.intent.action.PACKAGE_REPLACED" />
+                <data android:scheme="package" />
             </intent-filter>
         </receiver>
 

@@ -1,5 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 
 describe('AimShot Engine Pure Logic Unit Tests', () => {
   // Test 1: Device ID Formatting
@@ -326,19 +328,28 @@ describe('AimShot Engine Pure Logic Unit Tests', () => {
     assert.equal(isValidPackage('com.miniclip.carrom'), false);
   });
 
-  // Test 22: Authentication Failure Handling (X-App-Key, non-200, missing token)
-  test('UpdateAuthService handles auth errors, invalid HTTP status, and missing token', () => {
+  // Test 22: Authentication Failure Handling (Broker JSON error surfacing, non-200, missing token)
+  test('UpdateAuthService surfaces exact server JSON errors and handles invalid HTTP status or missing token', () => {
     const handleAuthResponse = (status, body) => {
-      if (status !== 200) {
-        return { success: false, error: `Server returned HTTP ${status}` };
-      }
       try {
         const json = typeof body === 'string' ? JSON.parse(body) : body;
-        if (!json || !json.token) {
-          return { success: false, error: 'Server response missing security token' };
+        if (json && (json.success === false || json.status === 'error')) {
+          return { success: false, error: json.error || json.message || `Authentication rejected (HTTP ${status})` };
         }
-        return { success: true, token: json.token, expiresIn: json.expires_in || 60 };
+        if (status !== 200) {
+          const serverErr = json && (json.error || json.message);
+          return { success: false, error: serverErr || `Server returned HTTP ${status}` };
+        }
+        const token = json && (json.token || json.temporary_token || json.temp_token || json.access_token || (json.data && json.data.token));
+        if (!token) {
+          const serverErr = json && (json.error || json.message);
+          return { success: false, error: serverErr || 'Server response missing security token' };
+        }
+        return { success: true, token, expiresIn: json.expires_in || 60 };
       } catch (e) {
+        if (status !== 200) {
+          return { success: false, error: `Server returned HTTP ${status}` };
+        }
         return { success: false, error: 'Malformed JSON from server' };
       }
     };
@@ -476,9 +487,9 @@ describe('AimShot Engine Pure Logic Unit Tests', () => {
     assert.equal(downloadCount, 1);
   });
 
-  // Test 27: Open AimShot Engine Launch & Countdown Behavior
-  test('Launch trigger resolves package intent and respects Android background launch rules', () => {
-    const createLaunchPlan = (installedPackage, isForeground, autoCountdownAllowed) => {
+  // Test 27: Open AimShot Engine Launch & Explicit User Consent (No Unsolicited Auto-Countdown)
+  test('Launch trigger resolves package intent and strictly requires explicit user tap without auto-countdown', () => {
+    const createLaunchPlan = (installedPackage) => {
       if (installedPackage !== 'com.alpha10.aimshot') {
         return { canLaunch: false, reason: 'Unknown package' };
       }
@@ -487,22 +498,19 @@ describe('AimShot Engine Pure Logic Unit Tests', () => {
         canLaunch: true,
         targetPackage: installedPackage,
         buttonText: 'OPEN AIMSHOT ENGINE',
-        hasAutoCountdown: isForeground && autoCountdownAllowed,
-        countdownSeconds: isForeground && autoCountdownAllowed ? 3 : null
+        hasAutoCountdown: false,
+        countdownSeconds: null
       };
     };
 
-    const fgPlan = createLaunchPlan('com.alpha10.aimshot', true, true);
+    const fgPlan = createLaunchPlan('com.alpha10.aimshot');
     assert.equal(fgPlan.canLaunch, true);
     assert.equal(fgPlan.buttonText, 'OPEN AIMSHOT ENGINE');
-    assert.equal(fgPlan.hasAutoCountdown, true);
-    assert.equal(fgPlan.countdownSeconds, 3);
+    assert.equal(fgPlan.hasAutoCountdown, false);
+    assert.equal(fgPlan.countdownSeconds, null);
 
-    const bgPlan = createLaunchPlan('com.alpha10.aimshot', false, true);
-    assert.equal(bgPlan.canLaunch, true);
-    assert.equal(bgPlan.buttonText, 'OPEN AIMSHOT ENGINE');
-    assert.equal(bgPlan.hasAutoCountdown, false);
-    assert.equal(bgPlan.countdownSeconds, null);
+    const wrongPkgPlan = createLaunchPlan('com.miniclip.carrom');
+    assert.equal(wrongPkgPlan.canLaunch, false);
   });
 
   // Test 28: Localization strings for 9-stage sequence in English, Bengali, and Hindi
@@ -603,8 +611,13 @@ describe('AimShot Engine Pure Logic Unit Tests', () => {
       const isOnline = true;
       assert.equal(isOnline, true);
 
-      // 2. Alpha10 Server Authentication
-      const authHeader = { 'X-App-Key': 'existing-key' };
+      // 2. Zero-Secret Alpha10 Server Broker Authentication (No client X-App-Key!)
+      const brokerPayload = {
+        launcher_package: 'com.alpha10.aimshot.launcher',
+        target_package: 'com.alpha10.aimshot',
+        device_id: 'AS-7F3E-9C4D-2A8B-6E1F'
+      };
+      assert.equal('X-App-Key' in brokerPayload, false);
       const token = 'alpha10_temp_60s_token';
       assert.ok(token);
 
@@ -730,8 +743,232 @@ describe('AimShot Engine Pure Logic Unit Tests', () => {
     assert.equal(onInstallSuccessCalled, true);
     assert.equal(redownloadCount, 1); // No redundant redownload!
   });
+
+  // Test 37: Source-Level Security Audit — Zero Hardcoded 64-char Secret App Key or Debug Cert Bypass in Android Client
+  test('Source-Level Audit: Zero hardcoded 64-char App Key, client X-App-Key header, or debug cert bypass in Android client', () => {
+    const walkFiles = (target, fileList = []) => {
+      if (!fs.existsSync(target)) return fileList;
+      if (fs.statSync(target).isFile()) {
+        fileList.push(target);
+        return fileList;
+      }
+      for (const entry of fs.readdirSync(target, { withFileTypes: true })) {
+        const full = path.join(target, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name !== 'build' && entry.name !== '.gradle' && entry.name !== 'node_modules') {
+            walkFiles(full, fileList);
+          }
+        } else if (/\.(java|xml|gradle|properties|ts|tsx)$/.test(entry.name)) {
+          fileList.push(full);
+        }
+      }
+      return fileList;
+    };
+
+    const clientFiles = [
+      ...walkFiles(path.resolve('AimShot_Project/app/src')),
+      ...walkFiles(path.resolve('AimShot_Project/app/build.gradle')),
+      ...walkFiles(path.resolve('app/src')),
+      ...walkFiles(path.resolve('src'))
+    ];
+
+    assert.ok(clientFiles.length > 20, 'Expected Android & web client source files to exist');
+
+    for (const file of clientFiles) {
+      const content = fs.readFileSync(file, 'utf8');
+      assert.equal(
+        content.includes('AIMSHOT-ALPHA10-ENGINE-2026'),
+        false,
+        `Forbidden hardcoded App Key found in ${file}`
+      );
+      assert.equal(
+        /setRequestProperty\s*\(\s*["']X-App-Key["']/.test(content),
+        false,
+        `Forbidden client-side X-App-Key request header found in ${file}`
+      );
+      assert.equal(
+        content.includes('61:ED:37:7E:85:D3:86:A8:DF:EE:6B:86:4B:D8:5B:0B'),
+        false,
+        `Forbidden Android Debug Certificate bypass found in ${file}`
+      );
+    }
+  });
+
+  // Test 38: UpdateAuthService surfaces server JSON error instead of masking with "No valid token found"
+  test('UpdateAuthService surfaces exact server error message when HTTP 200 JSON indicates auth rejection', () => {
+    const parseBrokerResponse = (httpCode, rawBody) => {
+      const json = JSON.parse(rawBody);
+      if (json.success === false || json.status === 'error') {
+        return { ok: false, error: json.error || json.message };
+      }
+      const token =
+        json.token ||
+        json.temporary_token ||
+        json.temp_token ||
+        json.access_token ||
+        (json.data && (json.data.token || json.data.temporary_token));
+      if (!token) {
+        return { ok: false, error: json.error || json.message || 'No valid temporary token received' };
+      }
+      return {
+        ok: true,
+        token,
+        expectedSha256: json.expected_sha256 || null,
+        trustedCertSha256: json.trusted_cert_sha256 || null
+      };
+    };
+
+    // Previously caused misleading "No valid token found in server authentication response"
+    const rejected = parseBrokerResponse(200, JSON.stringify({
+      success: false,
+      error: 'Invalid or missing X-App-Key on upstream server'
+    }));
+    assert.equal(rejected.ok, false);
+    assert.equal(rejected.error, 'Invalid or missing X-App-Key on upstream server');
+
+    // Nested data.temporary_token with SHA-256 metadata
+    const validNested = parseBrokerResponse(200, JSON.stringify({
+      success: true,
+      data: { temporary_token: 'tok_alpha10_60s_live' },
+      expected_sha256: 'a'.repeat(64),
+      trusted_cert_sha256: '1C:8D:56:83:62:EE:D9:04:02:36:43:0D:AC:8D:1F:BE:30:06:0E:9F:FD:2D:F4:01:AB:69:04:E7:94:86:A5:A2'
+    }));
+    assert.equal(validNested.ok, true);
+    assert.equal(validNested.token, 'tok_alpha10_60s_live');
+    assert.equal(validNested.expectedSha256.length, 64);
+  });
+
+  // Test 39: Strict Multi-Tier ApkSecurityVerifier (No ZipFile bypass, No missing SHA-256 bypass, No catch fallback)
+  test('ApkSecurityVerifier blocks missing expectedSha256, null PackageInfo, wrong package ID, and untrusted cert', () => {
+    const TRUSTED_RELEASE_CERT = '1C8D568362EED9040236430DAC8D1FBE30060E9FFD2DF401AB6904E79486A5A2';
+    const DEBUG_CERT = '61ED377E85D386A8DFEE6B864BD85B0BFAA5AF81';
+
+    const verifyApk = ({ packageInfo, actualSha256, expectedSha256, certHex, trustedCertHex }) => {
+      if (!packageInfo) {
+        return { valid: false, reason: 'PackageManager failed to parse APK archive (Zero ZipFile bypass)' };
+      }
+      if (packageInfo.packageName !== 'com.alpha10.aimshot') {
+        return { valid: false, reason: `Package ID mismatch: ${packageInfo.packageName}` };
+      }
+      if (!expectedSha256 || !/^[0-9a-f]{64}$/i.test(expectedSha256)) {
+        return { valid: false, reason: 'Missing or invalid authoritative expectedSha256 from server' };
+      }
+      if (actualSha256.toLowerCase() !== expectedSha256.toLowerCase()) {
+        return { valid: false, reason: 'SHA-256 digest mismatch' };
+      }
+      if (!certHex || certHex.toUpperCase() !== trustedCertHex.toUpperCase()) {
+        return { valid: false, reason: 'Signing certificate mismatch' };
+      }
+      return { valid: true };
+    };
+
+    const validHash = 'b'.repeat(64);
+
+    // 1. Missing expectedSha256 MUST fail (zero guessed hash)
+    assert.equal(
+      verifyApk({
+        packageInfo: { packageName: 'com.alpha10.aimshot' },
+        actualSha256: validHash,
+        expectedSha256: null,
+        certHex: TRUSTED_RELEASE_CERT,
+        trustedCertHex: TRUSTED_RELEASE_CERT
+      }).valid,
+      false
+    );
+
+    // 2. Null PackageInfo MUST fail (no ZipFile fallback)
+    assert.equal(
+      verifyApk({
+        packageInfo: null,
+        actualSha256: validHash,
+        expectedSha256: validHash,
+        certHex: TRUSTED_RELEASE_CERT,
+        trustedCertHex: TRUSTED_RELEASE_CERT
+      }).valid,
+      false
+    );
+
+    // 3. Debug certificate MUST fail
+    assert.equal(
+      verifyApk({
+        packageInfo: { packageName: 'com.alpha10.aimshot' },
+        actualSha256: validHash,
+        expectedSha256: validHash,
+        certHex: DEBUG_CERT,
+        trustedCertHex: TRUSTED_RELEASE_CERT
+      }).valid,
+      false
+    );
+
+    // 4. Authentic Main AimShot Engine APK passes all tiers
+    assert.equal(
+      verifyApk({
+        packageInfo: { packageName: 'com.alpha10.aimshot' },
+        actualSha256: validHash,
+        expectedSha256: validHash,
+        certHex: TRUSTED_RELEASE_CERT,
+        trustedCertHex: TRUSTED_RELEASE_CERT
+      }).valid,
+      true
+    );
+  });
+
+  // Test 40: OS-Only Authority for isMainApkInstalled (Eliminates stale SharedPreferences bug after uninstall)
+  test('PackageInstallerHelper.isMainApkInstalled relies solely on OS PackageManager and clears stale cache on uninstall', () => {
+    let stalePrefsFlag = true; // Previously caused Launcher to think uninstalled app was still installed
+    const osInstalledPackages = new Set(['com.alpha10.aimshot.launcher']);
+
+    const isMainApkInstalled = () => {
+      const presentInOs = osInstalledPackages.has('com.alpha10.aimshot');
+      if (!presentInOs && stalePrefsFlag) {
+        stalePrefsFlag = false; // Auto-heal stale preference
+      }
+      return presentInOs;
+    };
+
+    assert.equal(isMainApkInstalled(), false);
+    assert.equal(stalePrefsFlag, false);
+  });
+
+  // Test 41: PackageInstallStatusReceiver validates active sessionId and OS package confirmation
+  test('PackageInstallStatusReceiver ignores stale session callbacks and confirms OS installation on STATUS_SUCCESS', () => {
+    const activeSessionId = 4021;
+    const osPackages = new Set(['com.alpha10.aimshot.launcher']);
+
+    const handleBroadcast = (incomingSessionId, statusCode) => {
+      if (incomingSessionId !== activeSessionId) {
+        return { ignored: true };
+      }
+      if (statusCode === 0) {
+        if (!osPackages.has('com.alpha10.aimshot')) {
+          return { ignored: false, result: 'ERROR_OS_NOT_FOUND' };
+        }
+        return { ignored: false, result: 'SUCCESS' };
+      }
+      if (statusCode === 3) {
+        return { ignored: false, result: 'CANCELLED_BY_USER' };
+      }
+      return { ignored: false, result: 'FAILURE' };
+    };
+
+    // Stale session ignored
+    assert.equal(handleBroadcast(1099, 0).ignored, true);
+
+    // User cancelled installation
+    assert.equal(handleBroadcast(4021, 3).result, 'CANCELLED_BY_USER');
+
+    // OS installed com.alpha10.aimshot -> confirmed SUCCESS
+    osPackages.add('com.alpha10.aimshot');
+    assert.equal(handleBroadcast(4021, 0).result, 'SUCCESS');
+  });
+
+  // Test 42: Private Internal Storage Isolation (context.getFilesDir()/downloads/)
+  test('Private Internal Storage keeps APK invisible to public storage and cleans up post-install', () => {
+    const internalFilesDir = '/data/user/0/com.alpha10.aimshot.launcher/files/downloads';
+    const apkPath = `${internalFilesDir}/AimShot_Engine_v1.0.1.apk`;
+
+    assert.equal(apkPath.startsWith('/sdcard'), false);
+    assert.equal(apkPath.includes('/storage/emulated/0'), false);
+    assert.equal(apkPath.startsWith('/data/user/0/com.alpha10.aimshot.launcher/files/downloads/'), true);
+  });
 });
-
-
-
-

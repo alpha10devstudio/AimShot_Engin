@@ -409,7 +409,19 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
                     btnLaunchGame.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
-                            Toast.makeText(MainActivity.this, "AimShot Engine Overlay Activated for Carrom Disc Pool (120 FPS)", Toast.LENGTH_LONG).show();
+                            final String targetPackage = "com.alpha10.aimshot";
+                            if (targetPackage.equals(getPackageName())) {
+                                Toast.makeText(MainActivity.this, "AimShot Engine is active.", Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+                            Intent launchIntent = getPackageManager().getLaunchIntentForPackage(targetPackage);
+                            if (launchIntent != null) {
+                                launchIntent.setPackage(targetPackage);
+                                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                                startActivity(launchIntent);
+                            } else {
+                                Toast.makeText(MainActivity.this, "Main AimShot Engine (com.alpha10.aimshot) is not installed yet.", Toast.LENGTH_LONG).show();
+                            }
                         }
                     });
                 }
@@ -423,6 +435,8 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
                     @Override
                     public void onClick(View v) {
                         showVerificationDialog();
+                    }
+                });
             }
         }
     }
