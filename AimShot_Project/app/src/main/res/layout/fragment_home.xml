@@ -97,7 +97,7 @@
                     android:background="@drawable/bg_badge_active"
                     android:gravity="center"
                     android:text="4"
-                    android:textColor="#0B0F17"
+                    android:textColor="@color/badge_active_text"
                     android:textSize="9sp"
                     android:textStyle="bold"
                     android:visibility="visible" />
@@ -225,7 +225,7 @@
                                 android:paddingEnd="8dp"
                                 android:paddingBottom="3dp"
                                 android:text="SAFE CORE"
-                                android:textColor="@color/bg_main"
+                                android:textColor="@color/badge_active_text"
                                 android:textSize="9sp"
                                 android:textStyle="bold" />
 
@@ -246,7 +246,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="Auto Aim &amp; Guideline Engine"
-                                    android:textColor="@color/text_primary"
+                                    android:textColor="@color/text_on_dark_overlay"
                                     android:textSize="14sp"
                                     android:textStyle="bold" />
 
@@ -255,7 +255,7 @@
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="2dp"
                                     android:text="Engineered for Carrom Disc Pool &amp; Billiards"
-                                    android:textColor="@color/text_secondary"
+                                    android:textColor="@color/text_on_dark_overlay_sub"
                                     android:textSize="10.5sp" />
                             </LinearLayout>
                         </RelativeLayout>
@@ -315,7 +315,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="Zero Recoil &amp; FPS Boost"
-                                    android:textColor="@color/text_primary"
+                                    android:textColor="@color/text_on_dark_overlay"
                                     android:textSize="14sp"
                                     android:textStyle="bold" />
 
@@ -324,7 +324,7 @@
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="2dp"
                                     android:text="Ultra low latency 120 FPS game acceleration"
-                                    android:textColor="@color/text_secondary"
+                                    android:textColor="@color/text_on_dark_overlay_sub"
                                     android:textSize="10.5sp" />
                             </LinearLayout>
                         </RelativeLayout>
@@ -384,7 +384,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="Auto-Trajectory &amp; Bank Shots"
-                                    android:textColor="@color/text_primary"
+                                    android:textColor="@color/text_on_dark_overlay"
                                     android:textSize="14sp"
                                     android:textStyle="bold" />
 
@@ -393,7 +393,7 @@
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="2dp"
                                     android:text="Precision guideline calculations for all angles"
-                                    android:textColor="@color/text_secondary"
+                                    android:textColor="@color/text_on_dark_overlay_sub"
                                     android:textSize="10.5sp" />
                             </LinearLayout>
                         </RelativeLayout>
@@ -415,7 +415,8 @@
                 android:elevation="6dp"
                 android:focusable="true"
                 android:padding="6dp"
-                android:src="@drawable/ic_chevron_left" />
+                android:src="@drawable/ic_chevron_left"
+                app:tint="@color/white" />
 
             <!-- Carousel Right Arrow Navigation Button -->
             <ImageView
@@ -431,7 +432,8 @@
                 android:elevation="6dp"
                 android:focusable="true"
                 android:padding="6dp"
-                android:src="@drawable/ic_chevron_right" />
+                android:src="@drawable/ic_chevron_right"
+                app:tint="@color/white" />
         </RelativeLayout>
 
         <!-- Carousel Indicator Dots (3 Dots, Active is an elongated pill) -->
@@ -561,7 +563,7 @@
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp" />
 
-            <Button
+            <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/btn_home_login"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
@@ -570,7 +572,7 @@
                 android:stateListAnimator="@null"
                 android:text="@string/login_now"
                 android:textAllCaps="false"
-                android:textColor="@color/bg_main"
+                android:textColor="@color/text_on_accent"
                 android:textSize="15sp"
                 android:textStyle="bold" />
         </LinearLayout>
@@ -637,7 +639,7 @@
                             android:paddingEnd="6dp"
                             android:paddingBottom="2dp"
                             android:text="ACTIVE"
-                            android:textColor="#0B0F17"
+                            android:textColor="@color/badge_active_text"
                             android:textSize="9sp"
                             android:textStyle="bold" />
                     </LinearLayout>
@@ -665,7 +667,7 @@
             </RelativeLayout>
 
             <!-- Prominent Electric Blue Launch Button matching Reference Preview -->
-            <Button
+            <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/btn_launch_game"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
@@ -675,7 +677,7 @@
                 android:stateListAnimator="@null"
                 android:text="@string/launch_aimshot_engine"
                 android:textAllCaps="true"
-                android:textColor="@color/bg_main"
+                android:textColor="@color/text_on_accent"
                 android:textSize="14sp"
                 android:textStyle="bold" />
         </LinearLayout>

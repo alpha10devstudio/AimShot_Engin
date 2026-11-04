@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg_main"
@@ -235,10 +236,11 @@
             <ImageView
                 android:layout_width="32dp"
                 android:layout_height="32dp"
-                android:background="#2039B9FF"
+                android:background="@color/icon_tint_box_bg"
                 android:contentDescription="Email"
                 android:padding="6dp"
-                android:src="@drawable/ic_bell" />
+                android:src="@drawable/ic_bell"
+                app:tint="@color/accent_primary" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -346,7 +348,7 @@
         </LinearLayout>
 
         <!-- Contact Now Main Button -->
-        <Button
+        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/btn_action_contact_now"
             android:layout_width="match_parent"
             android:layout_height="52dp"
@@ -356,7 +358,7 @@
             android:stateListAnimator="@null"
             android:text="@string/btn_contact_now"
             android:textAllCaps="false"
-            android:textColor="@color/bg_main"
+            android:textColor="@color/text_on_accent"
             android:textSize="15sp"
             android:textStyle="bold" />
 

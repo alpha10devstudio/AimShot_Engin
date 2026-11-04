@@ -2,16 +2,23 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_pressed="true">
         <shape android:shape="rectangle">
-            <solid android:color="#1A39B9FF" />
+            <solid android:color="@color/accent_primary_glow" />
             <corners android:radius="14dp" />
-            <stroke android:width="1.5dp" android:color="#39B9FF" />
+            <stroke android:width="1.5dp" android:color="@color/accent_primary" />
+        </shape>
+    </item>
+    <item android:state_enabled="false">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/bg_card_secondary" />
+            <corners android:radius="14dp" />
+            <stroke android:width="1dp" android:color="@color/border_subtle" />
         </shape>
     </item>
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="#0B0F17" />
+            <solid android:color="@color/btn_tactical_bg" />
             <corners android:radius="14dp" />
-            <stroke android:width="1.5dp" android:color="#6639B9FF" />
+            <stroke android:width="1.5dp" android:color="@color/border_accent" />
         </shape>
     </item>
 </selector>

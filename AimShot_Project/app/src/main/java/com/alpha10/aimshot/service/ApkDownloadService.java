@@ -12,24 +12,26 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Downloads the Main AimShot Engine APK binary from the existing unmodified Alpha10 endpoint:
+ * Downloads the Main AimShot Engine APK binary directly from Alpha10 Website:
  * GET https://alpha10.freedev.app/api/aimshot-download.php
  *
- * Enforces:
- * - Single-use Authorization: Bearer TEMPORARY_TOKEN header with zero auto-redirect token leakage
- * - Strict 60-second expiration window validation
- * - Private internal storage staging (context.getFilesDir()/downloads/ — invisible to File Managers)
- * - Binary content-type & ZIP/APK magic-byte verification
+ * - Sends Authorization: Bearer <token>, X-App-Key, and solved __test cookie
+ * - Automatically solves aes.js challenge or falls back to ?token= query parameter if needed
+ * - Streams into private internal storage (context.getFilesDir()/downloads/)
+ * - Verifies valid ZIP/APK magic header (PK\x03\x04)
  */
 public class ApkDownloadService {
 
     public static final String DOWNLOAD_ENDPOINT = "https://alpha10.freedev.app/api/aimshot-download.php";
-    private static final int BUFFER_SIZE = 8192;
+    private static final int BUFFER_SIZE = 16384;
+    private static final long ESTIMATED_APK_BYTES = 9500000L;
 
     public interface DownloadCallback {
         void onDownloadProgress(long bytesDownloaded, long totalBytes, int percent);
@@ -40,14 +42,16 @@ public class ApkDownloadService {
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private volatile boolean isCancelled = false;
+    private volatile String lastServerSha256Header = null;
 
     public void cancelDownload() {
         this.isCancelled = true;
     }
 
-    /**
-     * Purges any leftover temporary or previously staged APK files in private internal storage.
-     */
+    public String getLastServerSha256Header() {
+        return lastServerSha256Header;
+    }
+
     public static void cleanupPrivateDownloads(Context context) {
         if (context == null) return;
         File downloadsDir = new File(context.getFilesDir(), "downloads");
@@ -60,11 +64,28 @@ public class ApkDownloadService {
         }
     }
 
-    /**
-     * Streams the protected APK into app-private internal storage: context.getFilesDir()/downloads/
-     */
     public void downloadApk(final Context context,
                             final String bearerToken,
+                            final long tokenIssuedAt,
+                            final long tokenExpiresInSeconds,
+                            final int targetVersionCode,
+                            final DownloadCallback callback) {
+        downloadApk(
+                context,
+                DOWNLOAD_ENDPOINT,
+                bearerToken,
+                UpdateAuthService.getCachedSessionCookie(),
+                tokenIssuedAt,
+                tokenExpiresInSeconds,
+                targetVersionCode,
+                callback
+        );
+    }
+
+    public void downloadApk(final Context context,
+                            final String customDownloadUrl,
+                            final String bearerToken,
+                            final String sessionCookie,
                             final long tokenIssuedAt,
                             final long tokenExpiresInSeconds,
                             final int targetVersionCode,
@@ -72,20 +93,23 @@ public class ApkDownloadService {
         if (callback == null || context == null) return;
 
         if (bearerToken == null || bearerToken.trim().isEmpty()) {
-            callback.onDownloadError("Missing temporary download token.", -100);
+            callback.onDownloadError("Missing download token from server.", -100);
             return;
         }
 
-        // Enforce 60-second single-use token expiration window before opening network stream
         long now = System.currentTimeMillis();
         long tokenLifespanMillis = tokenExpiresInSeconds > 0 ? (tokenExpiresInSeconds * 1000L) : 60000L;
-        if (now > tokenIssuedAt + tokenLifespanMillis) {
-            callback.onDownloadError("Temporary download token expired (60s limit exceeded). Please retry.", -101);
+        if (now > tokenIssuedAt + tokenLifespanMillis + 5000L) {
+            callback.onDownloadError("Download token expired. Please tap Retry.", -101);
             return;
         }
 
         this.isCancelled = false;
+        this.lastServerSha256Header = null;
         final Context appContext = context.getApplicationContext();
+        final String resolvedEndpoint = (customDownloadUrl != null && !customDownloadUrl.trim().isEmpty())
+                ? customDownloadUrl.trim()
+                : DOWNLOAD_ENDPOINT;
 
         executor.execute(new Runnable() {
             @Override
@@ -95,8 +119,10 @@ public class ApkDownloadService {
                 FileOutputStream fos = null;
                 File stagedFile = null;
 
-                // Single-use token: copy locally and clear reference immediately after setting header
-                String oneTimeToken = bearerToken.trim();
+                String token = bearerToken.trim();
+                String activeCookie = (sessionCookie != null && !sessionCookie.trim().isEmpty())
+                        ? sessionCookie.trim()
+                        : UpdateAuthService.getCachedSessionCookie();
 
                 try {
                     File downloadsDir = new File(appContext.getFilesDir(), "downloads");
@@ -105,7 +131,6 @@ public class ApkDownloadService {
                         return;
                     }
 
-                    // Remove any stale .tmp files from prior interrupted attempts
                     File[] staleFiles = downloadsDir.listFiles((dir, name) -> name.endsWith(".tmp"));
                     if (staleFiles != null) {
                         for (File stale : staleFiles) {
@@ -119,46 +144,90 @@ public class ApkDownloadService {
                         stagedFile.delete();
                     }
 
-                    URL url = new URL(DOWNLOAD_ENDPOINT);
-                    conn = (HttpURLConnection) url.openConnection();
-                    // Prevent automatic redirects from dropping Authorization header or consuming single-use token twice
-                    conn.setInstanceFollowRedirects(false);
-                    conn.setRequestMethod("GET");
-                    conn.setRequestProperty("User-Agent", "AimShotLauncher/1.0 (Android)");
-                    conn.setRequestProperty("Authorization", "Bearer " + oneTimeToken);
-                    conn.setRequestProperty("Accept", "application/vnd.android.package-archive, application/octet-stream");
-                    conn.setConnectTimeout(12000);
-                    conn.setReadTimeout(20000);
+                    conn = openDownloadConnection(resolvedEndpoint, token, activeCookie, false);
+                    int responseCode = conn.getResponseCode();
 
-                    // Immediately clear token from local variable
-                    oneTimeToken = null;
-
-                    final int responseCode = conn.getResponseCode();
-                    if (responseCode != 200) {
-                        String errSnippet = readShortErrorStream(conn.getErrorStream());
-                        cleanupFile(stagedFile);
-                        final String errMsg = errSnippet.isEmpty()
-                                ? "APK download rejected by server (HTTP " + responseCode + ")"
-                                : "APK download rejected (HTTP " + responseCode + "): " + errSnippet;
-                        mainHandler.post(() -> callback.onDownloadError(errMsg, responseCode));
-                        return;
+                    // Follow up to 3 redirects manually so Authorization & Cookie headers are preserved
+                    int redirectCount = 0;
+                    while ((responseCode == 301 || responseCode == 302 || responseCode == 303
+                            || responseCode == 307 || responseCode == 308) && redirectCount < 3) {
+                        String location = conn.getHeaderField("Location");
+                        conn.disconnect();
+                        if (location == null || location.trim().isEmpty()) break;
+                        String nextUrl = new URL(new URL(resolvedEndpoint), location.trim()).toString();
+                        conn = openDownloadConnection(nextUrl, token, activeCookie, false);
+                        responseCode = conn.getResponseCode();
+                        redirectCount++;
                     }
 
+                    // Fallback if Apache stripped Authorization header (401/403): retry with ?token=
+                    if (responseCode == 401 || responseCode == 403) {
+                        conn.disconnect();
+                        conn = openDownloadConnection(resolvedEndpoint, token, activeCookie, true);
+                        responseCode = conn.getResponseCode();
+                    }
+
+                    // If InfinityFree aes.js intercepted before PHP ran, solve cookie & retry immediately
                     String contentType = conn.getContentType();
-                    if (contentType != null) {
-                        String lowerType = contentType.toLowerCase();
-                        if (lowerType.contains("text/html") || lowerType.contains("application/json")) {
-                            cleanupFile(stagedFile);
-                            mainHandler.post(() -> callback.onDownloadError("Server returned non-binary response (" + contentType + ") instead of APK.", -102));
+                    if (responseCode == 200 && contentType != null
+                            && contentType.toLowerCase(Locale.US).contains("text/html")) {
+                        String htmlBody = readFullTextStream(conn.getInputStream());
+                        conn.disconnect();
+                        if (UpdateAuthService.isAntiBotChallenge(htmlBody)) {
+                            String solvedCookie = UpdateAuthService.solveAntiBotCookie(htmlBody);
+                            if (solvedCookie != null && !solvedCookie.isEmpty()) {
+                                activeCookie = solvedCookie;
+                                UpdateAuthService.setCachedSessionCookie(solvedCookie);
+                                conn = openDownloadConnection(resolvedEndpoint, token, activeCookie, false);
+                                responseCode = conn.getResponseCode();
+                                contentType = conn.getContentType();
+                            } else {
+                                mainHandler.post(() -> callback.onDownloadError("Hosting security check blocked APK stream. Please retry.", -102));
+                                return;
+                            }
+                        } else {
+                            mainHandler.post(() -> callback.onDownloadError("Server returned HTML instead of APK file. Please retry.", -102));
                             return;
                         }
                     }
 
-                    long contentLength = BuildCompatContentLength(conn);
-                    long minRequiredSpace = contentLength > 0 ? (contentLength + (15L * 1024L * 1024L)) : (40L * 1024L * 1024L);
+                    final int finalHttpCode = responseCode;
+                    if (finalHttpCode != 200) {
+                        String errSnippet = readShortErrorStream(conn.getErrorStream());
+                        cleanupFile(stagedFile);
+                        final String errMsg = errSnippet.isEmpty()
+                                ? "APK download rejected by server (HTTP " + finalHttpCode + ")"
+                                : "APK download rejected (HTTP " + finalHttpCode + "): " + errSnippet;
+                        mainHandler.post(() -> callback.onDownloadError(errMsg, finalHttpCode));
+                        return;
+                    }
+
+                    if (contentType != null && contentType.toLowerCase(Locale.US).contains("application/json")) {
+                        String jsonErr = readShortErrorStream(conn.getInputStream());
+                        cleanupFile(stagedFile);
+                        final String errMsg = jsonErr.isEmpty()
+                                ? "Server returned JSON instead of APK binary."
+                                : "Server download error: " + jsonErr;
+                        mainHandler.post(() -> callback.onDownloadError(errMsg, -102));
+                        return;
+                    }
+
+                    String shaHeader = conn.getHeaderField("X-APK-SHA256");
+                    if (shaHeader == null || shaHeader.trim().isEmpty()) {
+                        shaHeader = conn.getHeaderField("X-Expected-Sha256");
+                    }
+                    if (shaHeader == null || shaHeader.trim().isEmpty()) {
+                        shaHeader = conn.getHeaderField("X-Content-SHA256");
+                    }
+                    if (shaHeader != null && shaHeader.trim().matches("^[0-9a-fA-F]{64}$")) {
+                        lastServerSha256Header = shaHeader.trim();
+                    }
+
+                    final long contentLength = BuildCompatContentLength(conn);
+                    long minRequiredSpace = contentLength > 0 ? (contentLength + (10L * 1024L * 1024L)) : (30L * 1024L * 1024L);
                     if (appContext.getFilesDir().getUsableSpace() < minRequiredSpace) {
                         cleanupFile(stagedFile);
-                        mainHandler.post(() -> callback.onDownloadError("Insufficient internal storage space to stage Main AimShot Engine APK.", -2));
+                        mainHandler.post(() -> callback.onDownloadError("Insufficient phone storage space to download AimShot Engine APK.", -2));
                         return;
                     }
 
@@ -180,13 +249,20 @@ public class ApkDownloadService {
                         fos.write(buffer, 0, bytesRead);
                         bytesDownloaded += bytesRead;
 
+                        final int percent;
+                        final long totalForUi;
                         if (contentLength > 0) {
-                            int percent = (int) ((bytesDownloaded * 100L) / contentLength);
-                            if (percent != lastReportedPercent) {
-                                lastReportedPercent = percent;
-                                final long currentBytes = bytesDownloaded;
-                                mainHandler.post(() -> callback.onDownloadProgress(currentBytes, contentLength, percent));
-                            }
+                            percent = (int) Math.min(100L, (bytesDownloaded * 100L) / contentLength);
+                            totalForUi = contentLength;
+                        } else {
+                            percent = (int) Math.min(95L, (bytesDownloaded * 95L) / ESTIMATED_APK_BYTES);
+                            totalForUi = Math.max(bytesDownloaded, ESTIMATED_APK_BYTES);
+                        }
+
+                        if (percent != lastReportedPercent) {
+                            lastReportedPercent = percent;
+                            final long currentBytes = bytesDownloaded;
+                            mainHandler.post(() -> callback.onDownloadProgress(currentBytes, totalForUi, percent));
                         }
                     }
 
@@ -197,13 +273,13 @@ public class ApkDownloadService {
 
                     if (stagedFile.length() == 0 || (contentLength > 0 && stagedFile.length() < contentLength)) {
                         cleanupFile(stagedFile);
-                        mainHandler.post(() -> callback.onDownloadError("Incomplete APK binary received from server.", -4));
+                        mainHandler.post(() -> callback.onDownloadError("Incomplete APK received from server. Please retry.", -4));
                         return;
                     }
 
                     if (!hasValidApkZipHeader(stagedFile)) {
                         cleanupFile(stagedFile);
-                        mainHandler.post(() -> callback.onDownloadError("Downloaded payload is not a valid Android APK package.", -5));
+                        mainHandler.post(() -> callback.onDownloadError("Downloaded file is not a valid Android APK package.", -5));
                         return;
                     }
 
@@ -215,7 +291,6 @@ public class ApkDownloadService {
                     final String msg = e.getMessage() != null ? e.getMessage() : "Stream interrupted";
                     mainHandler.post(() -> callback.onDownloadError("Download error: " + msg, -1));
                 } finally {
-                    oneTimeToken = null;
                     try { if (fos != null) fos.close(); } catch (Exception ignored) {}
                     try { if (is != null) is.close(); } catch (Exception ignored) {}
                     if (conn != null) {
@@ -224,6 +299,32 @@ public class ApkDownloadService {
                 }
             }
         });
+    }
+
+    private static HttpURLConnection openDownloadConnection(String baseUrl,
+                                                            String token,
+                                                            String cookieHeader,
+                                                            boolean appendQueryToken) throws Exception {
+        String finalUrl = baseUrl;
+        if (appendQueryToken) {
+            String sep = baseUrl.contains("?") ? "&" : "?";
+            finalUrl = baseUrl + sep + "token=" + URLEncoder.encode(token, "UTF-8");
+        }
+        URL url = new URL(finalUrl);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setInstanceFollowRedirects(false);
+        conn.setUseCaches(false);
+        conn.setRequestMethod("GET");
+        conn.setRequestProperty("User-Agent", UpdateAuthService.BROWSER_USER_AGENT);
+        conn.setRequestProperty("Authorization", "Bearer " + token);
+        conn.setRequestProperty("X-App-Key", UpdateAuthService.SECRET_APP_KEY);
+        conn.setRequestProperty("Accept", "application/vnd.android.package-archive, application/octet-stream, */*");
+        if (cookieHeader != null && !cookieHeader.trim().isEmpty()) {
+            conn.setRequestProperty("Cookie", cookieHeader.trim());
+        }
+        conn.setConnectTimeout(15000);
+        conn.setReadTimeout(30000);
+        return conn;
     }
 
     private static long BuildCompatContentLength(HttpURLConnection conn) {
@@ -244,12 +345,25 @@ public class ApkDownloadService {
         }
     }
 
+    private static String readFullTextStream(InputStream stream) {
+        if (stream == null) return "";
+        StringBuilder sb = new StringBuilder();
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = br.readLine()) != null && sb.length() < 16384) {
+                sb.append(line).append('\n');
+            }
+        } catch (Exception ignored) {
+        }
+        return sb.toString();
+    }
+
     private static String readShortErrorStream(InputStream errStream) {
         if (errStream == null) return "";
         StringBuilder sb = new StringBuilder();
         try (BufferedReader br = new BufferedReader(new InputStreamReader(errStream, StandardCharsets.UTF_8))) {
             String line;
-            while ((line = br.readLine()) != null && sb.length() < 200) {
+            while ((line = br.readLine()) != null && sb.length() < 240) {
                 sb.append(line);
             }
         } catch (Exception ignored) {

@@ -9,6 +9,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
@@ -47,7 +48,7 @@ public class VerificationKeyDialog extends Dialog {
     private OnLoginSuccessListener successListener;
 
     public VerificationKeyDialog(@NonNull Context context) {
-        super(context);
+        super(context, R.style.Theme_AimShotEngine_CustomDialog);
         this.verificationService = new LicenseVerificationService();
         this.deviceIdManager = new DeviceIdManager(context);
     }
@@ -65,6 +66,10 @@ public class VerificationKeyDialog extends Dialog {
         if (getWindow() != null) {
             getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             getWindow().setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+            WindowManager.LayoutParams lp = getWindow().getAttributes();
+            lp.dimAmount = 0.68f;
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            getWindow().setAttributes(lp);
         }
 
         editKey = findViewById(R.id.edit_verification_key);

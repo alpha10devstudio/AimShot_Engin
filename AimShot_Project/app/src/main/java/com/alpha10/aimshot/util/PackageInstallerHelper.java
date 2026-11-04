@@ -12,7 +12,6 @@ import android.os.Build;
 import android.provider.Settings;
 import android.util.Log;
 
-import com.alpha10.aimshot.model.ReleaseManifest;
 import com.alpha10.aimshot.receiver.PackageInstallStatusReceiver;
 
 import java.io.File;
@@ -22,7 +21,7 @@ import java.io.OutputStream;
 
 /**
  * Handles official Android PackageInstaller Session installation, Unknown App Sources permission
- * redirection, authoritative OS package presence checks, and verified Main AimShot Engine launching.
+ * redirection, authoritative OS package presence checks, and Main AimShot Engine launching.
  */
 public class PackageInstallerHelper {
 
@@ -30,9 +29,6 @@ public class PackageInstallerHelper {
     public static final String TARGET_PACKAGE_NAME = "com.alpha10.aimshot";
     public static final int REQUEST_CODE_UNKNOWN_APPS = 1001;
 
-    /**
-     * Checks if the Launcher app has permission to request APK package installations on Android 8.0+.
-     */
     public static boolean canInstallPackages(Context context) {
         if (context == null) return false;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -41,9 +37,6 @@ public class PackageInstallerHelper {
         return true;
     }
 
-    /**
-     * Opens system Settings to grant Unknown App Installation permission for AimShot Launcher.
-     */
     public static void requestInstallPermission(Activity activity) {
         if (activity == null) return;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -58,11 +51,6 @@ public class PackageInstallerHelper {
         }
     }
 
-    /**
-     * Streams the verified APK from private internal storage directly into Android's official
-     * PackageInstaller.Session API and registers deterministic status callbacks.
-     * Does NOT fall back to untracked ACTION_VIEW intents.
-     */
     public static int installApkWithSession(Context context,
                                             File apkFile,
                                             PackageInstallStatusReceiver.InstallStatusListener listener) {
@@ -121,13 +109,6 @@ public class PackageInstallerHelper {
         }
     }
 
-    /**
-     * Authoritatively checks Android OS PackageManager to determine if Main AimShot Engine
-     * ("com.alpha10.aimshot") is currently installed on the device.
-     *
-     * Does NOT rely on SharedPreferences flags so manual uninstallation by the user is
-     * immediately detected.
-     */
     public static boolean isMainApkInstalled(Context context) {
         if (context == null) return false;
         if (context.getPackageName().equals(TARGET_PACKAGE_NAME)) {
@@ -149,9 +130,6 @@ public class PackageInstallerHelper {
         }
     }
 
-    /**
-     * Queries OS PackageManager for the installed versionCode of the given package, or -1 if absent.
-     */
     public static int getInstalledPackageVersionCode(Context context, String packageName) {
         if (context == null || packageName == null) return -1;
         try {
@@ -164,34 +142,23 @@ public class PackageInstallerHelper {
         }
     }
 
-    /**
-     * Launches the installed Main AimShot Engine ("com.alpha10.aimshot") after verifying:
-     * 1. Target package is distinct from Launcher ("com.alpha10.aimshot.launcher")
-     * 2. Target package is genuinely installed on the OS
-     * 3. Target package signing certificate matches the trusted Release Certificate
-     *
-     * Under NO circumstances launches Carrom Pool or re-launches AimShot Launcher.
-     */
     public static boolean launchInstalledApp(Context context) {
-        return launchInstalledApp(context, ReleaseManifest.PERMANENT_CERT_SHA256);
+        return launchInstalledApp(context, null);
     }
 
     public static boolean launchInstalledApp(Context context, String trustedCertFingerprint) {
         if (context == null) return false;
 
-        // 1. Prevent self-launch loop
         if (context.getPackageName().equals(TARGET_PACKAGE_NAME)) {
             Log.e(TAG, "Blocked self-launch: Launcher and target share identical package ID.");
             return false;
         }
 
-        // 2. Verify Main AimShot Engine is installed on OS
         if (!isMainApkInstalled(context)) {
             Log.w(TAG, "Main AimShot Engine (" + TARGET_PACKAGE_NAME + ") is not installed.");
             return false;
         }
 
-        // 3. Verify installed package signing certificate when expected fingerprint is provided
         if (trustedCertFingerprint != null && !trustedCertFingerprint.trim().isEmpty()) {
             boolean certValid = ApkSecurityVerifier.verifyInstalledPackageCertificate(
                     context,

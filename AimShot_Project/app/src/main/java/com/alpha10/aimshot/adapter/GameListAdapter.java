@@ -73,7 +73,7 @@ public class GameListAdapter extends RecyclerView.Adapter<GameListAdapter.ViewHo
             holder.itemView.setAlpha(1.0f);
             holder.ivGameCheck.setVisibility(View.VISIBLE);
         } else {
-            holder.itemView.setAlpha(0.45f);
+            holder.itemView.setAlpha(0.72f);
             holder.ivGameCheck.setVisibility(View.GONE);
         }
 

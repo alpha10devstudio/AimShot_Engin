@@ -7,12 +7,14 @@ import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 
 import com.alpha10.aimshot.R;
 import com.alpha10.aimshot.controller.UpdateController;
@@ -52,7 +54,7 @@ public class UpdateDialog extends Dialog implements UpdateController.UpdateListe
     }
 
     public UpdateDialog(@NonNull Activity activity, boolean autoStart) {
-        super(activity);
+        super(activity, R.style.Theme_AimShotEngine_CustomDialog);
         this.activity = activity;
         this.controller = new UpdateController(activity);
         this.autoStart = autoStart;
@@ -78,6 +80,10 @@ public class UpdateDialog extends Dialog implements UpdateController.UpdateListe
                     android.view.ViewGroup.LayoutParams.MATCH_PARENT,
                     android.view.ViewGroup.LayoutParams.WRAP_CONTENT
             );
+            WindowManager.LayoutParams lp = getWindow().getAttributes();
+            lp.dimAmount = 0.68f;
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            getWindow().setAttributes(lp);
         }
 
         setCancelable(false);
@@ -163,8 +169,10 @@ public class UpdateDialog extends Dialog implements UpdateController.UpdateListe
         progressBar.setProgress(0);
         btnPrimary.setEnabled(false);
         btnPrimary.setText(R.string.update_btn_download);
+        btnPrimary.setTextColor(ContextCompat.getColor(getContext(), R.color.text_on_accent));
         btnCancel.setEnabled(true);
         btnCancel.setText(R.string.btn_cancel);
+        btnCancel.setTextColor(ContextCompat.getColor(getContext(), R.color.text_primary));
         bindPrimaryActionButton();
 
         controller.startUpdatePipeline(activity, this);
@@ -258,12 +266,13 @@ public class UpdateDialog extends Dialog implements UpdateController.UpdateListe
         if (btnPrimary != null) {
             btnPrimary.setText(R.string.btn_open_app);
             btnPrimary.setEnabled(true);
-            btnPrimary.setTextColor(Color.parseColor("#49DCA0"));
+            btnPrimary.setTextColor(ContextCompat.getColor(getContext(), R.color.text_on_accent));
             bindPrimaryActionButton();
         }
 
         if (btnCancel != null) {
             btnCancel.setText(R.string.action_close);
+            btnCancel.setTextColor(ContextCompat.getColor(getContext(), R.color.text_primary));
         }
 
         if (installStateChangedListener != null) {
@@ -286,6 +295,7 @@ public class UpdateDialog extends Dialog implements UpdateController.UpdateListe
         if (btnPrimary != null) {
             btnPrimary.setEnabled(true);
             btnPrimary.setText(R.string.btn_retry);
+            btnPrimary.setTextColor(ContextCompat.getColor(getContext(), R.color.text_on_accent));
             bindPrimaryActionButton();
         }
     }
@@ -305,11 +315,12 @@ public class UpdateDialog extends Dialog implements UpdateController.UpdateListe
         if (btnPrimary != null) {
             btnPrimary.setText(R.string.btn_open_app);
             btnPrimary.setEnabled(true);
-            btnPrimary.setTextColor(Color.parseColor("#49DCA0"));
+            btnPrimary.setTextColor(ContextCompat.getColor(getContext(), R.color.text_on_accent));
             bindPrimaryActionButton();
         }
         if (btnCancel != null) {
             btnCancel.setText(R.string.action_close);
+            btnCancel.setTextColor(ContextCompat.getColor(getContext(), R.color.text_primary));
         }
     }
 
@@ -331,6 +342,7 @@ public class UpdateDialog extends Dialog implements UpdateController.UpdateListe
         if (btnPrimary != null) {
             btnPrimary.setEnabled(true);
             btnPrimary.setText(canRetry ? R.string.btn_retry : R.string.action_close);
+            btnPrimary.setTextColor(ContextCompat.getColor(getContext(), R.color.text_on_accent));
             if (canRetry) {
                 bindPrimaryActionButton();
             } else {

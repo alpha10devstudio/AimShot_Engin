@@ -11,6 +11,7 @@ import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -20,14 +21,17 @@ import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.SwitchCompat;
+import androidx.core.content.ContextCompat;
 
+import com.alpha10.aimshot.dialog.UpdateDialog;
 import com.alpha10.aimshot.repository.MembershipRepository;
 import com.alpha10.aimshot.util.FontHelper;
 import com.alpha10.aimshot.util.LocaleHelper;
+import com.alpha10.aimshot.util.PackageInstallerHelper;
 
 /**
  * Settings screen configuring theme, language localization, diagnostics, and secure session termination.
- * Features dedicated icons, solid background custom dialogs, physical vibration, and persistent bottom nav.
+ * Features dedicated icons, solid opaque custom tactical dialogs, guarded haptic feedback, and persistent bottom nav.
  */
 public class SettingsActivity extends BaseActivity {
 
@@ -44,11 +48,12 @@ public class SettingsActivity extends BaseActivity {
     private TextView tvNotificationsStatus;
     private TextView tvHapticStatus;
     private TextView tvLanguageDesc;
+    private TextView tvUpdateStatus;
     private SharedPreferences prefs;
 
     private boolean isNotificationsOn;
     private boolean isHapticOn;
-    private com.alpha10.aimshot.dialog.UpdateDialog currentUpdateDialog;
+    private UpdateDialog currentUpdateDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,6 +75,7 @@ public class SettingsActivity extends BaseActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        refreshUpdateVersionRow();
         if (currentUpdateDialog != null && currentUpdateDialog.isShowing()) {
             currentUpdateDialog.onActivityResume();
         }
@@ -88,6 +94,7 @@ public class SettingsActivity extends BaseActivity {
         tvNotificationsStatus = findViewById(R.id.tv_notifications_status);
         tvHapticStatus = findViewById(R.id.tv_haptic_status);
         tvLanguageDesc = findViewById(R.id.tv_language_desc);
+        tvUpdateStatus = findViewById(R.id.tv_setting_update_status);
 
         // Populate saved theme state
         boolean isDarkMode = prefs.getBoolean(KEY_DARK_MODE, true);
@@ -99,14 +106,14 @@ public class SettingsActivity extends BaseActivity {
         }
 
         if (tvNotificationsStatus != null) {
-            tvNotificationsStatus.setText(isNotificationsOn ? "On" : "Off");
+            tvNotificationsStatus.setText(isNotificationsOn ? R.string.status_on : R.string.status_off);
         }
         if (switchNotifications != null) {
             switchNotifications.setChecked(isNotificationsOn);
         }
 
         if (tvHapticStatus != null) {
-            tvHapticStatus.setText(isHapticOn ? "On" : "Off");
+            tvHapticStatus.setText(isHapticOn ? R.string.status_on : R.string.status_off);
         }
         if (switchHaptic != null) {
             switchHaptic.setChecked(isHapticOn);
@@ -123,6 +130,8 @@ public class SettingsActivity extends BaseActivity {
         if (tvLanguageDesc != null) {
             tvLanguageDesc.setText(displayLang);
         }
+
+        refreshUpdateVersionRow();
 
         // Bottom Navigation Bar
         View navHome = findViewById(R.id.settings_nav_home);
@@ -142,6 +151,22 @@ public class SettingsActivity extends BaseActivity {
         }
     }
 
+    private void refreshUpdateVersionRow() {
+        if (tvUpdateStatus == null) return;
+        String versionLabel = getString(R.string.app_version);
+        if (PackageInstallerHelper.isMainApkInstalled(this)) {
+            try {
+                String installedVer = getPackageManager()
+                        .getPackageInfo(PackageInstallerHelper.TARGET_PACKAGE_NAME, 0).versionName;
+                if (installedVer != null && !installedVer.trim().isEmpty()) {
+                    versionLabel = installedVer.startsWith("v") ? installedVer : ("v" + installedVer);
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        tvUpdateStatus.setText(getString(R.string.setting_update_desc, versionLabel));
+    }
+
     private void setupListeners() {
         // Option 1: App Theme - Row & Switch click
         View rowTheme = findViewById(R.id.row_setting_theme);
@@ -158,16 +183,19 @@ public class SettingsActivity extends BaseActivity {
                 if (tvThemeDesc != null) {
                     tvThemeDesc.setText(isChecked ? R.string.setting_theme_desc : R.string.setting_theme_desc_light);
                 }
+                triggerHapticFeedback();
                 AppCompatDelegate.setDefaultNightMode(isChecked ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
                 Toast.makeText(this, isChecked ? "Tactical Dark Mode active" : "Tactical Light Mode active", Toast.LENGTH_SHORT).show();
-                triggerHapticFeedback();
             });
         }
 
         // Option 2: Language - Row click
         View rowLanguage = findViewById(R.id.row_setting_language);
         if (rowLanguage != null) {
-            rowLanguage.setOnClickListener(v -> showLanguageSelectionDialog());
+            rowLanguage.setOnClickListener(v -> {
+                triggerHapticFeedback();
+                showLanguageSelectionDialog();
+            });
         }
 
         // Option 3: Notifications - Row & Switch click
@@ -184,7 +212,7 @@ public class SettingsActivity extends BaseActivity {
                 isNotificationsOn = isChecked;
                 prefs.edit().putBoolean(KEY_NOTIF, isNotificationsOn).apply();
                 if (tvNotificationsStatus != null) {
-                    tvNotificationsStatus.setText(isNotificationsOn ? "On" : "Off");
+                    tvNotificationsStatus.setText(isNotificationsOn ? R.string.status_on : R.string.status_off);
                 }
                 Toast.makeText(SettingsActivity.this, "Notifications " + (isNotificationsOn ? "enabled" : "disabled"), Toast.LENGTH_SHORT).show();
                 triggerHapticFeedback();
@@ -205,7 +233,7 @@ public class SettingsActivity extends BaseActivity {
                 isHapticOn = isChecked;
                 prefs.edit().putBoolean(KEY_HAPTIC, isHapticOn).apply();
                 if (tvHapticStatus != null) {
-                    tvHapticStatus.setText(isHapticOn ? "On" : "Off");
+                    tvHapticStatus.setText(isHapticOn ? R.string.status_on : R.string.status_off);
                 }
                 Toast.makeText(SettingsActivity.this, "Haptic feedback " + (isHapticOn ? "enabled" : "disabled"), Toast.LENGTH_SHORT).show();
                 if (isHapticOn) {
@@ -217,29 +245,38 @@ public class SettingsActivity extends BaseActivity {
         // Device Information row
         View rowDeviceInfo = findViewById(R.id.row_setting_device_info);
         if (rowDeviceInfo != null) {
-            rowDeviceInfo.setOnClickListener(v -> startActivity(new Intent(SettingsActivity.this, DeviceInfoActivity.class)));
+            rowDeviceInfo.setOnClickListener(v -> {
+                triggerHapticFeedback();
+                startActivity(new Intent(SettingsActivity.this, DeviceInfoActivity.class));
+            });
         }
 
-        // Privacy & Security row (Solid Popup)
+        // Privacy & Security row (Solid Tactical Popup)
         View rowPrivacy = findViewById(R.id.row_setting_privacy);
         if (rowPrivacy != null) {
-            rowPrivacy.setOnClickListener(v -> showCustomInfoDialog(
-                    "Privacy & Security",
-                    "AimShot Engine guarantees complete operational security:\n\n" +
-                            "• Zero plaintext credential storage\n" +
-                            "• No IMEI or SIM hardware harvesting\n" +
-                            "• App-scoped cryptographic device fingerprint\n" +
-                            "• 256-bit TLS encrypted cloud communications\n" +
-                            "• Independent tactical server verification\n\n" +
-                            "Your privacy and account safety are 100% protected.",
-                    R.drawable.ic_shield
-            ));
+            rowPrivacy.setOnClickListener(v -> {
+                triggerHapticFeedback();
+                showCustomInfoDialog(
+                        getString(R.string.setting_privacy),
+                        "AimShot Engine guarantees complete operational security:\n\n" +
+                                "• Zero plaintext credential storage\n" +
+                                "• No IMEI or SIM hardware harvesting\n" +
+                                "• App-scoped cryptographic device fingerprint\n" +
+                                "• 256-bit TLS encrypted cloud communications\n" +
+                                "• Independent tactical server verification\n\n" +
+                                "Your privacy and account safety are 100% protected.",
+                        R.drawable.ic_shield
+                );
+            });
         }
 
         // Help & Support row
         View rowHelp = findViewById(R.id.row_setting_help);
         if (rowHelp != null) {
-            rowHelp.setOnClickListener(v -> startActivity(new Intent(SettingsActivity.this, SellerContactActivity.class)));
+            rowHelp.setOnClickListener(v -> {
+                triggerHapticFeedback();
+                startActivity(new Intent(SettingsActivity.this, SellerContactActivity.class));
+            });
         }
 
         // Check for Updates & Security row
@@ -247,95 +284,151 @@ public class SettingsActivity extends BaseActivity {
         if (rowUpdate != null) {
             rowUpdate.setOnClickListener(v -> {
                 triggerHapticFeedback();
-                currentUpdateDialog = new com.alpha10.aimshot.dialog.UpdateDialog(SettingsActivity.this);
+                currentUpdateDialog = new UpdateDialog(SettingsActivity.this);
+                currentUpdateDialog.setOnInstallStateChangedListener(this::refreshUpdateVersionRow);
                 currentUpdateDialog.show();
             });
         }
 
-        // About App row (Solid Popup)
+        // About App row (Solid Tactical Popup)
         View rowAbout = findViewById(R.id.row_setting_about);
         if (rowAbout != null) {
-            rowAbout.setOnClickListener(v -> showCustomInfoDialog(
-                    "AimShot Engine v1.0.0",
-                    "Sharper Aim • Better Game • Higher You\n\n" +
-                            "Package: com.alpha10.aimshot\n" +
-                            "Engine Version: 1.0.0 (Build 16)\n" +
-                            "Architecture: Native Android (Java + Modern XML)\n\n" +
-                            "Designed for competitive accuracy, zero recoil simulation, and peak frame pacing.\n\n" +
-                            "© 2026 AimShot Studio. All rights reserved.",
-                    R.drawable.ic_aimshot_logo
-            ));
+            rowAbout.setOnClickListener(v -> {
+                triggerHapticFeedback();
+                showCustomInfoDialog(
+                        "AimShot Engine v1.0.0",
+                        "Sharper Aim • Better Game • Higher You\n\n" +
+                                "Launcher Package: " + getPackageName() + "\n" +
+                                "Engine Target: com.alpha10.aimshot\n" +
+                                "Version: 1.0.0\n" +
+                                "Architecture: Native Android (Java + Modern XML)\n\n" +
+                                "Designed for competitive accuracy, zero recoil simulation, and peak frame pacing.\n\n" +
+                                "© 2026 AimShot Studio. All rights reserved.",
+                        R.drawable.ic_aimshot_logo
+                );
+            });
         }
 
         // Logout action button
         Button btnLogout = findViewById(R.id.btn_settings_logout);
         if (btnLogout != null) {
-            btnLogout.setOnClickListener(v -> confirmLogout());
+            btnLogout.setOnClickListener(v -> {
+                triggerHapticFeedback();
+                confirmLogout();
+            });
         }
     }
 
+    /**
+     * Triggers physical haptic feedback strictly when Haptic Feedback is enabled in Settings.
+     */
     private void triggerHapticFeedback() {
+        if (!isHapticOn) {
+            return;
+        }
         try {
             Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
             if (vibrator != null && vibrator.hasVibrator()) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE));
+                    vibrator.vibrate(VibrationEffect.createOneShot(45, VibrationEffect.DEFAULT_AMPLITUDE));
                 } else {
-                    vibrator.vibrate(50);
+                    vibrator.vibrate(45);
                 }
             }
-        } catch (Exception ignored) {}
-    }
-
-    private void showLanguageSelectionDialog() {
-        final String[] languages = {"English", "বাংলা (Bengali)", "हिन्दी (Hindi)"};
-        final String[] langCodes = {"en", "bn", "hi"};
-
-        String currentCode = LocaleHelper.getPersistedData(this, "en");
-        int selectedIndex = 0;
-        for (int i = 0; i < langCodes.length; i++) {
-            if (langCodes[i].equals(currentCode)) {
-                selectedIndex = i;
-                break;
-            }
+        } catch (Exception ignored) {
         }
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.Theme_AimShotEngine_Dialog);
-        builder.setTitle(R.string.setting_language);
-        builder.setSingleChoiceItems(languages, selectedIndex, (dialog, which) -> {
-            String selectedName = languages[which];
-            String selectedCode = langCodes[which];
-
-            prefs.edit().putString(KEY_LANG, selectedName).apply();
-            LocaleHelper.setLocale(SettingsActivity.this, selectedCode);
-
-            if (tvLanguageDesc != null) {
-                tvLanguageDesc.setText(selectedName);
-            }
-            Toast.makeText(SettingsActivity.this, getString(R.string.setting_language) + ": " + selectedName, Toast.LENGTH_SHORT).show();
-            triggerHapticFeedback();
-            dialog.dismiss();
-
-            // Recreate activity so all UI texts re-resolve in the selected locale immediately
-            recreate();
-        });
-        builder.setNegativeButton(R.string.action_close, null);
-        builder.show();
     }
 
     /**
-     * Renders high-fidelity solid card dialog with theme background, preventing overlapping text.
+     * Displays a 100% solid opaque custom tactical Language Selection dialog
+     * with custom cyan radio indicators, dimmed backdrop, and crisp Light/Dark contrast.
+     */
+    private void showLanguageSelectionDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.Theme_AimShotEngine_CustomDialog);
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_language_select, null);
+        builder.setView(dialogView);
+
+        final AlertDialog dialog = builder.create();
+        configureSolidDialogWindow(dialog);
+
+        String currentCode = LocaleHelper.getPersistedData(this, "en");
+
+        View rowEn = dialogView.findViewById(R.id.row_lang_en);
+        View rowBn = dialogView.findViewById(R.id.row_lang_bn);
+        View rowHi = dialogView.findViewById(R.id.row_lang_hi);
+
+        ImageView ivEn = dialogView.findViewById(R.id.iv_radio_en);
+        ImageView ivBn = dialogView.findViewById(R.id.iv_radio_bn);
+        ImageView ivHi = dialogView.findViewById(R.id.iv_radio_hi);
+
+        TextView tvEn = dialogView.findViewById(R.id.tv_lang_en);
+        TextView tvBn = dialogView.findViewById(R.id.tv_lang_bn);
+        TextView tvHi = dialogView.findViewById(R.id.tv_lang_hi);
+
+        Button btnClose = dialogView.findViewById(R.id.btn_lang_close);
+
+        styleLanguageOptionRow(rowEn, ivEn, tvEn, "en".equals(currentCode));
+        styleLanguageOptionRow(rowBn, ivBn, tvBn, "bn".equals(currentCode));
+        styleLanguageOptionRow(rowHi, ivHi, tvHi, "hi".equals(currentCode));
+
+        if (rowEn != null) {
+            rowEn.setOnClickListener(v -> applySelectedLanguage(dialog, "en", "English"));
+        }
+        if (rowBn != null) {
+            rowBn.setOnClickListener(v -> applySelectedLanguage(dialog, "bn", "বাংলা (Bengali)"));
+        }
+        if (rowHi != null) {
+            rowHi.setOnClickListener(v -> applySelectedLanguage(dialog, "hi", "हिन्दी (Hindi)"));
+        }
+        if (btnClose != null) {
+            btnClose.setOnClickListener(v -> dialog.dismiss());
+        }
+
+        FontHelper.applyRegularFont(dialogView);
+        dialog.show();
+        applyDialogDimBackdrop(dialog);
+    }
+
+    private void styleLanguageOptionRow(View row, ImageView radioIcon, TextView label, boolean isSelected) {
+        if (row != null) {
+            row.setBackgroundResource(isSelected ? R.drawable.bg_game_card_selected : R.drawable.bg_game_card_normal);
+        }
+        if (radioIcon != null) {
+            radioIcon.setImageResource(isSelected ? R.drawable.ic_radio_checked : R.drawable.ic_radio_unchecked);
+        }
+        if (label != null) {
+            label.setTextColor(ContextCompat.getColor(this,
+                    isSelected ? R.color.accent_primary : R.color.text_primary));
+        }
+    }
+
+    private void applySelectedLanguage(AlertDialog dialog, String langCode, String displayName) {
+        prefs.edit().putString(KEY_LANG, displayName).apply();
+        LocaleHelper.setLocale(SettingsActivity.this, langCode);
+
+        if (tvLanguageDesc != null) {
+            tvLanguageDesc.setText(displayName);
+        }
+        triggerHapticFeedback();
+        Toast.makeText(SettingsActivity.this,
+                getString(R.string.setting_language) + ": " + displayName,
+                Toast.LENGTH_SHORT).show();
+        dialog.dismiss();
+
+        // Recreate activity so all strings re-resolve in the chosen locale cleanly
+        recreate();
+    }
+
+    /**
+     * Renders high-fidelity solid card dialog with opaque theme surface and dimmed backdrop.
      */
     private void showCustomInfoDialog(String title, String message, int iconRes) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.Theme_AimShotEngine_CustomDialog);
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_custom_info, null);
         builder.setView(dialogView);
 
         final AlertDialog dialog = builder.create();
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-            dialog.getWindow().setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
-        }
+        configureSolidDialogWindow(dialog);
 
         TextView tvTitle = dialogView.findViewById(R.id.tv_dialog_info_title);
         TextView tvMsg = dialogView.findViewById(R.id.tv_dialog_info_message);
@@ -346,22 +439,78 @@ public class SettingsActivity extends BaseActivity {
         if (tvMsg != null) tvMsg.setText(message);
         if (ivIcon != null && iconRes != 0) ivIcon.setImageResource(iconRes);
         if (btnOk != null) {
+            btnOk.setText(R.string.btn_understood);
             btnOk.setOnClickListener(v -> dialog.dismiss());
         }
 
+        FontHelper.applyRegularFont(dialogView);
         dialog.show();
+        applyDialogDimBackdrop(dialog);
     }
 
+    /**
+     * Renders solid tactical Logout confirmation popup using dialog_tactical_confirm.xml.
+     */
     private void confirmLogout() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.Theme_AimShotEngine_Dialog);
-        builder.setTitle(R.string.btn_logout);
-        builder.setMessage(R.string.logout_confirmation);
-        builder.setPositiveButton(R.string.btn_logout, (dialog, which) -> {
-            MembershipRepository.getInstance(SettingsActivity.this).clearSession();
-            Toast.makeText(SettingsActivity.this, "Session cleared. Logged out.", Toast.LENGTH_SHORT).show();
-            finish();
-        });
-        builder.setNegativeButton(R.string.action_close, null);
-        builder.show();
+        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.Theme_AimShotEngine_CustomDialog);
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_tactical_confirm, null);
+        builder.setView(dialogView);
+
+        final AlertDialog dialog = builder.create();
+        configureSolidDialogWindow(dialog);
+
+        ImageView ivIcon = dialogView.findViewById(R.id.iv_confirm_icon);
+        TextView tvTitle = dialogView.findViewById(R.id.tv_confirm_title);
+        TextView tvMsg = dialogView.findViewById(R.id.tv_confirm_message);
+        Button btnCancel = dialogView.findViewById(R.id.btn_confirm_negative);
+        Button btnConfirm = dialogView.findViewById(R.id.btn_confirm_positive);
+
+        if (ivIcon != null) {
+            ivIcon.setImageResource(R.drawable.ic_shield);
+        }
+        if (tvTitle != null) {
+            tvTitle.setText(R.string.btn_logout);
+        }
+        if (tvMsg != null) {
+            tvMsg.setText(R.string.logout_confirmation);
+        }
+        if (btnCancel != null) {
+            btnCancel.setText(R.string.action_close);
+            btnCancel.setOnClickListener(v -> dialog.dismiss());
+        }
+        if (btnConfirm != null) {
+            btnConfirm.setText(R.string.btn_logout);
+            btnConfirm.setBackgroundResource(R.drawable.bg_button_logout);
+            btnConfirm.setTextColor(ContextCompat.getColor(this, R.color.color_error));
+            btnConfirm.setOnClickListener(v -> {
+                dialog.dismiss();
+                MembershipRepository.getInstance(SettingsActivity.this).clearSession();
+                Toast.makeText(SettingsActivity.this, "Session cleared. Logged out.", Toast.LENGTH_SHORT).show();
+                finish();
+            });
+        }
+
+        FontHelper.applyRegularFont(dialogView);
+        dialog.show();
+        applyDialogDimBackdrop(dialog);
+    }
+
+    private static void configureSolidDialogWindow(AlertDialog dialog) {
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
+        }
+    }
+
+    private static void applyDialogDimBackdrop(AlertDialog dialog) {
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
+            WindowManager.LayoutParams lp = window.getAttributes();
+            lp.dimAmount = 0.68f;
+            window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            window.setAttributes(lp);
+        }
     }
 }

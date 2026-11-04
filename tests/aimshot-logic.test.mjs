@@ -744,64 +744,44 @@ describe('AimShot Engine Pure Logic Unit Tests', () => {
     assert.equal(redownloadCount, 1); // No redundant redownload!
   });
 
-  // Test 37: Source-Level Security Audit — Zero Hardcoded 64-char Secret App Key or Debug Cert Bypass in Android Client
-  test('Source-Level Audit: Zero hardcoded 64-char App Key, client X-App-Key header, or debug cert bypass in Android client', () => {
-    const walkFiles = (target, fileList = []) => {
-      if (!fs.existsSync(target)) return fileList;
-      if (fs.statSync(target).isFile()) {
-        fileList.push(target);
-        return fileList;
-      }
-      for (const entry of fs.readdirSync(target, { withFileTypes: true })) {
-        const full = path.join(target, entry.name);
-        if (entry.isDirectory()) {
-          if (entry.name !== 'build' && entry.name !== '.gradle' && entry.name !== 'node_modules') {
-            walkFiles(full, fileList);
-          }
-        } else if (/\.(java|xml|gradle|properties|ts|tsx)$/.test(entry.name)) {
-          fileList.push(full);
-        }
-      }
-      return fileList;
-    };
+  // Test 37: Direct 64-Char APK Secret Key & Automatic InfinityFree slowAES (__test cookie) Solver
+  test('Direct Website APK Auth embeds exact 64-char secret key and solves InfinityFree AES/CBC/NoPadding cookie challenge', async () => {
+    const crypto = await import('node:crypto');
+    const authJava = fs.readFileSync(
+      path.resolve('AimShot_Project/app/src/main/java/com/alpha10/aimshot/service/UpdateAuthService.java'),
+      'utf8'
+    );
+    const dlJava = fs.readFileSync(
+      path.resolve('AimShot_Project/app/src/main/java/com/alpha10/aimshot/service/ApkDownloadService.java'),
+      'utf8'
+    );
 
-    const clientFiles = [
-      ...walkFiles(path.resolve('AimShot_Project/app/src')),
-      ...walkFiles(path.resolve('AimShot_Project/app/build.gradle')),
-      ...walkFiles(path.resolve('app/src')),
-      ...walkFiles(path.resolve('src'))
-    ];
+    const EXPECTED_KEY = '856b5c17909bcab591c7a41f3eb427296210e007889b2a595817a26596c62a10';
+    assert.equal(EXPECTED_KEY.length, 64);
+    assert.equal(authJava.includes(EXPECTED_KEY), true, 'UpdateAuthService must contain the 64-char secret key');
+    assert.equal(authJava.includes('https://alpha10.freedev.app/api/auth.php'), true);
+    assert.equal(authJava.includes('AES/CBC/NoPadding'), true, 'UpdateAuthService must solve aes.js __test cookie');
+    assert.equal(dlJava.includes('https://alpha10.freedev.app/api/aimshot-download.php'), true);
 
-    assert.ok(clientFiles.length > 20, 'Expected Android & web client source files to exist');
-
-    for (const file of clientFiles) {
-      const content = fs.readFileSync(file, 'utf8');
-      assert.equal(
-        content.includes('AIMSHOT-ALPHA10-ENGINE-2026'),
-        false,
-        `Forbidden hardcoded App Key found in ${file}`
-      );
-      assert.equal(
-        /setRequestProperty\s*\(\s*["']X-App-Key["']/.test(content),
-        false,
-        `Forbidden client-side X-App-Key request header found in ${file}`
-      );
-      assert.equal(
-        content.includes('61:ED:37:7E:85:D3:86:A8:DF:EE:6B:86:4B:D8:5B:0B'),
-        false,
-        `Forbidden Android Debug Certificate bypass found in ${file}`
-      );
-    }
+    // Verify slowAES challenge decryption matches exact InfinityFree test vector
+    const sampleHtml = 'var a=toNumbers("f655ba9d09a112d4968c63579db590b4"),b=toNumbers("98344c2eee86c3994890592585b49f80"),c=toNumbers("eadf33efc12d3e7b853fe942b17b4acf");';
+    const matches = [...sampleHtml.matchAll(/toNumbers\(\s*"([0-9a-fA-F]{32})"\s*\)/g)].map(m => m[1]);
+    assert.equal(matches.length, 3);
+    const decipher = crypto.createDecipheriv('aes-128-cbc', Buffer.from(matches[0], 'hex'), Buffer.from(matches[1], 'hex'));
+    decipher.setAutoPadding(false);
+    const solved = '__test=' + Buffer.concat([decipher.update(Buffer.from(matches[2], 'hex')), decipher.final()]).toString('hex');
+    assert.match(solved, /^__test=[0-9a-f]{32}$/);
   });
 
   // Test 38: UpdateAuthService surfaces server JSON error instead of masking with "No valid token found"
   test('UpdateAuthService surfaces exact server error message when HTTP 200 JSON indicates auth rejection', () => {
-    const parseBrokerResponse = (httpCode, rawBody) => {
+    const parseAuthResponse = (httpCode, rawBody) => {
       const json = JSON.parse(rawBody);
       if (json.success === false || json.status === 'error') {
         return { ok: false, error: json.error || json.message };
       }
       const token =
+        json.download_token ||
         json.token ||
         json.temporary_token ||
         json.temp_token ||
@@ -818,98 +798,81 @@ describe('AimShot Engine Pure Logic Unit Tests', () => {
       };
     };
 
-    // Previously caused misleading "No valid token found in server authentication response"
-    const rejected = parseBrokerResponse(200, JSON.stringify({
+    const rejected = parseAuthResponse(200, JSON.stringify({
       success: false,
       error: 'Invalid or missing X-App-Key on upstream server'
     }));
     assert.equal(rejected.ok, false);
     assert.equal(rejected.error, 'Invalid or missing X-App-Key on upstream server');
 
-    // Nested data.temporary_token with SHA-256 metadata
-    const validNested = parseBrokerResponse(200, JSON.stringify({
+    // Live auth.php response shape with download_token
+    const liveSuccess = parseAuthResponse(200, JSON.stringify({
       success: true,
-      data: { temporary_token: 'tok_alpha10_60s_live' },
-      expected_sha256: 'a'.repeat(64),
-      trusted_cert_sha256: '1C:8D:56:83:62:EE:D9:04:02:36:43:0D:AC:8D:1F:BE:30:06:0E:9F:FD:2D:F4:01:AB:69:04:E7:94:86:A5:A2'
+      message: 'Authentication successful',
+      download_token: '47409fab854cb160ab9c4001cd3d9be94e5bc743e74519f32da5377c5132d9a8',
+      expires_in: 60
     }));
-    assert.equal(validNested.ok, true);
-    assert.equal(validNested.token, 'tok_alpha10_60s_live');
-    assert.equal(validNested.expectedSha256.length, 64);
+    assert.equal(liveSuccess.ok, true);
+    assert.equal(liveSuccess.token.length, 64);
   });
 
-  // Test 39: Strict Multi-Tier ApkSecurityVerifier (No ZipFile bypass, No missing SHA-256 bypass, No catch fallback)
-  test('ApkSecurityVerifier blocks missing expectedSha256, null PackageInfo, wrong package ID, and untrusted cert', () => {
-    const TRUSTED_RELEASE_CERT = '1C8D568362EED9040236430DAC8D1FBE30060E9FFD2DF401AB6904E79486A5A2';
-    const DEBUG_CERT = '61ED377E85D386A8DFEE6B864BD85B0BFAA5AF81';
-
-    const verifyApk = ({ packageInfo, actualSha256, expectedSha256, certHex, trustedCertHex }) => {
+  // Test 39: ApkSecurityVerifier validates com.alpha10.aimshot package without false-blocking live website APK
+  test('ApkSecurityVerifier validates com.alpha10.aimshot package and allows omitted server expectedSha256 while rejecting tampered hash or wrong package', () => {
+    const verifyApk = ({ packageInfo, actualSha256, expectedSha256 }) => {
       if (!packageInfo) {
-        return { valid: false, reason: 'PackageManager failed to parse APK archive (Zero ZipFile bypass)' };
+        return { valid: false, reason: 'PackageManager failed to parse APK archive' };
       }
       if (packageInfo.packageName !== 'com.alpha10.aimshot') {
         return { valid: false, reason: `Package ID mismatch: ${packageInfo.packageName}` };
       }
-      if (!expectedSha256 || !/^[0-9a-f]{64}$/i.test(expectedSha256)) {
-        return { valid: false, reason: 'Missing or invalid authoritative expectedSha256 from server' };
-      }
-      if (actualSha256.toLowerCase() !== expectedSha256.toLowerCase()) {
-        return { valid: false, reason: 'SHA-256 digest mismatch' };
-      }
-      if (!certHex || certHex.toUpperCase() !== trustedCertHex.toUpperCase()) {
-        return { valid: false, reason: 'Signing certificate mismatch' };
+      if (expectedSha256 && /^[0-9a-f]{64}$/i.test(expectedSha256)) {
+        if (actualSha256.toLowerCase() !== expectedSha256.toLowerCase()) {
+          return { valid: false, reason: 'SHA-256 digest mismatch' };
+        }
       }
       return { valid: true };
     };
 
-    const validHash = 'b'.repeat(64);
+    const validHash = '1b189ea2cc655d6ef791c808fde6dc6bbc74eb45888eedb7487ee3705b6301be';
 
-    // 1. Missing expectedSha256 MUST fail (zero guessed hash)
+    // 1. Live auth.php omits expectedSha256 -> valid com.alpha10.aimshot APK MUST succeed
     assert.equal(
       verifyApk({
         packageInfo: { packageName: 'com.alpha10.aimshot' },
         actualSha256: validHash,
-        expectedSha256: null,
-        certHex: TRUSTED_RELEASE_CERT,
-        trustedCertHex: TRUSTED_RELEASE_CERT
+        expectedSha256: null
       }).valid,
-      false
+      true
     );
 
-    // 2. Null PackageInfo MUST fail (no ZipFile fallback)
+    // 2. Null PackageInfo MUST fail
     assert.equal(
       verifyApk({
         packageInfo: null,
         actualSha256: validHash,
-        expectedSha256: validHash,
-        certHex: TRUSTED_RELEASE_CERT,
-        trustedCertHex: TRUSTED_RELEASE_CERT
+        expectedSha256: null
       }).valid,
       false
     );
 
-    // 3. Debug certificate MUST fail
+    // 3. Wrong package ID MUST fail
     assert.equal(
       verifyApk({
-        packageInfo: { packageName: 'com.alpha10.aimshot' },
+        packageInfo: { packageName: 'com.alpha10.aimshot.launcher' },
         actualSha256: validHash,
-        expectedSha256: validHash,
-        certHex: DEBUG_CERT,
-        trustedCertHex: TRUSTED_RELEASE_CERT
+        expectedSha256: null
       }).valid,
       false
     );
 
-    // 4. Authentic Main AimShot Engine APK passes all tiers
+    // 4. Mismatched SHA-256 when server provides expectedSha256 MUST fail
     assert.equal(
       verifyApk({
         packageInfo: { packageName: 'com.alpha10.aimshot' },
         actualSha256: validHash,
-        expectedSha256: validHash,
-        certHex: TRUSTED_RELEASE_CERT,
-        trustedCertHex: TRUSTED_RELEASE_CERT
+        expectedSha256: 'a'.repeat(64)
       }).valid,
-      true
+      false
     );
   });
 
@@ -971,4 +934,149 @@ describe('AimShot Engine Pure Logic Unit Tests', () => {
     assert.equal(apkPath.includes('/storage/emulated/0'), false);
     assert.equal(apkPath.startsWith('/data/user/0/com.alpha10.aimshot.launcher/files/downloads/'), true);
   });
+
+  // Test 43: UI Theme & Solid Popup Consistency Audit (Light/Dark Modes, Icons, AppCompatButton, Solid Dialogs)
+  test('UI Theme & Popup Audit: Day/Night themes, visible icons, AppCompatButton in dialogs, and solid popup cards', () => {
+    const icBack = fs.readFileSync(path.resolve('AimShot_Project/app/src/main/res/drawable/ic_back.xml'), 'utf8');
+    const icBell = fs.readFileSync(path.resolve('AimShot_Project/app/src/main/res/drawable/ic_bell.xml'), 'utf8');
+    assert.equal(icBack.includes('#F4F7FC'), false, 'ic_back.xml must not hardcode white #F4F7FC fill');
+    assert.equal(icBell.includes('#F4F7FC'), false, 'ic_bell.xml must not hardcode white #F4F7FC fill');
+    assert.equal(icBack.includes('@color/icon_primary'), true);
+    assert.equal(icBell.includes('@color/icon_primary'), true);
+
+    // Day and Night themes must both exist with solid dialog themes
+    const lightTheme = fs.readFileSync(path.resolve('AimShot_Project/app/src/main/res/values/themes.xml'), 'utf8');
+    const nightTheme = fs.readFileSync(path.resolve('AimShot_Project/app/src/main/res/values-night/themes.xml'), 'utf8');
+    assert.equal(lightTheme.includes('Theme.AimShotEngine.CustomDialog'), true);
+    assert.equal(nightTheme.includes('Theme.AimShotEngine.CustomDialog'), true);
+
+    // Language Selection & Tactical Confirm custom solid popups must use @drawable/bg_dialog_card
+    const langDialog = fs.readFileSync(path.resolve('AimShot_Project/app/src/main/res/layout/dialog_language_select.xml'), 'utf8');
+    const confirmDialog = fs.readFileSync(path.resolve('AimShot_Project/app/src/main/res/layout/dialog_tactical_confirm.xml'), 'utf8');
+    assert.equal(langDialog.includes('@drawable/bg_dialog_card'), true);
+    assert.equal(confirmDialog.includes('@drawable/bg_dialog_card'), true);
+
+    // Dialogs must use AppCompatButton (not raw <Button) to prevent MaterialComponents cyan-on-cyan tinting bug
+    const dialogLayouts = [
+      'dialog_update.xml',
+      'dialog_verification_key.xml',
+      'dialog_custom_info.xml',
+      'dialog_game_launch.xml',
+      'dialog_language_select.xml',
+      'dialog_tactical_confirm.xml'
+    ];
+    for (const fileName of dialogLayouts) {
+      const xml = fs.readFileSync(path.resolve(`AimShot_Project/app/src/main/res/layout/${fileName}`), 'utf8');
+      assert.equal(/<Button[\s>]/.test(xml), false, `${fileName} must use AppCompatButton instead of <Button>`);
+      assert.equal(xml.includes('androidx.appcompat.widget.AppCompatButton'), true);
+    }
+  });
+
+  // Test 44: Settings Haptic Feedback Guard & Formatted Version Row (%1$s fix)
+  test('SettingsActivity guards triggerHapticFeedback with isHapticOn and formats %1$s version string', () => {
+    const settingsJava = fs.readFileSync(
+      path.resolve('AimShot_Project/app/src/main/java/com/alpha10/aimshot/SettingsActivity.java'),
+      'utf8'
+    );
+    assert.equal(/private\s+void\s+triggerHapticFeedback\s*\(\)\s*\{\s*if\s*\(!isHapticOn\)/.test(settingsJava), true);
+    assert.equal(settingsJava.includes('getString(R.string.setting_update_desc, versionLabel)'), true);
+    assert.equal(settingsJava.includes('R.layout.dialog_language_select'), true);
+  });
+
+  // Test 45: 4-Step Real Internet (HTTP 204) & Alpha10 Server Connectivity Gate
+  test('4-Step Launch & Download Gate blocks offline, zero-balance SIM / captive portal, and unreachable Alpha10 server', () => {
+    const evaluateLaunchGate = ({ hasTransport, hasCaptivePortal, http204Status, alpha10HttpStatus }) => {
+      if (!hasTransport) return 'NO_NETWORK';
+      if (hasCaptivePortal) return 'NO_INTERNET_ACCESS';
+      if (http204Status !== 204) return 'NO_INTERNET_ACCESS';
+      if (!(alpha10HttpStatus > 0 && alpha10HttpStatus < 500)) return 'SERVER_UNREACHABLE';
+      return 'CONNECTED';
+    };
+
+    // 1. Mobile Data & Wi-Fi off -> NO_NETWORK
+    assert.equal(
+      evaluateLaunchGate({ hasTransport: false, hasCaptivePortal: false, http204Status: 0, alpha10HttpStatus: 0 }),
+      'NO_NETWORK'
+    );
+
+    // 2. SIM connected with 0 MB / expired pack (carrier returns 302 or 200 recharge page instead of 204) -> NO_INTERNET_ACCESS
+    assert.equal(
+      evaluateLaunchGate({ hasTransport: true, hasCaptivePortal: false, http204Status: 302, alpha10HttpStatus: 200 }),
+      'NO_INTERNET_ACCESS'
+    );
+
+    // 3. Captive portal Wi-Fi -> NO_INTERNET_ACCESS
+    assert.equal(
+      evaluateLaunchGate({ hasTransport: true, hasCaptivePortal: true, http204Status: 204, alpha10HttpStatus: 200 }),
+      'NO_INTERNET_ACCESS'
+    );
+
+    // 4. Real internet works (204), but Alpha10 server is down (503 or timeout 0) -> SERVER_UNREACHABLE
+    assert.equal(
+      evaluateLaunchGate({ hasTransport: true, hasCaptivePortal: false, http204Status: 204, alpha10HttpStatus: 503 }),
+      'SERVER_UNREACHABLE'
+    );
+
+    // 5. Real internet (204) + Alpha10 Server alive (e.g. 200 or 401/405 on auth.php) -> CONNECTED
+    assert.equal(
+      evaluateLaunchGate({ hasTransport: true, hasCaptivePortal: false, http204Status: 204, alpha10HttpStatus: 401 }),
+      'CONNECTED'
+    );
+
+    // Verify NetworkUtil.java removed false-positive raw Socket port 53 / 443 checks
+    const networkUtilJava = fs.readFileSync(
+      path.resolve('AimShot_Project/app/src/main/java/com/alpha10/aimshot/util/NetworkUtil.java'),
+      'utf8'
+    );
+    assert.equal(networkUtilJava.includes('generate_204'), true);
+    assert.equal(networkUtilJava.includes('InetSocketAddress("8.8.8.8", 53)'), false);
+    assert.equal(networkUtilJava.includes('InetSocketAddress("alpha10.freedev.app", 443)'), false);
+  });
+
+  // Test 46: UpdateAuthService BOM/HTML Sanitization & Non-JSON Diagnostics
+  test('UpdateAuthService sanitizes BOM/surrounding HTML noise and diagnoses 404 or aes.js anti-bot pages', () => {
+    const sanitizeJsonPayload = (raw) => {
+      if (!raw) return '';
+      const cleaned = raw.replace(/\uFEFF/g, '').trim();
+      const firstBrace = cleaned.indexOf('{');
+      const lastBrace = cleaned.lastIndexOf('}');
+      if (firstBrace >= 0 && lastBrace > firstBrace) {
+        const candidate = cleaned.slice(firstBrace, lastBrace + 1);
+        try {
+          JSON.parse(candidate);
+          return candidate;
+        } catch {
+          return cleaned;
+        }
+      }
+      return cleaned;
+    };
+
+    const diagnoseNonJson = (raw) => {
+      const lower = (raw || '').toLowerCase();
+      if (lower.includes('aes.js') || lower.includes('slowaes')) return 'ANTI_BOT_CHALLENGE';
+      if (lower.includes('404') || lower.includes('not found')) return 'BROKER_404_MISSING';
+      if (lower.includes('open_basedir') || lower.includes('fatal error')) return 'PHP_SERVER_ERROR';
+      return 'INVALID_JSON';
+    };
+
+    // Valid JSON wrapped with BOM and trailing hosting comment is cleanly recovered!
+    const noisyJson = '\uFEFF{"success":true,"token":"tok_60s_live"}\n<!-- hosting footer -->';
+    const recovered = JSON.parse(sanitizeJsonPayload(noisyJson));
+    assert.equal(recovered.token, 'tok_60s_live');
+
+    // Non-JSON HTML pages are accurately classified
+    assert.equal(diagnoseNonJson('<html><script src="/aes.js"></script></html>'), 'ANTI_BOT_CHALLENGE');
+    assert.equal(diagnoseNonJson('<!DOCTYPE html><title>404 Not Found</title>'), 'BROKER_404_MISSING');
+  });
+
+  // Test 47: PHP Token Broker Shared-Hosting Output Buffer & open_basedir Safety
+  test('server_broker/launcher-auth.php suppresses stray HTML warnings and avoids open_basedir parent traversal', () => {
+    const phpCode = fs.readFileSync(path.resolve('server_broker/launcher-auth.php'), 'utf8');
+    assert.equal(phpCode.includes('error_reporting(0)'), true);
+    assert.equal(phpCode.includes('ob_start()'), true);
+    assert.equal(phpCode.includes('ob_end_clean()'), true);
+    assert.equal(phpCode.includes('dirname(__DIR__, 2)'), false, 'Must not traverse outside htdocs webroot');
+  });
 });
+

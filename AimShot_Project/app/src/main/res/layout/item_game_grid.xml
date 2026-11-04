@@ -59,7 +59,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
         android:text="Active"
-        android:textColor="#49DCA0"
+        android:textColor="@color/color_success"
         android:textSize="8.5sp"
         android:textStyle="bold" />
 

@@ -66,6 +66,7 @@
             android:layout_marginEnd="8dp"
             android:indeterminate="true"
             android:indeterminateTint="@color/accent_primary"
+            android:progressBackgroundTint="@color/border_subtle"
             android:progressTint="@color/accent_primary" />
 
         <TextView
@@ -95,14 +96,14 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
-        android:background="#22EF4444"
+        android:background="@drawable/bg_error_box"
         android:gravity="center"
-        android:padding="8dp"
-        android:textColor="#F87171"
-        android:textSize="11.5sp"
+        android:padding="10dp"
+        android:textColor="@color/error_box_text"
+        android:textSize="12sp"
         android:visibility="gone" />
 
-    <!-- Action Buttons -->
+    <!-- Action Buttons (AppCompatButton prevents MaterialComponents cyan backgroundTint collision) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -110,28 +111,34 @@
         android:gravity="center"
         android:orientation="horizontal">
 
-        <Button
+        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/btn_update_cancel"
             android:layout_width="0dp"
-            android:layout_height="40dp"
+            android:layout_height="44dp"
             android:layout_marginEnd="6dp"
             android:layout_weight="1"
             android:background="@drawable/bg_button_tactical_border"
+            android:elevation="0dp"
+            android:stateListAnimator="@null"
             android:text="@string/btn_cancel"
-            android:textColor="@color/text_secondary"
-            android:textSize="12sp"
+            android:textAllCaps="false"
+            android:textColor="@color/text_primary"
+            android:textSize="12.5sp"
             android:textStyle="bold" />
 
-        <Button
+        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/btn_update_primary"
             android:layout_width="0dp"
-            android:layout_height="40dp"
+            android:layout_height="44dp"
             android:layout_marginStart="6dp"
             android:layout_weight="1"
-            android:background="@drawable/bg_button_tactical_border"
+            android:background="@drawable/bg_button_accent"
+            android:elevation="0dp"
+            android:stateListAnimator="@null"
             android:text="@string/update_btn_check"
-            android:textColor="@color/accent_primary"
-            android:textSize="12sp"
+            android:textAllCaps="false"
+            android:textColor="@color/text_on_accent"
+            android:textSize="12.5sp"
             android:textStyle="bold" />
     </LinearLayout>
 

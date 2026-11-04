@@ -42,16 +42,16 @@
         android:textSize="13sp" />
 
     <!-- Action Button -->
-    <Button
+    <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/btn_dialog_info_positive"
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:background="@drawable/bg_button_accent"
         android:elevation="0dp"
         android:stateListAnimator="@null"
-        android:text="Understood"
+        android:text="@string/btn_understood"
         android:textAllCaps="false"
-        android:textColor="@color/bg_main"
+        android:textColor="@color/text_on_accent"
         android:textSize="14sp"
         android:textStyle="bold" />
 

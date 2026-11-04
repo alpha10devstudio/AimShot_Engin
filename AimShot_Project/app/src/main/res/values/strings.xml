@@ -167,4 +167,13 @@
     <string name="stage_9_open">9. Opening AimShot Engine</string>
     <string name="btn_open_app">OPEN AIMSHOT ENGINE</string>
     <string name="auto_launching_countdown">Launching AimShot Engine in %1$ds...</string>
+    <string name="status_on">On</string>
+    <string name="status_off">Off</string>
+    <string name="select_language_subtitle">Choose your preferred display language</string>
+    <string name="verifying_network_title">Verifying Connection</string>
+    <string name="verifying_network_msg">Checking active internet &amp; Alpha10 Server...</string>
+    <string name="no_internet_access_msg">Wi-Fi or Mobile Data is turned on, but there is no active internet access (data pack expired, zero balance, or captive portal). Please check your connection and try again.</string>
+    <string name="server_connection_failed_title">Server Connection Failed</string>
+    <string name="server_connection_failed_msg">Internet is connected, but Alpha10 Server could not be reached. Please try again shortly.</string>
+    <string name="btn_understood">Understood</string>
 </resources>

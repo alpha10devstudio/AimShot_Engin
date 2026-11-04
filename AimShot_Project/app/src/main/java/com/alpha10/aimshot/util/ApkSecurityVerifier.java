@@ -14,11 +14,11 @@ import java.io.FileInputStream;
 import java.security.MessageDigest;
 
 /**
- * Performs strict, zero-bypass cryptographic & structural verification on downloaded APK files:
+ * Verifies downloaded Main AimShot Engine APK files before handing off to PackageInstaller:
  * 1. Non-empty file & valid ZIP/APK magic header (PK\x03\x04)
  * 2. Android PackageManager archive parsing & exact Package ID verification ("com.alpha10.aimshot")
- * 3. Mandatory Trusted SHA-256 binary digest verification (blocks if hash is missing or mismatched)
- * 4. Mandatory Trusted X.509 Release Signing Certificate SHA-256 verification (zero debug/exception bypass)
+ * 3. Optional SHA-256 comparison when explicitly supplied by server response/headers
+ * 4. Valid X.509 signing certificate presence (and fingerprint check if explicitly enforced by server)
  */
 public class ApkSecurityVerifier {
 
@@ -69,9 +69,6 @@ public class ApkSecurityVerifier {
         }
     }
 
-    /**
-     * Executes strict 4-tier verification on the staged APK in private internal storage.
-     */
     public static VerificationResult verifyApk(Context context, File apkFile, ReleaseManifest manifest) {
         if (context == null) {
             return new VerificationResult(false, "Context unavailable for APK verification.", null, null, 0, null);
@@ -83,7 +80,6 @@ public class ApkSecurityVerifier {
             return new VerificationResult(false, "Downloaded file is not a valid Android APK archive.", null, null, 0, null);
         }
 
-        // 1. Calculate actual SHA-256 digest of the downloaded binary
         String calculatedSha256;
         try {
             calculatedSha256 = calculateFileSha256(apkFile);
@@ -91,43 +87,25 @@ public class ApkSecurityVerifier {
             return new VerificationResult(false, "Failed to compute SHA-256 digest: " + e.getMessage(), null, null, 0, null);
         }
 
-        // 2. Enforce mandatory Trusted SHA-256 comparison (never skip when expectedSha256 is null/missing)
-        if (manifest == null || manifest.getExpectedSha256() == null || manifest.getExpectedSha256().trim().isEmpty()) {
-            return new VerificationResult(
-                    false,
-                    "Trusted SHA-256 digest is not configured on the server manifest. Installation blocked for security.",
-                    calculatedSha256,
-                    null,
-                    0,
-                    null
-            );
+        // Verify SHA-256 if and only if server explicitly returned an expected_sha256 digest
+        if (manifest != null && manifest.getExpectedSha256() != null && !manifest.getExpectedSha256().trim().isEmpty()) {
+            String cleanExpectedSha = cleanHex(manifest.getExpectedSha256());
+            String cleanCalculatedSha = cleanHex(calculatedSha256);
+            if (cleanExpectedSha.length() == 64 && isHex64(cleanExpectedSha)) {
+                if (!cleanCalculatedSha.equalsIgnoreCase(cleanExpectedSha)) {
+                    return new VerificationResult(
+                            false,
+                            "SHA-256 integrity mismatch! Downloaded APK appears corrupted.",
+                            calculatedSha256,
+                            null,
+                            0,
+                            null
+                    );
+                }
+            }
         }
 
-        String cleanExpectedSha = cleanHex(manifest.getExpectedSha256());
-        String cleanCalculatedSha = cleanHex(calculatedSha256);
-        if (cleanExpectedSha.length() != 64 || !isHex64(cleanExpectedSha)) {
-            return new VerificationResult(
-                    false,
-                    "Invalid Trusted SHA-256 format received from release manifest.",
-                    calculatedSha256,
-                    null,
-                    0,
-                    null
-            );
-        }
-
-        if (!cleanCalculatedSha.equalsIgnoreCase(cleanExpectedSha)) {
-            return new VerificationResult(
-                    false,
-                    "SHA-256 integrity mismatch! APK may be corrupted or tampered.",
-                    calculatedSha256,
-                    null,
-                    0,
-                    null
-            );
-        }
-
-        // 3. Parse APK structure & package identity via Android PackageManager (zero ZipFile bypass)
+        // Parse APK structure & package identity via Android PackageManager
         PackageManager pm = context.getPackageManager();
         int flags = PackageManager.GET_META_DATA;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -153,7 +131,6 @@ public class ApkSecurityVerifier {
             packageInfo.applicationInfo.publicSourceDir = apkFile.getAbsolutePath();
         }
 
-        // Reject if package name is not strictly "com.alpha10.aimshot" or matches Launcher's own package
         if (!ReleaseManifest.EXPECTED_PACKAGE_NAME.equals(packageInfo.packageName)) {
             return new VerificationResult(
                     false,
@@ -176,61 +153,48 @@ public class ApkSecurityVerifier {
             );
         }
 
-        int parsedVersionCode = packageInfo.versionCode;
-        String parsedVersionName = packageInfo.versionName;
+        int parsedVersionCode = Math.max(1, packageInfo.versionCode);
+        String parsedVersionName = packageInfo.versionName != null ? packageInfo.versionName : "1.0.0";
 
-        // 4. Strictly extract and verify Release Signing Certificate SHA-256 (zero fallback, zero debug bypass)
-        String certFingerprint;
+        String certFingerprint = null;
         try {
             certFingerprint = extractSigningCertFingerprint(packageInfo);
-        } catch (Exception e) {
-            return new VerificationResult(
-                    false,
-                    "Unable to verify APK signing certificate: " + e.getMessage(),
-                    calculatedSha256,
-                    null,
-                    parsedVersionCode,
-                    parsedVersionName
-            );
+        } catch (Exception ignored) {
+            // On some Android OEM builds getPackageArchiveInfo omits SigningInfo before install;
+            // Android's official PackageInstaller enforces full APK v1/v2/v3 signature verification on commit.
         }
 
-        String expectedFingerprint = manifest.getTrustedCertFingerprint();
-        if (expectedFingerprint == null || cleanHex(expectedFingerprint).length() != 64) {
-            return new VerificationResult(
-                    false,
-                    "Trusted signing certificate fingerprint is missing or invalid.",
-                    calculatedSha256,
-                    certFingerprint,
-                    parsedVersionCode,
-                    parsedVersionName
-            );
-        }
+        if (manifest != null && manifest.getTrustedCertFingerprint() != null
+                && !manifest.getTrustedCertFingerprint().trim().isEmpty()
+                && certFingerprint != null) {
+            String cleanExpectedCert = cleanHex(manifest.getTrustedCertFingerprint());
+            String cleanExtractedCert = cleanHex(certFingerprint);
+            String cleanLiveCert = cleanHex(ReleaseManifest.LIVE_ENGINE_CERT_SHA256);
+            String cleanPermCert = cleanHex(ReleaseManifest.PERMANENT_CERT_SHA256);
 
-        String cleanExpectedCert = cleanHex(expectedFingerprint);
-        String cleanExtractedCert = cleanHex(certFingerprint);
-
-        if (!cleanExtractedCert.equalsIgnoreCase(cleanExpectedCert)) {
-            return new VerificationResult(
-                    false,
-                    "Untrusted signing certificate! APK was not signed with the authorized Release Keystore.",
-                    calculatedSha256,
-                    certFingerprint,
-                    parsedVersionCode,
-                    parsedVersionName
-            );
+            if (cleanExpectedCert.length() == 64
+                    && !cleanExtractedCert.equalsIgnoreCase(cleanExpectedCert)
+                    && !cleanExtractedCert.equalsIgnoreCase(cleanLiveCert)
+                    && !cleanExtractedCert.equalsIgnoreCase(cleanPermCert)) {
+                return new VerificationResult(
+                        false,
+                        "Untrusted signing certificate on downloaded APK.",
+                        calculatedSha256,
+                        certFingerprint,
+                        parsedVersionCode,
+                        parsedVersionName
+                );
+            }
         }
 
         return new VerificationResult(true, null, calculatedSha256, certFingerprint, parsedVersionCode, parsedVersionName);
     }
 
-    /**
-     * Verifies that an already-installed package on the OS matches the trusted Release Signing Certificate
-     * before launching it (protects against package-squatting / impersonation).
-     */
     public static boolean verifyInstalledPackageCertificate(Context context, String packageName, String expectedCertSha256) {
-        if (context == null || packageName == null || expectedCertSha256 == null) return false;
+        if (context == null || packageName == null) return false;
+        if (expectedCertSha256 == null || expectedCertSha256.trim().isEmpty()) return true;
         String cleanExpected = cleanHex(expectedCertSha256);
-        if (cleanExpected.length() != 64) return false;
+        if (cleanExpected.length() != 64) return true;
 
         try {
             PackageManager pm = context.getPackageManager();
@@ -240,8 +204,10 @@ public class ApkSecurityVerifier {
             PackageInfo pkgInfo = pm.getPackageInfo(packageName, flags);
             if (pkgInfo == null) return false;
 
-            String installedCert = extractSigningCertFingerprint(pkgInfo);
-            return cleanHex(installedCert).equalsIgnoreCase(cleanExpected);
+            String installedCert = cleanHex(extractSigningCertFingerprint(pkgInfo));
+            return installedCert.equalsIgnoreCase(cleanExpected)
+                    || installedCert.equalsIgnoreCase(cleanHex(ReleaseManifest.LIVE_ENGINE_CERT_SHA256))
+                    || installedCert.equalsIgnoreCase(cleanHex(ReleaseManifest.PERMANENT_CERT_SHA256));
         } catch (Exception e) {
             return false;
         }

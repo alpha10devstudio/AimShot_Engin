@@ -135,7 +135,7 @@ public class NotificationsActivity extends BaseActivity {
     }
 
     private void showNotificationDetailDialog(NotificationItem item) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.Theme_AimShotEngine_CustomDialog);
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_custom_info, null);
         builder.setView(dialogView);
 
@@ -162,10 +162,18 @@ public class NotificationsActivity extends BaseActivity {
             ivIcon.setImageResource(R.drawable.ic_bell);
         }
         if (btnOk != null) {
-            btnOk.setText("Close");
+            btnOk.setText(R.string.action_close);
             btnOk.setOnClickListener(v -> dialog.dismiss());
         }
 
+        com.alpha10.aimshot.util.FontHelper.applyRegularFont(dialogView);
         dialog.show();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
+            WindowManager.LayoutParams lp = dialog.getWindow().getAttributes();
+            lp.dimAmount = 0.68f;
+            dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            dialog.getWindow().setAttributes(lp);
+        }
     }
 }

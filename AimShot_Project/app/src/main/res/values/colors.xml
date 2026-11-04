@@ -1,35 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- AimShot Light Theme Palette (Day Mode) -->
-    <color name="bg_main">#F4F7FC</color>
+    <!-- AimShot Tactical Light Theme Palette (Day Mode — High Contrast & Crisp Surfaces) -->
+    <color name="bg_main">#EEF3F9</color>
     <color name="bg_card">#FFFFFF</color>
-    <color name="bg_card_secondary">#E9EFF7</color>
-    <color name="bg_input">#EDF2F7</color>
+    <color name="bg_card_secondary">#E2E8F0</color>
+    <color name="bg_dialog">#FFFFFF</color>
+    <color name="bg_input">#F1F5F9</color>
 
-    <color name="accent_primary">#008CE3</color>
-    <color name="accent_primary_dark">#006CB3</color>
-    <color name="accent_primary_glow">#26008CE3</color>
-    <color name="accent_primary_soft">#E1F0FA</color>
+    <color name="accent_primary">#0077CC</color>
+    <color name="accent_primary_dark">#005FA3</color>
+    <color name="accent_primary_glow">#240077CC</color>
+    <color name="accent_primary_soft">#E0F2FE</color>
 
     <color name="text_primary">#0F172A</color>
-    <color name="text_secondary">#475569</color>
-    <color name="text_muted">#64748B</color>
+    <color name="text_secondary">#334155</color>
+    <color name="text_muted">#475569</color>
+    <color name="text_on_accent">#FFFFFF</color>
+    <color name="text_on_dark_overlay">#F8FAFC</color>
+    <color name="text_on_dark_overlay_sub">#CBD5E1</color>
 
-    <color name="color_success">#10B981</color>
-    <color name="color_success_bg">#1A10B981</color>
+    <color name="icon_primary">#0F172A</color>
+    <color name="icon_secondary">#475569</color>
+    <color name="icon_tint_box_bg">#1A0077CC</color>
 
-    <color name="color_warning">#F59E0B</color>
-    <color name="color_warning_bg">#1AF59E0B</color>
+    <color name="color_success">#047857</color>
+    <color name="color_success_bg">#1F10B981</color>
 
-    <color name="color_error">#EF4444</color>
-    <color name="color_error_bg">#1AEF4444</color>
+    <color name="color_warning">#B45309</color>
+    <color name="color_warning_bg">#1FF59E0B</color>
+
+    <color name="color_error">#DC2626</color>
+    <color name="color_error_bg">#1ADC2626</color>
+
+    <color name="error_box_bg">#FEE2E2</color>
+    <color name="error_box_border">#F87171</color>
+    <color name="error_box_text">#991B1B</color>
+
+    <color name="badge_active_text">#FFFFFF</color>
+    <color name="badge_inactive_bg">#E2E8F0</color>
+    <color name="badge_inactive_text">#334155</color>
+
+    <color name="btn_tactical_bg">#F8FAFC</color>
+    <color name="btn_paid_bg">#FFFBEB</color>
+    <color name="btn_logout_bg">#FEF2F2</color>
+
+    <color name="switch_track_off">#CBD5E1</color>
+    <color name="switch_thumb_off">#64748B</color>
 
     <color name="border_subtle">#CBD5E1</color>
-    <color name="border_accent">#008CE3</color>
-    <color name="border_glow">#33008CE3</color>
+    <color name="border_accent">#0077CC</color>
+    <color name="border_glow">#330077CC</color>
 
-    <color name="nav_active">#008CE3</color>
-    <color name="nav_inactive">#64748B</color>
+    <color name="nav_active">#0077CC</color>
+    <color name="nav_inactive">#475569</color>
     <color name="nav_bg">#FFFFFF</color>
 
     <color name="white">#FFFFFF</color>

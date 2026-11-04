@@ -66,17 +66,20 @@
         android:textSize="12.5sp" />
 
     <!-- Cancel / Abort Button -->
-    <Button
+    <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/btn_launch_abort"
         android:layout_width="wrap_content"
-        android:layout_height="38dp"
+        android:layout_height="40dp"
         android:layout_marginTop="22dp"
         android:background="@drawable/bg_button_tactical_border"
-        android:paddingStart="24dp"
-        android:paddingEnd="24dp"
-        android:text="CANCEL"
-        android:textColor="@color/text_secondary"
-        android:textSize="12sp"
+        android:elevation="0dp"
+        android:paddingStart="28dp"
+        android:paddingEnd="28dp"
+        android:stateListAnimator="@null"
+        android:text="@string/btn_cancel"
+        android:textAllCaps="false"
+        android:textColor="@color/text_primary"
+        android:textSize="12.5sp"
         android:textStyle="bold" />
 
 </LinearLayout>

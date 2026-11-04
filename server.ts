@@ -111,6 +111,105 @@ async function startServer() {
     });
   });
 
+  // Server-Side Token Broker Endpoint (optional Node/Cloud Run alternative to PHP launcher-auth.php)
+  app.post('/api/launcher-auth', async (req: Request, res: Response) => {
+    const secretAppKey = (process.env.ALPHA10_SECRET_APP_KEY || '').trim();
+    if (!secretAppKey) {
+      return res.status(503).json({
+        success: false,
+        error: 'Server configuration incomplete: ALPHA10_SECRET_APP_KEY is not set on server.'
+      });
+    }
+
+    const pkg = String(req.body?.launcher_package || req.body?.package_name || '').trim();
+    const deviceId = String(req.body?.device_id || '').trim();
+    if (pkg !== 'com.alpha10.aimshot.launcher' && pkg !== 'com.alpha10.aimshot') {
+      return res.status(403).json({
+        success: false,
+        error: 'Unauthorized client application package.'
+      });
+    }
+    if (!deviceId || deviceId.length < 6) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing or invalid device identifier.'
+      });
+    }
+
+    try {
+      const upstreamRes = await fetch('https://alpha10.freedev.app/api/auth.php', {
+        method: 'POST',
+        headers: {
+          'X-App-Key': secretAppKey,
+          'Accept': 'application/json',
+          'User-Agent': 'Alpha10-Launcher-Broker/1.0'
+        },
+        redirect: 'manual'
+      });
+
+      const rawText = await upstreamRes.text();
+      let parsed: Record<string, unknown> | null = null;
+      try {
+        parsed = JSON.parse(rawText.replace(/^\uFEFF/, '').trim());
+      } catch {
+        parsed = null;
+      }
+
+      if (!upstreamRes.ok || !parsed) {
+        const upstreamErr =
+          (parsed && typeof parsed.error === 'string' && parsed.error) ||
+          (parsed && typeof parsed.message === 'string' && parsed.message) ||
+          `Upstream Alpha10 auth.php rejected request (HTTP ${upstreamRes.status})`;
+        return res.status(upstreamRes.status >= 400 ? upstreamRes.status : 502).json({
+          success: false,
+          error: upstreamErr
+        });
+      }
+
+      const dataObj = (parsed.data && typeof parsed.data === 'object' ? parsed.data : {}) as Record<string, unknown>;
+      const token = [
+        parsed.token,
+        parsed.temporary_token,
+        parsed.temp_token,
+        parsed.access_token,
+        parsed.download_token,
+        parsed.auth_token,
+        dataObj.token,
+        dataObj.temporary_token,
+        dataObj.temp_token,
+        dataObj.access_token
+      ].find(v => typeof v === 'string' && v.trim().length > 0) as string | undefined;
+
+      if (!token) {
+        return res.status(502).json({
+          success: false,
+          error: (typeof parsed.error === 'string' && parsed.error) || 'Upstream auth.php did not return a temporary token.'
+        });
+      }
+
+      const expectedSha256 = (process.env.ALPHA10_MAIN_APK_SHA256 || '').trim();
+      const trustedCertSha256 =
+        (process.env.ALPHA10_MAIN_CERT_SHA256 || '').trim() ||
+        '1C:8D:56:83:62:EE:D9:04:02:36:43:0D:AC:8D:1F:BE:30:06:0E:9F:FD:2D:F4:01:AB:69:04:E7:94:86:A5:A2';
+
+      return res.json({
+        success: true,
+        token: token.trim(),
+        temporary_token: token.trim(),
+        expires_in: Number(parsed.expires_in) > 0 ? Number(parsed.expires_in) : 60,
+        expected_sha256: /^[0-9a-f]{64}$/i.test(expectedSha256) ? expectedSha256.toLowerCase() : null,
+        trusted_cert_sha256: trustedCertSha256,
+        target_package: 'com.alpha10.aimshot',
+        download_endpoint: 'https://alpha10.freedev.app/api/aimshot-download.php'
+      });
+    } catch (err) {
+      return res.status(502).json({
+        success: false,
+        error: 'Unable to reach upstream Alpha10 authentication server.'
+      });
+    }
+  });
+
   // Public/App Notification list endpoint
   app.get('/api/notifications', (req: Request, res: Response) => {
     const category = req.query.category as string | undefined;

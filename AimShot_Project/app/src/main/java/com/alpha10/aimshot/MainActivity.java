@@ -3,8 +3,12 @@ package com.alpha10.aimshot;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -56,6 +60,7 @@ public class MainActivity extends BaseActivity
 
     private boolean isLaunching = false;
     private com.alpha10.aimshot.dialog.UpdateDialog activeUpdateDialog;
+    private AlertDialog activeNetworkCheckDialog;
 
     private final android.os.Handler carouselHandler =
             new android.os.Handler(android.os.Looper.getMainLooper());
@@ -109,6 +114,7 @@ public class MainActivity extends BaseActivity
         super.onDestroy();
 
         stopCarouselTimer();
+        dismissVerifyingConnectionDialog();
 
         if (membershipRepository != null) {
             membershipRepository.removeListener(this);
@@ -305,21 +311,21 @@ public class MainActivity extends BaseActivity
                     .NotificationsRepository.getInstance(this)
                     .getUnreadCount();
 
-            View badge = findViewById(R.id.tv_header_notif_badge);
+            int[] badgeIds = new int[]{
+                    R.id.tv_header_notif_badge,
+                    R.id.tv_premium_notif_badge
+            };
 
-            if (badge instanceof TextView) {
-
-                TextView tvBadge = (TextView) badge;
-
-                if (unread > 0) {
-
-                    tvBadge.setText(String.valueOf(unread));
-
-                    tvBadge.setVisibility(View.VISIBLE);
-
-                } else {
-
-                    tvBadge.setVisibility(View.GONE);
+            for (int badgeId : badgeIds) {
+                View badge = findViewById(badgeId);
+                if (badge instanceof TextView) {
+                    TextView tvBadge = (TextView) badge;
+                    if (unread > 0) {
+                        tvBadge.setText(String.valueOf(unread));
+                        tvBadge.setVisibility(View.VISIBLE);
+                    } else {
+                        tvBadge.setVisibility(View.GONE);
+                    }
                 }
             }
 
@@ -805,7 +811,7 @@ public class MainActivity extends BaseActivity
 
 
     // =========================================================
-    // INSTALLATION / LAUNCH WORKFLOW
+    // INSTALLATION / LAUNCH WORKFLOW (4-STEP NETWORK & SERVER GATE)
     // =========================================================
 
     private void handleLauncherButtonClick() {
@@ -813,91 +819,194 @@ public class MainActivity extends BaseActivity
         if (isLaunching) {
             return;
         }
+        isLaunching = true;
 
-
-        // 1. Internet Check
+        // Step 1: Fast synchronous radio check (Wi-Fi / Mobile Data / VPN)
         if (!NetworkUtil.isNetworkConnected(this)) {
-
-            showNoInternetDialog();
-
+            isLaunching = false;
+            showConnectivityErrorDialog(NetworkUtil.ConnectivityStatus.NO_NETWORK);
             return;
         }
 
+        // Steps 2 & 3: Live HTTP 204 Internet Probe + Alpha10 Server HTTPS Reachability Check
+        showVerifyingConnectionDialog();
 
-        // 2. Check Main APK Installation
-        boolean isInstalled =
-                PackageInstallerHelper.isMainApkInstalled(this);
+        NetworkUtil.verifyFullLaunchConnectivity(this, status -> {
+            dismissVerifyingConnectionDialog();
 
+            if (isFinishing() || isDestroyed()) {
+                isLaunching = false;
+                return;
+            }
 
-        if (isInstalled) {
+            if (status != NetworkUtil.ConnectivityStatus.CONNECTED) {
+                isLaunching = false;
+                showConnectivityErrorDialog(status);
+                return;
+            }
 
-            // Situation A: Already Installed
-            isLaunching = true;
+            // Step 4: Verified active internet + reachable Alpha10 Server -> Launch or Download
+            boolean isInstalled = PackageInstallerHelper.isMainApkInstalled(MainActivity.this);
 
-            boolean launched =
-                    PackageInstallerHelper.launchInstalledApp(this);
-
-            if (launched) {
-
+            if (isInstalled) {
+                boolean launched = PackageInstallerHelper.launchInstalledApp(MainActivity.this);
+                if (launched) {
+                    Toast.makeText(
+                            MainActivity.this,
+                            R.string.launching_aimshot_engine,
+                            Toast.LENGTH_SHORT
+                    ).show();
+                } else {
+                    Toast.makeText(
+                            MainActivity.this,
+                            R.string.failed_to_launch_main_apk,
+                            Toast.LENGTH_LONG
+                    ).show();
+                }
+                isLaunching = false;
+            } else {
+                isLaunching = false;
                 Toast.makeText(
-                        this,
-                        R.string.launching_aimshot_engine,
+                        MainActivity.this,
+                        R.string.main_apk_not_installed,
                         Toast.LENGTH_SHORT
                 ).show();
 
-            } else {
-
-                Toast.makeText(
-                        this,
-                        R.string.failed_to_launch_main_apk,
-                        Toast.LENGTH_LONG
-                ).show();
+                activeUpdateDialog = new UpdateDialog(MainActivity.this, true);
+                activeUpdateDialog.setOnInstallStateChangedListener(() -> {
+                    if (currentTab == Tab.HOME) {
+                        Button btnLaunchGame = findViewById(R.id.btn_launch_game);
+                        updateLauncherButtonState(btnLaunchGame);
+                    }
+                });
+                activeUpdateDialog.show();
             }
-
-            isLaunching = false;
-
-        } else {
-
-            // Situation B: Not Installed
-            Toast.makeText(
-                    this,
-                    R.string.main_apk_not_installed,
-                    Toast.LENGTH_SHORT
-            ).show();
-
-            activeUpdateDialog = new UpdateDialog(this, true);
-            activeUpdateDialog.setOnInstallStateChangedListener(() -> {
-                if (currentTab == Tab.HOME) {
-                    Button btnLaunchGame = findViewById(R.id.btn_launch_game);
-                    updateLauncherButtonState(btnLaunchGame);
-                }
-            });
-            activeUpdateDialog.show();
-        }
+        });
     }
 
 
     // =========================================================
-    // NO INTERNET DIALOG
+    // SOLID TACTICAL CONNECTIVITY CHECK & ERROR DIALOGS
     // =========================================================
 
-    private void showNoInternetDialog() {
+    private void showVerifyingConnectionDialog() {
+        dismissVerifyingConnectionDialog();
+        if (isFinishing() || isDestroyed()) return;
 
         AlertDialog.Builder builder = new AlertDialog.Builder(
                 this,
-                R.style.Theme_AimShotEngine_Dialog
+                R.style.Theme_AimShotEngine_CustomDialog
         );
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_tactical_confirm, null);
+        builder.setView(dialogView);
 
-        builder.setTitle(R.string.no_internet_title);
+        View ivIcon = dialogView.findViewById(R.id.iv_confirm_icon);
+        View pbLoading = dialogView.findViewById(R.id.pb_confirm_loading);
+        TextView tvTitle = dialogView.findViewById(R.id.tv_confirm_title);
+        TextView tvMsg = dialogView.findViewById(R.id.tv_confirm_message);
+        View layoutButtons = dialogView.findViewById(R.id.layout_confirm_buttons);
 
-        builder.setMessage(R.string.no_internet_msg);
+        if (ivIcon != null) ivIcon.setVisibility(View.GONE);
+        if (pbLoading != null) pbLoading.setVisibility(View.VISIBLE);
+        if (tvTitle != null) tvTitle.setText(R.string.verifying_network_title);
+        if (tvMsg != null) tvMsg.setText(R.string.verifying_network_msg);
+        if (layoutButtons != null) layoutButtons.setVisibility(View.GONE);
 
-        builder.setPositiveButton(
-                R.string.action_close,
-                null
+        FontHelper.applyRegularFont(dialogView);
+
+        activeNetworkCheckDialog = builder.create();
+        activeNetworkCheckDialog.setCancelable(false);
+        activeNetworkCheckDialog.setCanceledOnTouchOutside(false);
+        styleTacticalDialogWindow(activeNetworkCheckDialog);
+        activeNetworkCheckDialog.show();
+        applyTacticalDialogDim(activeNetworkCheckDialog);
+    }
+
+    private void dismissVerifyingConnectionDialog() {
+        if (activeNetworkCheckDialog != null) {
+            try {
+                if (activeNetworkCheckDialog.isShowing()) {
+                    activeNetworkCheckDialog.dismiss();
+                }
+            } catch (Exception ignored) {
+            }
+            activeNetworkCheckDialog = null;
+        }
+    }
+
+    private void showConnectivityErrorDialog(NetworkUtil.ConnectivityStatus status) {
+        if (isFinishing() || isDestroyed()) return;
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(
+                this,
+                R.style.Theme_AimShotEngine_CustomDialog
         );
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_tactical_confirm, null);
+        builder.setView(dialogView);
 
-        builder.show();
+        final AlertDialog dialog = builder.create();
+        styleTacticalDialogWindow(dialog);
+
+        ImageView ivIcon = dialogView.findViewById(R.id.iv_confirm_icon);
+        View pbLoading = dialogView.findViewById(R.id.pb_confirm_loading);
+        TextView tvTitle = dialogView.findViewById(R.id.tv_confirm_title);
+        TextView tvMsg = dialogView.findViewById(R.id.tv_confirm_message);
+        Button btnClose = dialogView.findViewById(R.id.btn_confirm_negative);
+        Button btnRetry = dialogView.findViewById(R.id.btn_confirm_positive);
+
+        if (ivIcon != null) {
+            ivIcon.setVisibility(View.VISIBLE);
+            ivIcon.setImageResource(R.drawable.ic_globe);
+        }
+        if (pbLoading != null) {
+            pbLoading.setVisibility(View.GONE);
+        }
+
+        if (status == NetworkUtil.ConnectivityStatus.SERVER_UNREACHABLE) {
+            if (tvTitle != null) tvTitle.setText(R.string.server_connection_failed_title);
+            if (tvMsg != null) tvMsg.setText(R.string.server_connection_failed_msg);
+        } else if (status == NetworkUtil.ConnectivityStatus.NO_INTERNET_ACCESS) {
+            if (tvTitle != null) tvTitle.setText(R.string.no_internet_title);
+            if (tvMsg != null) tvMsg.setText(R.string.no_internet_access_msg);
+        } else {
+            if (tvTitle != null) tvTitle.setText(R.string.no_internet_title);
+            if (tvMsg != null) tvMsg.setText(R.string.no_internet_msg);
+        }
+
+        if (btnClose != null) {
+            btnClose.setText(R.string.action_close);
+            btnClose.setOnClickListener(v -> dialog.dismiss());
+        }
+        if (btnRetry != null) {
+            btnRetry.setText(R.string.btn_retry);
+            btnRetry.setOnClickListener(v -> {
+                dialog.dismiss();
+                handleLauncherButtonClick();
+            });
+        }
+
+        FontHelper.applyRegularFont(dialogView);
+        dialog.show();
+        applyTacticalDialogDim(dialog);
+    }
+
+    private static void styleTacticalDialogWindow(AlertDialog dialog) {
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
+        }
+    }
+
+    private static void applyTacticalDialogDim(AlertDialog dialog) {
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
+            WindowManager.LayoutParams lp = window.getAttributes();
+            lp.dimAmount = 0.68f;
+            window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            window.setAttributes(lp);
+        }
     }
 
 
@@ -1006,6 +1115,7 @@ public class MainActivity extends BaseActivity
 
 
         populatePremiumData(premiumView);
+        updateNotificationBadge();
 
         FontHelper.applyRegularFont(premiumView);
     }
@@ -1066,6 +1176,12 @@ public class MainActivity extends BaseActivity
                 tvBadge.setBackgroundResource(
                         R.drawable.bg_badge_active
                 );
+                tvBadge.setTextColor(
+                        ContextCompat.getColor(
+                                this,
+                                R.color.badge_active_text
+                        )
+                );
             }
 
             int remainingDays = status.getRemainingDays();
@@ -1122,10 +1238,13 @@ public class MainActivity extends BaseActivity
                                 : R.string.status_free
                 );
 
-                tvBadge.setBackgroundColor(
+                tvBadge.setBackgroundResource(
+                        R.drawable.bg_badge_inactive
+                );
+                tvBadge.setTextColor(
                         ContextCompat.getColor(
                                 this,
-                                R.color.border_subtle
+                                R.color.badge_inactive_text
                         )
                 );
             }
@@ -1227,12 +1346,16 @@ public class MainActivity extends BaseActivity
 
         super.onResume();
 
+        updateNavUi();
+
         // Check if active update dialog is waiting for install confirmation or permission grant
         if (activeUpdateDialog != null && activeUpdateDialog.isShowing()) {
             activeUpdateDialog.onActivityResume();
         }
 
         if (currentTab == Tab.HOME) {
+
+            fragmentContainer.removeAllViews();
 
             // Refresh Home Screen and Membership-dependent UI
             renderHomeScreen();
@@ -1242,6 +1365,11 @@ public class MainActivity extends BaseActivity
 
             // Restart carousel timer
             startCarouselTimer();
+
+        } else if (currentTab == Tab.PREMIUM) {
+
+            fragmentContainer.removeAllViews();
+            renderPremiumScreen();
         }
     }
 

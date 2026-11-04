@@ -10,8 +10,10 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -26,8 +28,8 @@ import com.alpha10.aimshot.util.FontHelper;
 import com.alpha10.aimshot.util.NetworkUtil;
 
 /**
- * Tactical Launch Dialog orchestrating internet verification, HUD status updates,
- * and game package launch intent execution.
+ * Tactical Launch Dialog orchestrating strict 4-step internet & Alpha10 Server verification,
+ * HUD status updates, and game package launch intent execution with solid opaque dialogs.
  */
 public class GameLaunchDialog extends Dialog {
 
@@ -47,7 +49,7 @@ public class GameLaunchDialog extends Dialog {
     private Runnable step3Runnable;
 
     public GameLaunchDialog(@NonNull Context context, @NonNull GameItem gameItem, OnLaunchListener listener) {
-        super(context);
+        super(context, R.style.Theme_AimShotEngine_CustomDialog);
         this.gameItem = gameItem;
         this.listener = listener;
     }
@@ -61,6 +63,10 @@ public class GameLaunchDialog extends Dialog {
         if (getWindow() != null) {
             getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             getWindow().setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+            WindowManager.LayoutParams lp = getWindow().getAttributes();
+            lp.dimAmount = 0.68f;
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            getWindow().setAttributes(lp);
         }
 
         setCancelable(false);
@@ -92,56 +98,76 @@ public class GameLaunchDialog extends Dialog {
     }
 
     private void startLaunchSequence() {
-        // Step 1: Check initial network connectivity
-        if (!NetworkUtil.isNetworkConnected(getContext())) {
-            abortLaunch(getContext().getString(R.string.no_internet_msg));
-            return;
+        isAborted = false;
+        if (tvStatusMessage != null) {
+            tvStatusMessage.setText(R.string.verifying_network_msg);
         }
 
-        tvStatusMessage.setText(R.string.launching_status_init);
+        // Enforce full 4-step active internet + Alpha10 server verification before launching
+        NetworkUtil.verifyFullLaunchConnectivity(getContext(), status -> {
+            if (isAborted || !isShowing()) return;
 
-        // Step 2: Sync overlay state at 700ms
-        step2Runnable = new Runnable() {
-            @Override
-            public void run() {
-                if (isAborted || !isShowing()) return;
-
-                // Validate network is still alive
-                if (!NetworkUtil.isNetworkConnected(getContext())) {
-                    abortLaunch(getContext().getString(R.string.connection_lost));
-                    return;
+            if (status != NetworkUtil.ConnectivityStatus.CONNECTED) {
+                isAborted = true;
+                cleanupHandlers();
+                dismiss();
+                showConnectivityFailureDialog(status);
+                if (listener != null) {
+                    listener.onLaunchComplete(false);
                 }
-
-                tvStatusMessage.setText(R.string.launching_status_sync);
-
-                // Step 3: Trigger game package launch at 1400ms
-                step3Runnable = new Runnable() {
-                    @Override
-                    public void run() {
-                        if (isAborted || !isShowing()) return;
-                        executeGameLaunch();
-                    }
-                };
-                handler.postDelayed(step3Runnable, 700);
+                return;
             }
-        };
-        handler.postDelayed(step2Runnable, 700);
+
+            if (tvStatusMessage != null) {
+                tvStatusMessage.setText(R.string.launching_status_init);
+            }
+
+            // Step 2: Sync overlay state at 600ms
+            step2Runnable = new Runnable() {
+                @Override
+                public void run() {
+                    if (isAborted || !isShowing()) return;
+
+                    if (!NetworkUtil.isNetworkConnected(getContext())) {
+                        abortLaunch(getContext().getString(R.string.connection_lost));
+                        return;
+                    }
+
+                    if (tvStatusMessage != null) {
+                        tvStatusMessage.setText(R.string.launching_status_sync);
+                    }
+
+                    // Step 3: Trigger game package launch at 1200ms
+                    step3Runnable = new Runnable() {
+                        @Override
+                        public void run() {
+                            if (isAborted || !isShowing()) return;
+                            executeGameLaunch();
+                        }
+                    };
+                    handler.postDelayed(step3Runnable, 600);
+                }
+            };
+            handler.postDelayed(step2Runnable, 600);
+        });
     }
 
     private void executeGameLaunch() {
-        // Final internet safety check
         if (!NetworkUtil.isNetworkConnected(getContext())) {
             abortLaunch(getContext().getString(R.string.connection_lost));
             return;
         }
 
-        tvStatusMessage.setText(getContext().getString(R.string.launching_game, gameItem.getName()));
+        if (tvStatusMessage != null) {
+            tvStatusMessage.setText(getContext().getString(R.string.launching_game, gameItem.getName()));
+        }
 
         String packageName = gameItem.getLaunchPackage();
         Intent launchIntent = null;
         try {
             launchIntent = getContext().getPackageManager().getLaunchIntentForPackage(packageName);
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         if (launchIntent != null) {
             try {
@@ -191,25 +217,111 @@ public class GameLaunchDialog extends Dialog {
         super.dismiss();
     }
 
+    private void showConnectivityFailureDialog(NetworkUtil.ConnectivityStatus status) {
+        Context ctx = getContext();
+        AlertDialog.Builder builder = new AlertDialog.Builder(ctx, R.style.Theme_AimShotEngine_CustomDialog);
+        View dialogView = LayoutInflater.from(ctx).inflate(R.layout.dialog_tactical_confirm, null);
+        builder.setView(dialogView);
+
+        final AlertDialog dialog = builder.create();
+        configureSolidWindow(dialog);
+
+        ImageView ivIcon = dialogView.findViewById(R.id.iv_confirm_icon);
+        TextView tvTitle = dialogView.findViewById(R.id.tv_confirm_title);
+        TextView tvMsg = dialogView.findViewById(R.id.tv_confirm_message);
+        Button btnClose = dialogView.findViewById(R.id.btn_confirm_negative);
+        Button btnRetry = dialogView.findViewById(R.id.btn_confirm_positive);
+
+        if (ivIcon != null) ivIcon.setImageResource(R.drawable.ic_globe);
+        if (status == NetworkUtil.ConnectivityStatus.SERVER_UNREACHABLE) {
+            if (tvTitle != null) tvTitle.setText(R.string.server_connection_failed_title);
+            if (tvMsg != null) tvMsg.setText(R.string.server_connection_failed_msg);
+        } else if (status == NetworkUtil.ConnectivityStatus.NO_INTERNET_ACCESS) {
+            if (tvTitle != null) tvTitle.setText(R.string.no_internet_title);
+            if (tvMsg != null) tvMsg.setText(R.string.no_internet_access_msg);
+        } else {
+            if (tvTitle != null) tvTitle.setText(R.string.no_internet_title);
+            if (tvMsg != null) tvMsg.setText(R.string.no_internet_msg);
+        }
+
+        if (btnClose != null) {
+            btnClose.setText(R.string.action_close);
+            btnClose.setOnClickListener(v -> dialog.dismiss());
+        }
+        if (btnRetry != null) {
+            btnRetry.setText(R.string.btn_retry);
+            btnRetry.setOnClickListener(v -> {
+                dialog.dismiss();
+                new GameLaunchDialog(ctx, gameItem, listener).show();
+            });
+        }
+
+        FontHelper.applyRegularFont(dialogView);
+        dialog.show();
+        applySolidDim(dialog);
+    }
+
     /**
-     * Tactical Dialog shown when targeted game is not found on device.
+     * Solid Tactical Dialog shown when targeted game is not found on device.
      */
     private void showNotInstalledDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(getContext(), R.style.Theme_AimShotEngine_Dialog);
-        builder.setTitle(R.string.game_not_installed_title);
-        builder.setMessage(getContext().getString(R.string.game_not_installed_msg, gameItem.getName()));
-        builder.setPositiveButton(R.string.btn_install_game, (dialog, which) -> {
-            try {
-                Intent marketIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + gameItem.getLaunchPackage()));
-                marketIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                getContext().startActivity(marketIntent);
-            } catch (ActivityNotFoundException e) {
-                Intent webIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=" + gameItem.getLaunchPackage()));
-                webIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                getContext().startActivity(webIntent);
-            }
-        });
-        builder.setNegativeButton(R.string.action_close, null);
-        builder.show();
+        Context ctx = getContext();
+        AlertDialog.Builder builder = new AlertDialog.Builder(ctx, R.style.Theme_AimShotEngine_CustomDialog);
+        View dialogView = LayoutInflater.from(ctx).inflate(R.layout.dialog_tactical_confirm, null);
+        builder.setView(dialogView);
+
+        final AlertDialog dialog = builder.create();
+        configureSolidWindow(dialog);
+
+        TextView tvTitle = dialogView.findViewById(R.id.tv_confirm_title);
+        TextView tvMsg = dialogView.findViewById(R.id.tv_confirm_message);
+        Button btnClose = dialogView.findViewById(R.id.btn_confirm_negative);
+        Button btnInstall = dialogView.findViewById(R.id.btn_confirm_positive);
+
+        if (tvTitle != null) tvTitle.setText(R.string.game_not_installed_title);
+        if (tvMsg != null) tvMsg.setText(ctx.getString(R.string.game_not_installed_msg, gameItem.getName()));
+
+        if (btnClose != null) {
+            btnClose.setText(R.string.action_close);
+            btnClose.setOnClickListener(v -> dialog.dismiss());
+        }
+        if (btnInstall != null) {
+            btnInstall.setText(R.string.btn_install_game);
+            btnInstall.setOnClickListener(v -> {
+                dialog.dismiss();
+                try {
+                    Intent marketIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + gameItem.getLaunchPackage()));
+                    marketIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    ctx.startActivity(marketIntent);
+                } catch (ActivityNotFoundException e) {
+                    Intent webIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=" + gameItem.getLaunchPackage()));
+                    webIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    ctx.startActivity(webIntent);
+                }
+            });
+        }
+
+        FontHelper.applyRegularFont(dialogView);
+        dialog.show();
+        applySolidDim(dialog);
+    }
+
+    private static void configureSolidWindow(AlertDialog dialog) {
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
+        }
+    }
+
+    private static void applySolidDim(AlertDialog dialog) {
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
+            WindowManager.LayoutParams lp = window.getAttributes();
+            lp.dimAmount = 0.68f;
+            window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            window.setAttributes(lp);
+        }
     }
 }

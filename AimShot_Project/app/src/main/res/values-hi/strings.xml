@@ -167,4 +167,13 @@
     <string name="stage_9_open">9. AimShot Engine खोला जा रहा है</string>
     <string name="btn_open_app">OPEN AIMSHOT ENGINE</string>
     <string name="auto_launching_countdown">%1$d सेकंड में खोला जा रहा है...</string>
+    <string name="status_on">चालू</string>
+    <string name="status_off">बंद</string>
+    <string name="select_language_subtitle">अपनी पसंदीदा भाषा चुनें</string>
+    <string name="verifying_network_title">कनेक्शन की जांच हो रही है</string>
+    <string name="verifying_network_msg">सक्रिय इंटरनेट और Alpha10 सर्वर की जांच की जा रही है...</string>
+    <string name="no_internet_access_msg">Wi-Fi या मोबाइल डेटा चालू है, लेकिन सक्रिय इंटरनेट उपलब्ध नहीं है (डेटा पैक समाप्त या बैलेंस नहीं)। कृपया कनेक्शन जांचकर पुनः प्रयास करें।</string>
+    <string name="server_connection_failed_title">सर्वर कनेक्शन विफल</string>
+    <string name="server_connection_failed_msg">इंटरनेट चालू है, लेकिन Alpha10 सर्वर से संपर्क नहीं हो सका। कृपया पुनः प्रयास करें।</string>
+    <string name="btn_understood">ठीक है</string>
 </resources>

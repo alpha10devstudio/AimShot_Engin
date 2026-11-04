@@ -107,7 +107,7 @@
         android:visibility="gone" />
 
     <!-- Login Action Button -->
-    <Button
+    <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/btn_dialog_login"
         android:layout_width="match_parent"
         android:layout_height="50dp"
@@ -117,7 +117,7 @@
         android:stateListAnimator="@null"
         android:text="@string/btn_login"
         android:textAllCaps="false"
-        android:textColor="@color/bg_main"
+        android:textColor="@color/text_on_accent"
         android:textSize="15sp"
         android:textStyle="bold" />
 
