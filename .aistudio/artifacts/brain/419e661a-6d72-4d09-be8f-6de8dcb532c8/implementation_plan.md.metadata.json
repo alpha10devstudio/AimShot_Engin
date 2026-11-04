@@ -1,6 +1,6 @@
 {
-  "summary": "AimShot Launcher-এর প্রাইভেট ভল্টে মেইন AimShot APK গোপনে সংরক্ষণ ও ডায়নামিক কন্টেইনারের মাধ্যমে সরাসরি লঞ্চারের ভেতরে রান করানোর আর্কিটেকচার এবং অ্যাপের সকল পপআপ ও ডায়ালগের মার্জিন, আইকন বক্স ও থিম সামঞ্জস্য ঠিক করার সম্পূর্ণ বাস্তবায়ন পরিকল্পনা।",
-  "updatedAt": "2026-11-04T13:47:00.879483480Z",
+  "summary": "Implementation plan for resolving app-wide language synchronization, smooth slide transitions for Settings and secondary activities, two-card side-by-side layout for Carrom and 8 Ball Pool, and restoring direct PackageInstaller OS installation with package launch.",
+  "updatedAt": "2026-11-04T18:30:45.282397591Z",
   "requestFeedback": true,
   "userFacing": true
 }

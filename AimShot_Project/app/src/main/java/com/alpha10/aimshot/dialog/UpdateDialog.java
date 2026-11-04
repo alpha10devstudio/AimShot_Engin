@@ -116,11 +116,6 @@ public class UpdateDialog extends Dialog implements UpdateController.UpdateListe
         if (btnPrimary == null) return;
         btnPrimary.setOnClickListener(v -> {
             if (isInstallSuccess) {
-                if (PackageInstallerHelper.isLegacyStandaloneAppInstalled(activity)) {
-                    Toast.makeText(activity, R.string.legacy_app_detected_title, Toast.LENGTH_LONG).show();
-                    PackageInstallerHelper.requestUninstallLegacyStandaloneApp(activity);
-                    return;
-                }
                 boolean launched = controller.launchInstalledApp(activity);
                 if (launched) {
                     dismiss();

@@ -10,20 +10,13 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- Queries declaration for Android 11+ package visibility -->
     <queries>
         <package android:name="com.alpha10.aimshot" />
         <package android:name="com.miniclip.carrom" />
         <package android:name="com.miniclip.eightballpool" />
-        <package android:name="com.tencent.ig" />
-        <package android:name="com.dts.freefireth" />
-        <package android:name="com.pubg.imobile" />
-        <package android:name="com.activision.callofduty.shooter" />
-        <package android:name="com.riotgames.valorant" />
-        <package android:name="com.rockstargames.gtav" />
-        <package android:name="jp.konami.pesam" />
-        <package android:name="com.mojang.minecraftpe" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
@@ -38,6 +31,17 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.AimShotEngine">
+
+        <!-- FileProvider for secure OS APK installation -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.alpha10.aimshot.launcher.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
         <!-- Splash Activity: Single Application Launcher Entry -->
         <activity

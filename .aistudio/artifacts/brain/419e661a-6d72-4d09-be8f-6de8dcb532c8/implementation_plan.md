@@ -1,138 +1,183 @@
-# AimShot Engine — প্রাইভেট ইন-অ্যাপ ইঞ্জিন রানটাইম ও ইউনিফায়েড পপআপ ইউআই প্ল্যান
+# AimShot Engine — Full App Localization, Smooth Navigation Transitions, 2-Game Card Layout & Direct Package Installation
 
-এই পরিকল্পনার মাধ্যমে মেইন **AimShot APK** ফোনে আলাদা অ্যাপ হিসেবে ইনস্টল হওয়া সম্পূর্ণ বন্ধ করে **AimShot Launcher**-এর নিজস্ব গোপন প্রাইভেট স্টোরেজে সংরক্ষণ ও সরাসরি লঞ্চারের ভেতরেই রান করানোর ব্যবস্থা করা হবে, যাতে অ্যাপ ড্রয়ারে কোনো দ্বিতীয় আইকন না আসে এবং লাইসেন্স ভেরিফিকেশন ১০০% সুরক্ষিত থাকে। একইসাথে অ্যাপের সকল পপআপ ও ডায়ালগের সাইড মার্জিন, স্কয়ার আইকন বক্স এবং ডার্ক/লাইট থিমের অসামঞ্জস্য স্থায়ীভাবে সমাধান করা হবে।
+Comprehensive implementation plan to resolve four core functional and UI requirements:
+1. **Universal App Localization**: Synchronize language selection (English, Bengali, Hindi) across all app screens and activities, so returning from Settings re-renders the Home, Premium, and all sub-views in the chosen language immediately without remaining in English.
+2. **Smooth Slide Page Transitions**: Eliminate jarring window flicker/jolt ("ঝটকা") when opening and closing Settings and all secondary screens by implementing fluid right-to-left slide enter/exit animations (`slide_in_right`, `slide_out_left`, `slide_in_left`, `slide_out_right`).
+3. **Streamlined 2-Game Side-by-Side Card Layout**: Limit the Supported Games section to exclusively **Carrom Disc Pool** (Active & Unlocked) and **8 Ball Pool** (Locked), rendered as two beautifully balanced tactical cards side-by-side.
+4. **Standard Direct OS Package Installation**: Restore direct Android `PackageInstaller` APK installation for `com.alpha10.aimshot`, allowing normal system-level package presence while launching and managing the engine securely via `AimShot Launcher` (`package="com.alpha10.aimshot"`).
+
+---
 
 ## User Review & Critical Decisions
 
 > [!IMPORTANT]
-> নিচে আপনার নিশ্চিত করা সিদ্ধান্তগুলো এবং প্রাইভেট রানটাইম কন্টেইনারের গুরুত্বপূর্ণ দিকগুলো তুলে ধরা হলো। পরিকল্পনাটি যাচাই করে **Proceed** বাটনে চাপ দিলে কোড বাস্তবায়ন শুরু হবে।
+> The following architectural decisions have been confirmed by the user in Phase 1:
 
-- **নিশ্চিত সিদ্ধান্ত ১ (গোপন প্রাইভেট ভল্ট ও ইন-অ্যাপ রানটাইম)**: মেইন AimShot APK আর ফোনের সিস্টেম ইনস্টলার দিয়ে আলাদা অ্যাপ হিসেবে ইনস্টল করা হবে না। ডাউনলোড ও যাচাইয়ের পর APK-টি লঞ্চারের নিজস্ব প্রাইভেট ইন্টারনাল ফোল্ডারে লুকানো থাকবে এবং লঞ্চারের ভেতরেই ডায়নামিক কন্টেইনারের মাধ্যমে রান হবে।
-- **নিশ্চিত সিদ্ধান্ত ২ (সোর্স কোড ছাড়াই প্রি-বিল্ট APK সাপোর্ট)**: যেহেতু মেইন `AimShot` অ্যাপের সোর্স কোড নেই (শুধুমাত্র তৈরি করা APK আছে), তাই লঞ্চারের ভেতরে একটি ডায়নামিক প্লাগইন হোস্ট (ক্লাস লোডার, রিসোর্স মার্জার, নেটিভ `.so` লাইব্রেরি এক্সট্রাক্টর এবং প্রক্সি অ্যাক্টিভিটি/সার্ভিস কন্টেইনার) তৈরি করা হবে যা প্রি-বিল্ট APK-কে সরাসরি চালাতে পারবে।
-- **নিশ্চিত সিদ্ধান্ত ৩ (সকল পপআপ ও ডায়ালগ একসাথে সংস্কার)**: শুধুমাত্র Language বা Notification নয়, বরং অ্যাপের ভেতরের সকল ডায়ালগ ও পপআপের বাম-ডান সাইড মার্জিন, রাউন্ডেড আইকন কন্টেইনার, বর্ডার এবং ব্যাকড্রপ ডিম একই মানদণ্ডে সুন্দরভাবে ঠিক করা হবে।
-- **পুরাতন ইনস্টল করা অ্যাপ ক্লিনআপ সুরক্ষা (প্রস্তাবিত ডিফল্ট)**: আপনার ফোনে ইতিমধ্যে আগের টেস্টের কারণে যে আলাদা `AimShot` অ্যাপটি ইনস্টল হয়ে হোমস্ক্রিনে দেখা যাচ্ছে, লঞ্চার চালু হলে সেটি শনাক্ত করে এক ক্লিকে আনইনস্টল করার প্রম্পট দেখাবে—যাতে ফোনে আর কোনো খোলা আইকন অবশিষ্ট না থাকে।
+- **Confirmed Decision 1: Direct OS Package Installation**: Rather than storing and running the APK through an in-memory/isolated classloader vault, the downloaded `com.alpha10.aimshot` APK will be installed directly via the Android OS `PackageInstaller`. The app will be visible in device `Settings -> Apps` and launched directly from `AimShot Launcher` via `com.alpha10.aimshot` launch intent.
+- **Confirmed Decision 2: Universal Smooth Slide Navigation**: All activity transitions (Settings, Device Info, Seller Contact, Notifications, Supported Games) will use smooth right-to-left slide-in and slide-out transitions, completely eliminating the system animation jolt ("ঝটকা").
+- **Confirmed Decision 3: 2-Game Balanced Layout**: Only **Carrom Disc Pool** and **8 Ball Pool** will be shown on the home screen, displayed side-by-side in a 2-column balanced grid with tactical badges and active/locked status indicators.
 
 ---
 
 ## 1. Overview & Core Concept
 
-- **What It Does**:
-  1. সার্ভার থেকে মেইন AimShot APK ডাউনলোড করে SHA-256 ও সিগনেচার যাচাইয়ের পর সেটি সরাসরি লঞ্চারের গোপন প্রাইভেট ভল্টে সংরক্ষণ করে (কোনো সিস্টেম ইনস্টল প্রম্পট বা দ্বিতীয় অ্যাপ আইকন ছাড়াই)।
-  2. ইউজার যখন বৈধ লাইসেন্স কী ও সক্রিয় ইন্টারনেটসহ **Launch AimShot Engine** বাটনে ক্লিক করবেন, তখন লঞ্চারের নিজস্ব সুরক্ষিত কন্টেইনারের ভেতরেই মেইন ইঞ্জিনের ইন্টারফেস ও ওভারলে সার্ভিস চালু হবে।
-  3. অ্যাপের সব পপআপ কার্ড স্ক্রিনের দুই পাশে সুন্দর ফাঁকা জায়গা (`24dp` মার্জিন), মসৃণ রাউন্ডেড আইকন বক্স এবং স্পষ্ট টেক্সট কনট্রাস্ট বজায় রাখবে।
-- **Target Audience / Persona**: AimShot Engine-এর বৈধ লাইসেন্সধারী ব্যবহারকারী—যারা একটি মাত্র লঞ্চার অ্যাপের মাধ্যমে ঝামেলাহীনভাবে ইঞ্জিন ডাউনলোড ও ব্যবহার করবেন, কিন্তু লাইসেন্স ভেরিফিকেশন বাইপাস করে সরাসরি মেইন ইঞ্জিনে প্রবেশ করতে পারবেন না।
-- **Key Value**:
-  - **১০০% লাইসেন্স সুরক্ষা**: হোমস্ক্রিন বা অ্যাপ ড্রয়ারে কোনো দ্বিতীয় `AimShot` আইকন থাকবে না এবং সাধারণ ফাইল ম্যানেজার থেকেও APK ফাইলটি দেখা বা কপি করা যাবে না।
-  - **ওয়ান-ট্যাপ সিমলেস অভিজ্ঞতা**: Android-এর "Install Unknown Apps" পারমিশন বা বারবার সিস্টেম ইনস্টল ডায়ালগের ঝামেলা ছাড়াই প্রাইভেট ভল্টে ইঞ্জিন প্রস্তুত হয়ে যাবে।
-  - **প্রিমিয়াম ইউআই ফিনিশিং**: প্রতিটি ডায়ালগ ও পপআপ দেখতে `AimShot Update System` কার্ডের মতো নিখুঁত ও প্রফেশনাল হবে।
+### What It Does
+- **App-wide Multilingual Refresh**: When a user selects Bengali (`বাংলা`) or Hindi (`हिन्दी`) in Settings, the language preference is persisted to `SharedPreferences` and applied to `LocaleHelper`. Every activity in the back stack (including `MainActivity`) automatically recreates its layout and typography upon `onResume()` if the active locale differs from the saved locale.
+- **Buttery-Smooth Navigation**: Navigating between `MainActivity` and `SettingsActivity` (or any sub-activity) triggers fluid hardware-accelerated slide transitions. Closing the page slides it gracefully back to the right.
+- **Focused 2-Card Game Grid**: Eliminates the 8 unused locked game cards. Carrom Disc Pool occupies the left slot with an active green tactical badge, and 8 Ball Pool occupies the right slot with a sleek locked indicator and 0.45 alpha.
+- **Reliable Direct APK Installation**: Downloads the verified `com.alpha10.aimshot` APK from `https://alpha10.freedev.app/api/aimshot-download.php`, checks SHA-256 integrity, invokes the Android `PackageInstaller` session, handles installation success/failure intents cleanly, and updates the launcher button to "LAUNCH AIMSHOT ENGINE" to start `package="com.alpha10.aimshot"`.
+
+### Key Value
+- Seamless user experience with zero language mismatch between screens.
+- Elimination of visual jarring or window stuttering on modern Android versions (Android 10 through 14).
+- Clean, focused tactical interface showing only the two games relevant to the user.
+- Direct, native Android execution for peak performance, overlay guidelines, and system service compatibility.
 
 ---
 
 ## 2. User Experience & Visual Design
 
-- **Key User Flows**:
-  1. **প্রাইভেট ইঞ্জিন সেটআপ ফ্লো (কোনো ওএস ইনস্টলেশন ছাড়াই)**:
-     - ইউজার লাইসেন্স কী দিয়ে লগইন করার পর হোম স্ক্রিনে **Setup / Download AimShot Engine** বাটন দেখবেন।
-     - ক্লিক করলে আপডেট ডায়ালগে সার্ভার অথেনটিকেশন -> APK ডাউনলোড -> ইন্টিগ্রিটি যাচাই -> নেটিভ লাইব্রেরি ও প্রাইভেট ভল্ট অপ্টিমাইজেশন সম্পন্ন হবে এবং সাথে সাথেই ইঞ্জিন **Ready to Launch** অবস্থায় চলে যাবে (সিস্টেম প্যাকেজ ইনস্টলার ওপেন হবে না)।
-  2. **সুরক্ষিত ইঞ্জিন লঞ্চ ও পুরাতন কপি অপসারণ ফ্লো**:
-     - ফোনে যদি আগে থেকে আলাদাভাবে ইনস্টল করা পুরাতন `AimShot` অ্যাপ থাকে, লঞ্চার প্রথমেই একটি সুন্দর ট্যাকটিক্যাল পপআপ দেখিয়ে পুরাতন এক্সপোজড অ্যাপটি আনইনস্টল করতে বলবে।
-     - এরপর ইউজার **Launch AimShot Engine** চাপলে লাইসেন্সের মেয়াদ + লাইভ ইন্টারনেট + Alpha10 সার্ভার সংযোগ যাচাই করে লঞ্চারের ভেতরেই গোপন প্রাইভেট ভল্ট থেকে মেইন ইঞ্জিন রান হবে। ওভারলে ফিচারের প্রয়োজন হলে স্বয়ংক্রিয়ভাবে ওভারলে পারমিশন যাচাই করা হবে।
-  3. **ইউনিফায়েড পপআপ ও ডায়ালগ ফ্লো**:
-     - Settings থেকে **Language**, **Privacy & Security**, **About App**, **Log Out** অথবা Notifications থেকে যেকোনো অ্যানাউন্সমেন্ট ওপেন করলে পপআপটি স্ক্রিনের বাম ও ডান প্রান্ত থেকে `24dp` ভেতরে অবস্থান করবে, পেছনের স্ক্রিন `68%` ডিম হবে এবং উপরের আইকনটি চারকোনা বাক্সের বদলে রাউন্ডেড বর্ডারযুক্ত ব্যাজে দেখাবে।
+### Key User Flows
 
-- **Visual Identity & Theme**:
-  - *Aesthetic Direction*: ট্যাকটিক্যাল সাইবার-গেমিং ডার্ক ও হাই-কনট্রাস্ট লাইট ইন্টারফেস—পরিচ্ছন্ন জ্যামিতিক কার্ড, সূক্ষ্ম সায়ান বর্ডার এবং স্পষ্ট টাইপোগ্রাফি।
-  - *Color Palette & Mood*:
-    - ডার্ক মোডে গভীর স্লেট কার্ড সারফেস (`#0F172A` / `#131C2E`), উজ্জ্বল সায়ান অ্যাকসেন্ট (`#38BDF8`), এবং হালকা নীলাভ ট্যাকটিক্যাল বর্ডার।
-    - লাইট মোডে পরিষ্কার সলিড কার্ড ব্যাকগ্রাউন্ডের ওপর গাঢ় চারকোল প্রাইমারি টেক্সট ও স্পষ্ট সেকেন্ডারি সাবটাইটেল—যাতে কোনো লেখা সাদা ব্যাকগ্রাউন্ডের সাথে মিশে না যায়।
-  - *Typography & Hierarchy*: অ্যাপের কাস্টম রেগুলার ও বোল্ড ফন্ট হায়ারার্কি; পপআপ টাইটেল `18sp Bold`, সাবটাইটেল ও বডি `13sp–14sp` আরামদায়ক লাইন স্পেসিংসহ, এবং অ্যাকশন বাটন `14sp Bold`।
-  - *Component Styling & Layout*:
-    - সকল ডায়ালগের চারপাশে বাধ্যতামূলক `24dp` হরাইজন্টাল ও `16dp` ভার্টিক্যাল আউটার ইনসেট কন্টেইনার।
-    - ডায়ালগের হেডার আইকনের জন্য `48dp` রাউন্ডেড ট্যাকটিক্যাল আইকন কন্টেইনার (চারকোনা ফ্ল্যাট ব্যাকগ্রাউন্ড সম্পূর্ণ বর্জন)।
-    - বাটনগুলোর উচ্চতা (`46dp–48dp`) এবং কর্নার রেডিয়াস সব ডায়ালগে অভিন্ন রাখা।
+```
+[Home Screen (MainActivity)]
+        │
+        ├── User taps "Settings" in Bottom Navigation Bar
+        │         └── [Smooth Slide-in from Right Animation (280ms cubic-bezier)]
+        ▼
+[Settings Screen (SettingsActivity)]
+        │
+        ├── User taps "Language" -> Tactical Dialog opens
+        │         └── User selects "বাংলা (Bengali)"
+        │         └── Dialog closes, SettingsActivity updates language immediately
+        │
+        ├── User taps Back Button (or system back)
+        │         └── [Smooth Slide-out to Right Animation (250ms)]
+        ▼
+[Home Screen (MainActivity)]
+        │
+        └── onResume() detects locale change (EN -> BN)
+        └── Recreates view with Bengali strings ("হোম", "প্রিমিয়াম", "সেটিংস", "সাপোর্টেড গেমস")
+        └── Supported Games shows 2 balanced cards: "ক্যারম ডিস্ক পুল" & "৮ বল পুল"
+```
 
-- **Interactive Feedback & Motion**:
-  - হ্যাপটিক ফিডব্যাক শুধুমাত্র Settings-এ চালু থাকলেই কাজ করবে।
-  - ডাউনলোড ও ভল্ট প্রস্তুতির সময় ধাপে ধাপে প্রগ্রেস বার ও স্ট্যাটাস আপডেট দেখাবে।
-  - কোনো নেটওয়ার্ক বা ভেরিফিকেশন ত্রুটি ঘটলে স্বচ্ছতার বদলে সলিড ট্যাকটিক্যাল এরর ব্যানার ও তাৎক্ষণিক **Retry** অপশন দেখাবে।
+### Visual Identity & Layout Refinements
+- **Supported Games 2-Card Grid**:
+  - Left card: **Carrom Disc Pool** — Active cyan/green glow, tactical crosshair icon, "সক্রিয়" (Active) badge.
+  - Right card: **8 Ball Pool** — Dimmed tactical navy background (`alpha 0.65`), locked padlock icon, "লক করা" (Locked) badge.
+  - Two equal-width columns (`GridLayoutManager(context, 2)` or a tailored 2-column flex container) with `12dp` central gutter and `16dp` outer margins.
+- **Slide Animations**:
+  - `slide_in_right.xml`: Translate X from `100%` to `0%` with interpolator `@android:anim/decelerate_interpolator` (duration `260ms`).
+  - `slide_out_left.xml`: Translate X from `0%` to `-25%` with alpha from `1.0` to `0.85`.
+  - `slide_in_left.xml`: Translate X from `-25%` to `0%` with alpha from `0.85` to `1.0`.
+  - `slide_out_right.xml`: Translate X from `0%` to `100%` with interpolator `@android:anim/accelerate_interpolator` (duration `240ms`).
 
 ---
 
 ## 3. Key Product Decisions & Trade-Offs
 
-- **Decision 1: সিস্টেম PackageInstaller-এর বদলে ইন-অ্যাপ ডায়নামিক প্লাগইন কন্টেইনার**
-  - *Chosen Approach*: ডাউনলোড করা APK ফাইলকে লঞ্চারের প্রাইভেট ইন্টারনাল ডিরেক্টরিতে Read-Only মোডে রেখে `DexClassLoader`, কাস্টম `AssetManager`/`Resources`, নেটিভ `.so` এক্সট্রাকশন এবং প্রক্সি হোস্ট অ্যাক্টিভিটি/সার্ভিসের মাধ্যমে সরাসরি লঞ্চারের প্রসেসের ভেতরেই রান করানো।
-  - *Why*: সিস্টেম দিয়ে আলাদা APK ইনস্টল করলেই Android সেটিকে আলাদা অ্যাপ হিসেবে নিবন্ধন করে এবং অ্যাপ ড্রয়ারে আইকন দেখায়। যেহেতু মেইন APK-তে নিজস্ব কোনো লগইন চেক নেই এবং এর সোর্স কোডও নেই, তাই ইন-অ্যাপ কন্টেইনারই একমাত্র উপায় যা অ্যাপটিকে সম্পূর্ণ অদৃশ্য রাখে এবং প্রতিবার রান করার আগে লঞ্চারের লাইসেন্স যাচাই বাধ্যতামূলক করে।
-  - *Alternatives Considered*: সিস্টেম ইনস্টলার দিয়ে ইনস্টল রেখে লঞ্চার আইকন লুকানোর চেষ্টা—কিন্তু মেইন APK-র সোর্স কোড না থাকায় এর ভেতরের ম্যানিফেস্ট পরিবর্তন করা সম্ভব নয় (পুনরায় সাইন করলে সিগনেচার বদলে যাবে এবং তবুও থার্ড-পার্টি শর্টকাট মেকার দিয়ে ইউজার অ্যাপটি সরাসরি ওপেন করে ফেলতে পারত)।
+### Decision 1: Language Propagation via BaseActivity Lifecycle
+- **Approach**: In `BaseActivity.onResume()`, compare the current active configuration language with `LocaleHelper.getPersistedData(this, "en")`. If they mismatch, invoke `recreate()` on the activity.
+- **Why**: Android maintains suspended activity stacks. When `SettingsActivity` is popped from the back stack, `MainActivity.onCreate()` or `attachBaseContext()` is not invoked again; only `onResume()` is called. Checking in `onResume()` guarantees instantaneous, flicker-free language updates across all screens.
 
-- **Decision 2: Android 14 (API 34) Read-Only DEX এবং সিস্টেম সার্ভিস UID সামঞ্জস্য**
-  - *Chosen Approach*: প্রাইভেট ভল্টে APK সংরক্ষণের সাথে সাথে ফাইলটিকে Read-Only (`setReadOnly`) হিসেবে লক করা এবং প্লাগইন কন্টেক্সট র‍্যাপারে রিসোর্স ও ক্লাসলোডার মেইন APK থেকে দিলেও Android সিস্টেম সার্ভিস কলের ক্ষেত্রে হোস্ট লঞ্চারের প্যাকেজ পরিচয় ব্যবহার করা।
-  - *Why*: Android 14-এ রাইটেবল ফাইল থেকে ডায়নামিক কোড লোড করলে সিস্টেম সাথে সাথে `SecurityException` দেয়। এছাড়া ওভারলে (`WindowManager`) বা টোস্ট দেখানোর সময় সিস্টেম হোস্ট অ্যাপের UID ও প্যাকেজ নাম মিলিয়ে দেখে—তাই হাইব্রিড কন্টেক্সট র‍্যাপার ব্যবহার করলে প্রি-বিল্ট APK ক্র্যাশ ছাড়াই মসৃণভাবে চলবে।
+### Decision 2: Smooth Window & Activity Transitions
+- **Approach**: Define custom animation resources (`slide_in_right`, `slide_out_left`, `slide_in_left`, `slide_out_right`) and apply them universally:
+  1. Programmatically via `Activity.overridePendingTransition()` immediately following `startActivity()` and inside `finish()`.
+  2. In `styles.xml` / `Theme.AimShotEngine` under `android:windowAnimationStyle` so system back gestures and navigation events automatically slide smoothly.
+- **Why**: Default Android window transitions on Android 12–14 often execute abrupt vertical slides or zoom-in morphs that clash with custom tactical layouts, causing perceived "ঝটকা" (jerk). Consistent horizontal slides feel native, snappy, and premium.
 
-- **Decision 3: ডায়ালগের মার্জিন সমস্যার স্থায়ী সমাধানে আউটার ইনসেট ফ্রেম ও কেন্দ্রীয় উইন্ডো হেল্পার**
-  - *Chosen Approach*: প্রতিটি ডায়ালগ লেআউটের কার্ডকে একটি ট্রান্সপারেন্ট আউটার `FrameLayout` (`paddingHorizontal="24dp"`) দিয়ে মোড়ানো এবং একটি কেন্দ্রীয় ডায়ালগ স্টাইলিং হেল্পারের মাধ্যমে সব `Dialog` ও `AlertDialog` পরিচালনা করা।
-  - *Why*: `AlertDialog.Builder`-এ কাস্টম ভিউ ইনফ্লেট করার সময় Android রুট ভিউয়ের `layout_margin` মুছে ফেলে, যার কারণে পপআপ স্ক্রিনের দুই পাশে লেগে যায়। কিন্তু রুট কন্টেইনারের ভেতরের `padding` কখনোই মুছে যায় না—ফলে সব ফোনে ও সব স্ক্রিনে পপআপের মার্জিন ১০০% নিখুঁত থাকবে।
+### Decision 3: Game Repository Truncation to 2 Titles
+- **Approach**: In `GameRepository.initializeGames()`, keep strictly **Carrom Disc Pool** (`com.miniclip.carrom`) and **8 Ball Pool** (`com.miniclip.eightballpool`). Remove PUBG, Free Fire, BGMI, COD, Valorant, GTA V, eFootball, and Minecraft.
+- **Layout Adjustment**: Update `rv_games_grid` layout manager from 4 columns to 2 columns so the cards fill the grid symmetrically without awkward blank gaps.
+
+### Decision 4: Direct OS Package Installation & Launcher Execution
+- **Approach**:
+  1. Restore the verified APK download and direct Android `PackageInstaller` pipeline in `UpdateController` and `PackageInstallerHelper`.
+  2. Once installed by Android OS, `com.alpha10.aimshot` exists as a registered application package.
+  3. `PackageInstallerHelper.isMainApkInstalled(context)` checks `packageManager.getPackageInfo("com.alpha10.aimshot", 0)`.
+  4. `PackageInstallerHelper.launchInstalledApp(context)` retrieves `packageManager.getLaunchIntentForPackage("com.alpha10.aimshot")` and starts the activity with `FLAG_ACTIVITY_NEW_TASK`.
+  5. Remove the legacy uninstaller prompt that asked users to remove `com.alpha10.aimshot`, because this is now the intended installation format.
 
 ---
 
-## 4. Technical Architecture & Data Strategy
+## 4. Technical Architecture & Component Mapping
 
-### Architecture & Component Diagram
+### System Diagram
 
-```text
-┌───────────────────────────────────────────────────────────────────────────┐
-│                         AimShot Launcher (Host App)                       │
-│                                                                           │
-│  ┌─────────────────────────┐       ┌───────────────────────────────────┐  │
-│  │   Unified Dialog Layer  │       │     License & Connectivity Gate   │  │
-│  │  • Inset Frame (24dp)   │       │  • Active Key Session Check       │  │
-│  │  • Rounded Icon Badges  │       │  • Live Internet + Alpha10 Probe  │  │
-│  │  • 68% Dim & Theme Sync │       │  • Legacy OS App Cleanup Check    │  │
-│  └────────────┬────────────┘       └─────────────────┬─────────────────┘  │
-│               │                                      │                    │
-│               ▼                                      ▼                    │
-│  ┌─────────────────────────────────────────────────────────────────────┐  │
-│  │                     Private Engine Vault Manager                    │  │
-│  │  • Authenticated HTTPS Stream Download                              │  │
-│  │  • ZIP Header + Package ID + SHA-256 + Cert Verification            │  │
-│  │  • Internal Private Vault Storage (Read-Only DEX Enforcement)       │  │
-│  │  • CPU ABI Native Library (.so) Extraction & Version Metadata       │  │
-│  └──────────────────────────────────┬──────────────────────────────────┘  │
-│                                     │                                     │
-│                                     ▼                                     │
-│  ┌─────────────────────────────────────────────────────────────────────┐  │
-│  │                 Dynamic In-App Plugin Runtime Container             │  │
-│  │                                                                     │  │
-│  │  ┌────────────────────┐  ┌───────────────────┐  ┌────────────────┐  │  │
-│  │  │  DexClassLoader    │  │ Split/Merged      │  │ Hybrid Plugin  │  │  │
-│  │  │  (Code + Native    │  │ AssetManager,     │  │ Context &      │  │  │
-│  │  │   ABI Lib Dir)     │  │ Resources & Theme │  │ Instrumentation│  │  │
-│  │  └─────────┬──────────┘  └─────────┬─────────┘  └───────┬────────┘  │  │
-│  │            └───────────────────────┼────────────────────┘           │  │
-│  │                                    ▼                                │  │
-│  │       ┌────────────────────────────────────────────────────┐        │  │
-│  │       │ Non-Exported Proxy Host Activity & Overlay Service │        │  │
-│  │       │  (Executes Prebuilt Engine UI & Services Privately)│        │  │
-│  │       └────────────────────────────────────────────────────┘        │  │
-│  └─────────────────────────────────────────────────────────────────────┘  │
-└───────────────────────────────────────────────────────────────────────────┘
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                          AimShot Launcher                              │
+│                                                                        │
+│   ┌──────────────────────────────────────────────────────────────┐     │
+│   │                        BaseActivity                          │     │
+│   │  • attachBaseContext(LocaleHelper.onAttach(context))         │     │
+│   │  • onResume() -> checkLocaleChanged() -> recreate()          │     │
+│   │  • applySmoothSlideTransitions()                             │     │
+│   └───────────────┬──────────────────────────────┬───────────────┘     │
+│                   │                              │                     │
+│                   ▼                              ▼                     │
+│         ┌───────────────────┐          ┌───────────────────┐           │
+│         │   MainActivity    │          │ SettingsActivity  │           │
+│         │  (Home & Premium) │◄────────►│ (Theme, Language) │           │
+│         └─────────┬─────────┘          └─────────┬─────────┘           │
+│                   │                              │                     │
+│                   ▼                              ▼                     │
+│         ┌───────────────────┐          ┌───────────────────┐           │
+│         │  GameRepository   │          │   LocaleHelper    │           │
+│         │ • Carrom (Active) │          │ • Persist code    │           │
+│         │ • 8 Ball (Locked) │          │ • updateResources │           │
+│         └───────────────────┘          └───────────────────┘           │
+│                   │                                                    │
+│                   ▼                                                    │
+│         ┌─────────────────────────────────────────────────┐            │
+│         │     UpdateController & PackageInstallerHelper   │            │
+│         │ • Stream APK from https://alpha10.freedev.app   │            │
+│         │ • Verify SHA-256                                │            │
+│         │ • OS PackageInstaller.Session                   │            │
+│         │ • Launch package "com.alpha10.aimshot"          │            │
+│         └────────────────────────┬────────────────────────┘            │
+└──────────────────────────────────┼─────────────────────────────────────┘
+                                   │
+                                   ▼
+             ┌──────────────────────────────────────────┐
+             │       Android Operating System           │
+             │                                          │
+             │   Package: com.alpha10.aimshot           │
+             │   Location: Phone Settings -> Apps       │
+             │   Launched exclusively via AimShot       │
+             └──────────────────────────────────────────┘
 ```
 
-### Data Model & State
+---
 
-- **Private Vault Metadata Store**:
-  - প্রাইভেট ফোল্ডারে সংরক্ষিত APK-র ভার্সন কোড, ভার্সন নাম, যাচাইকৃত SHA-256 হ্যাশ, এক্সট্রাক্ট করা নেটিভ ABI এবং এন্ট্রি অ্যাক্টিভিটি/সার্ভিস ক্লাসের নাম লোকাল প্রাইভেট প্রেফারেন্সে সংরক্ষিত থাকবে।
-  - প্রতিবার লঞ্চের আগে ফাইলটির অস্তিত্ব ও Read-Only স্ট্যাটাস দ্রুত মিলিয়ে দেখা হবে, যাতে ফাইল মুছে বা ক্ষতিগ্রস্ত হয়ে গেলে স্বয়ংক্রিয়ভাবে পুনরায় ডাউনলোডের অপশন দেয়।
-- **Legacy Exposed Package State**:
-  - ফোনের অপারেটিং সিস্টেমে পুরাতন `com.alpha10.aimshot` প্যাকেজ আলাদাভাবে ইনস্টল করা আছে কি না তা যাচাই করে ইউজারকে সেটি মুছে ফেলার নির্দেশনা দেবে, যাতে নিরাপত্তা বাইপাসের কোনো পথ খোলা না থাকে।
+## 5. Implementation Steps & Verification Plan
 
-### Interactive Component & State Mapping
+### Phase A: Language Synchronization Across All Activities
+- Update `LocaleHelper.java` to track the last attached language code.
+- In `BaseActivity.java`, record the attached language code. In `onResume()`, if `getPersistedData()` differs from the current attached code, call `recreate()`.
+- Ensure string resources in `values/strings.xml`, `values-bn/strings.xml`, and `values-hi/strings.xml` contain complete translations for all home titles, banners, game cards, and launcher buttons.
 
-- **হোম স্ক্রিন অ্যাকশন বাটন (`Install / Setup` বনাম `Launch`)**:
-  - বাটনের অবস্থা এখন আর ফোনের ওএস ইনস্টলেশন নয়, বরং **প্রাইভেট ভল্টে বৈধ ইঞ্জিন প্রস্তুত আছে কি না** তার ওপর নির্ভর করবে।
-  - ভল্ট খালি থাকলে বাটন দেখাবে **Install AimShot Engine**; ডাউনলোড ও ভল্ট সেটআপ শেষ হওয়া মাত্রই বাটন সাথে সাথে **Launch AimShot Engine**-এ পরিবর্তিত হবে।
-- **আপডেট ও ভল্ট সেটআপ ডায়ালগ**:
-  - ৫-ধাপের প্রগ্রেস ফ্লো: নেটওয়ার্ক চেক -> সার্ভার অথেনটিকেশন -> APK স্ট্রিমিং ডাউনলোড -> সিকিউরিটি ভেরিফিকেশন -> **প্রাইভেট ভল্ট ও নেটিভ ইঞ্জিন ইন্সটলেশন**।
-  - সেটআপ সম্পন্ন হলে ইউজার ডায়ালগ থেকেই সরাসরি এক ক্লিকে ইঞ্জিন রান করতে পারবেন।
-- **সর্বজনীন ডায়ালগ ও পপআপ সিস্টেম**:
-  - ভাষা নির্বাচন (`Language`), নোটিফিকেশন বিস্তারিত (`Notification Details`), প্রাইভেসি (`Privacy & Security`), অ্যাপ পরিচিতি (`About App`), লগআউট নিশ্চিতকরণ (`Logout Confirmation`), নেটওয়ার্ক চেকিং, লাইসেন্স কী ইনপুট, আপডেট ডায়ালগ এবং গেম লঞ্চ ডায়ালগ—প্রতিটি পপআপে একই আউটার ইনসেট মার্জিন, রাউন্ডেড আইকন ব্যাজ এবং ডার্ক/লাইট থিম কনট্রাস্ট কার্যকর হবে।
+### Phase B: Smooth Navigation Slide Animations
+- Create animation XML resources in `res/anim/`:
+  - `slide_in_right.xml`
+  - `slide_out_left.xml`
+  - `slide_in_left.xml`
+  - `slide_out_right.xml`
+- Update `styles.xml` / `themes.xml` to include `WindowSlideAnimation` under `android:windowAnimationStyle`.
+- Add transition overrides in `BaseActivity`, `MainActivity`, and `SettingsActivity` when starting or finishing activities.
+
+### Phase C: 2-Game Card Layout
+- Modify `GameRepository.java` to only register Carrom Disc Pool and 8 Ball Pool.
+- Update `MainActivity.java` `rvGrid` column count from `4` to `2` (`new GridLayoutManager(this, 2)`).
+- Ensure the cards fill the horizontal space harmoniously with `12dp` spacing and rounded tactical borders.
+
+### Phase D: Direct OS Installation & Launcher Button Flow
+- Revert `UpdateController.java` to install via `PackageInstallerHelper.installPackage(...)`.
+- Update `PackageInstallerHelper.java` to verify OS installation of `com.alpha10.aimshot` via `PackageManager`.
+- Remove the legacy standalone uninstaller prompt from `MainActivity` so `com.alpha10.aimshot` is recognized as the valid installed engine.
+- Wire `handleLauncherButtonClick()` to launch `com.alpha10.aimshot` directly when installed.
+
+### Phase E: Verification
+- Verify compilation with `compile_applet` and `lint_applet`.
+- Verify Java and XML syntax with static AST check.
+- Sync changes between `AimShot_Project/app/` and root `app/`.

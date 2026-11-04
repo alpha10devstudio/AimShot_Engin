@@ -370,7 +370,7 @@ public class MainActivity extends BaseActivity
 
         RecyclerView rvGrid = homeView.findViewById(R.id.rv_games_grid);
         if (rvGrid != null) {
-            rvGrid.setLayoutManager(new GridLayoutManager(this, 4));
+            rvGrid.setLayoutManager(new GridLayoutManager(this, 2));
             final GameGridAdapter adapter = new GameGridAdapter(
                     GameRepository.getInstance().getAllGames(),
                     item -> {
@@ -478,11 +478,6 @@ public class MainActivity extends BaseActivity
      * 4. Private Vault Engine launch inside AimShot Launcher (or Private Vault download/setup)
      */
     private void handleLauncherButtonClick() {
-        if (PackageInstallerHelper.isLegacyStandaloneAppInstalled(this)) {
-            showLegacyStandaloneCleanupDialog();
-            return;
-        }
-
         if (isLaunching) {
             return;
         }
@@ -882,8 +877,6 @@ public class MainActivity extends BaseActivity
             fragmentContainer.removeAllViews();
             renderPremiumScreen();
         }
-
-        checkLegacyStandaloneAppOnResume();
     }
 
     @Override
