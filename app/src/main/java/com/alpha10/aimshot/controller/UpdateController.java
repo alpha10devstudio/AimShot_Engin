@@ -14,6 +14,7 @@ import com.alpha10.aimshot.service.ApkDownloadService;
 import com.alpha10.aimshot.service.UpdateAuthService;
 import com.alpha10.aimshot.util.ApkSecurityVerifier;
 import com.alpha10.aimshot.util.NetworkUtil;
+import com.alpha10.aimshot.util.PackageInstallerHelper;
 
 import java.io.File;
 import java.util.concurrent.ExecutorService;

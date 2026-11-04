@@ -23,6 +23,7 @@ import com.alpha10.aimshot.model.GameItem;
 import com.alpha10.aimshot.model.MembershipStatus;
 import com.alpha10.aimshot.repository.GameRepository;
 import com.alpha10.aimshot.repository.MembershipRepository;
+import com.alpha10.aimshot.repository.NotificationsRepository;
 import com.alpha10.aimshot.util.DialogUiHelper;
 import com.alpha10.aimshot.util.FontHelper;
 import com.alpha10.aimshot.util.NetworkUtil;
