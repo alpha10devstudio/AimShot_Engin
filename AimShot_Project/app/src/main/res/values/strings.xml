@@ -188,4 +188,5 @@
     <string name="license_required_to_launch">Active license required to launch AimShot Engine.</string>
     <string name="license_check_failed_title">Launch Permission Denied</string>
     <string name="license_check_failed_msg">Security server rejected license authorization. Please verify your key.</string>
+    <string name="key_invalid_or_expired">Verification key is invalid or has expired.</string>
 </resources>

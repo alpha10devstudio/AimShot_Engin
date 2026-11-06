@@ -187,4 +187,6 @@
     <string name="license_required_to_launch">এইমশট ইঞ্জিন চালু করতে সক্রিয় লাইসেন্স প্রয়োজন।</string>
     <string name="license_check_failed_title">ইঞ্জিন চালু করার অনুমতি বাতিল</string>
     <string name="license_check_failed_msg">সিকিউরিটি সার্ভার থেকে লাইসেন্স অনুমোদন মেলেনি। অনুগ্রহ করে আপনার কি পুনরায় যাচাই করুন।</string>
+    <string name="key_verified_success">কি সফলভাবে যাচাই হয়েছে!</string>
+    <string name="key_invalid_or_expired">ভেরিফিকেশন কি অবৈধ বা মেয়াদ উত্তীর্ণ হয়েছে।</string>
 </resources>

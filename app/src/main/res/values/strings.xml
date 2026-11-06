@@ -32,7 +32,8 @@
     <string name="err_empty_key">Verification key cannot be empty.</string>
     <string name="err_invalid_key">Invalid or expired verification key.</string>
     <string name="service_not_configured">Verification service is not configured yet. Running offline demo check.</string>
-
+    <string name="key_verified_success">Key verified successfully!</string>
+    
     <!-- Premium Screen -->
     <string name="premium_status">Premium Status</string>
     <string name="status_active">Active</string>
@@ -102,7 +103,7 @@
     <string name="get_activation_key">Get Activation Key</string>
     <string name="btn_get_free_key">Get Free Key</string>
     <string name="btn_get_paid_key">Get Paid Key</string>
-    <string name="free_key_url">https://aimshotengine.com/free-key</string>
+    <string name="free_key_url">https://alpha10.freedev.app/index.php?p=generator</string>
 
     <!-- Games -->
     <string name="game_carrom">Carrom Disc Pool</string>
@@ -119,9 +120,9 @@
     <string name="launch_the_game">▶  LAUNCH AIMSHOT ENGINE</string>
     <string name="launch_aimshot_engine">▶  LAUNCH AIMSHOT ENGINE</string>
     <string name="install_aimshot_engine">▶  INSTALL AIMSHOT ENGINE</string>
-    <string name="launching_aimshot_engine">Launching AimShot Engine (com.alpha10.aimshot)...</string>
+    <string name="launching_aimshot_engine">Launching AimShot Core Engine...</string>
     <string name="failed_to_launch_main_apk">Unable to launch AimShot Engine. Please verify installation.</string>
-    <string name="main_apk_not_installed">Main AimShot Engine APK is not installed yet. Starting download...</string>
+    <string name="main_apk_not_installed">AimShot Core Engine is not installed yet. Initializing setup...</string>
     <string name="no_internet_title">No Internet Connection</string>
     <string name="no_internet_msg">Please connect to the internet and try again.</string>
     <string name="launching_game">Launching %1$s...</string>
@@ -144,29 +145,29 @@
     <string name="update_btn_download">Download &amp; Install</string>
     <string name="update_btn_check">Check Updates</string>
     <string name="update_status_network">Verifying internet &amp; server reachability...</string>
-    <string name="update_status_auth">Authenticating with Alpha10 Server...</string>
+    <string name="update_status_auth">Authenticating with Security Server...</string>
     <string name="update_status_downloading">Downloading update: %1$d%%</string>
     <string name="update_status_sha">Verifying SHA-256 package integrity...</string>
     <string name="update_status_cert">Verifying permanent release certificate...</string>
     <string name="update_status_installing">Launching Android Package Installer...</string>
-    <string name="update_failed_auth">Authentication failed. Unable to obtain download token.</string>
+    <string name="update_failed_auth">Authentication failed. Please verify your connection and try again.</string>
     <string name="update_failed_sha">Integrity check failed: SHA-256 hash mismatch.</string>
     <string name="update_failed_cert">Security check failed: Signing certificate mismatch.</string>
     <string name="update_failed_storage">Insufficient internal storage space.</string>
-    <string name="update_failed_network">Network error: Connection to Alpha10 server failed.</string>
+    <string name="update_failed_network">Network error: Connection to security server failed.</string>
     <string name="update_permission_prompt">Install permission required. Please enable Unknown App Installation for AimShot Engine.</string>
     <string name="btn_retry">Retry</string>
     <string name="btn_cancel">Cancel</string>
 
     <!-- 9 Distinct Tactical Pipeline Stages -->
     <string name="stage_1_internet">1. Checking Internet Connection</string>
-    <string name="stage_2_server">2. Connecting to Alpha10 Server</string>
-    <string name="stage_3_auth">3. Authenticating</string>
+    <string name="stage_2_server">2. Connecting to Security Server</string>
+    <string name="stage_3_auth">3. Verifying Engine Access</string>
     <string name="stage_4_download">4. Downloading AimShot Engine</string>
     <string name="stage_5_verify">5. Verifying APK Security</string>
-    <string name="stage_6_confirm">6. Preparing Private Vault</string>
-    <string name="stage_7_install">7. Securing AimShot Engine in Vault</string>
-    <string name="stage_8_success">8. Private Vault Ready</string>
+    <string name="stage_6_confirm">6. Preparing Installation</string>
+    <string name="stage_7_install">7. Installing AimShot Engine</string>
+    <string name="stage_8_success">8. AimShot Engine Ready</string>
     <string name="stage_9_open">9. Opening AimShot Engine</string>
     <string name="btn_open_app">OPEN AIMSHOT ENGINE</string>
     <string name="auto_launching_countdown">Launching AimShot Engine in %1$ds...</string>
@@ -174,12 +175,18 @@
     <string name="status_off">Off</string>
     <string name="select_language_subtitle">Choose your preferred display language</string>
     <string name="verifying_network_title">Verifying Connection</string>
-    <string name="verifying_network_msg">Checking active internet &amp; Alpha10 Server...</string>
+    <string name="verifying_network_msg">Verifying secure server connection...</string>
     <string name="no_internet_access_msg">Wi-Fi or Mobile Data is turned on, but there is no active internet access (data pack expired, zero balance, or captive portal). Please check your connection and try again.</string>
     <string name="server_connection_failed_title">Server Connection Failed</string>
-    <string name="server_connection_failed_msg">Internet is connected, but Alpha10 Server could not be reached. Please try again shortly.</string>
+    <string name="server_connection_failed_msg">Internet is connected, but the security server could not be reached. Please try again shortly.</string>
     <string name="btn_understood">Understood</string>
     <string name="legacy_app_detected_title">Remove Exposed App Copy</string>
-    <string name="legacy_app_detected_msg">An older standalone AimShot app icon is still installed on your phone. Please uninstall that exposed copy so AimShot Engine runs privately and securely inside AimShot Launcher only.</string>
+    <string name="legacy_app_detected_msg">A previous standalone version of the engine was detected. Please uninstall it to ensure seamless and secure launcher operation.</string>
     <string name="btn_uninstall_legacy">Uninstall Copy</string>
+    <string name="verifying_license_title">Verifying License Security</string>
+    <string name="verifying_license_msg">Verifying authorization with security server...</string>
+    <string name="license_required_to_launch">Active license required to launch AimShot Engine.</string>
+    <string name="license_check_failed_title">Launch Permission Denied</string>
+    <string name="license_check_failed_msg">Security server rejected license authorization. Please verify your key.</string>
+    <string name="key_invalid_or_expired">Verification key is invalid or has expired.</string>
 </resources>

@@ -187,4 +187,6 @@
     <string name="license_required_to_launch">एमशॉट इंजन शुरू करने के लिए सक्रिय लाइसेंस आवश्यक है।</string>
     <string name="license_check_failed_title">इंजन शुरू करने की अनुमति अस्वीकृत</string>
     <string name="license_check_failed_msg">सुरक्षा सर्वर ने लाइसेंस प्राधिकरण अस्वीकार कर दिया। कृपया अपनी कुंजी की जांच करें।</string>
+    <string name="key_verified_success">कुंजी सफलतापूर्वक सत्यापित हुई!</string>
+    <string name="key_invalid_or_expired">सत्यापन कुंजी अमान्य है या समाप्त हो गई है।</string>
 </resources>
