@@ -1,12 +1,14 @@
-import React from 'react';
-import { Crown, Bell, CheckCircle2, Key, ShoppingBag, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Crown, Bell, CheckCircle2, Key, ShoppingBag, ExternalLink, Clock } from 'lucide-react';
 import { TacticalReticleLogo } from '../TacticalReticleLogo';
 import { MembershipState, AppTheme } from '../../types';
-import { Translations } from '../../data/translations';
+import { Translations, Language } from '../../data/translations';
+import { calculateLiveCountdown } from '../../utils/countdownHelper';
 
 interface PremiumScreenProps {
   membership: MembershipState;
   theme: AppTheme;
+  language?: Language;
   t: Translations;
   unreadNotificationsCount?: number;
   onOpenNotifications: () => void;
@@ -17,6 +19,7 @@ interface PremiumScreenProps {
 export const PremiumScreen: React.FC<PremiumScreenProps> = ({
   membership,
   theme,
+  language = 'en',
   t,
   unreadNotificationsCount = 0,
   onOpenNotifications,
@@ -25,6 +28,25 @@ export const PremiumScreen: React.FC<PremiumScreenProps> = ({
 }) => {
   const isDark = theme === 'dark';
   const isActive = membership.status === 'active';
+
+  // Real-time second-by-second ticker
+  const [currentTimestamp, setCurrentTimestamp] = useState<number>(Date.now());
+
+  useEffect(() => {
+    // Only run active interval ticker when user has an active membership
+    const interval = setInterval(() => {
+      setCurrentTimestamp(Date.now());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Compute real-time countdown parts (Days, Hours, Minutes, Seconds)
+  const countdown = calculateLiveCountdown(
+    membership.expiryTimestamp,
+    language,
+    currentTimestamp
+  );
 
   const handleOpenFreeKey = () => {
     onShowToast('Opening AimShot Free Key verification portal...');
@@ -62,7 +84,7 @@ export const PremiumScreen: React.FC<PremiumScreenProps> = ({
           </div>
         </div>
 
-        {/* Top Notification Icon (Replaced Settings icon per Requirement 9) */}
+        {/* Top Notification Icon */}
         <button
           onClick={onOpenNotifications}
           className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors relative cursor-pointer ${
@@ -124,13 +146,27 @@ export const PremiumScreen: React.FC<PremiumScreenProps> = ({
           </span>
         </div>
 
+        {/* Live Ticking Indicator Badge (Active Status) */}
+        {isActive && (
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#39B9FF] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#39B9FF]"></span>
+            </span>
+            <span className="text-[10px] font-mono font-bold tracking-wider text-[#39B9FF] uppercase flex items-center gap-1">
+              <Clock className="w-2.5 h-2.5 inline-block" />
+              {t.liveCountdown} • 1s SYNC
+            </span>
+          </div>
+        )}
+
         {/* Expires In & Countdown */}
         <span className={`text-xs font-medium block ${isDark ? 'text-[#8D9BB0]' : 'text-[#64748B]'}`}>
           {t.expiresIn}
         </span>
-        <div className="flex items-baseline gap-2 mt-1 mb-3">
-          <span className="text-2xl font-black text-[#39B9FF] tracking-wide">
-            {isActive ? `${membership.daysRemaining} ${t.days}` : `0 ${t.days}`}
+        <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2 mt-1 mb-3">
+          <span className="text-xl sm:text-2xl font-black text-[#39B9FF] tracking-wide font-mono">
+            {isActive ? countdown.formattedString : `0 ${t.days}`}
           </span>
           <span className={`text-xs ${isDark ? 'text-[#8D9BB0]' : 'text-[#64748B]'}`}>
             ( {isActive ? membership.expiryDate : t.notActivated} )
@@ -145,7 +181,7 @@ export const PremiumScreen: React.FC<PremiumScreenProps> = ({
         >
           <div
             className="h-full bg-gradient-to-r from-[#1A85CC] to-[#39B9FF] rounded-full transition-all duration-500 shadow-[0_0_8px_#39B9FF]"
-            style={{ width: isActive ? `${Math.min(100, membership.daysRemaining * 3.5)}%` : '0%' }}
+            style={{ width: isActive ? `${Math.min(100, Math.max(8, (countdown.totalSeconds / (18 * 86400)) * 100))}%` : '0%' }}
           />
         </div>
 
@@ -246,10 +282,11 @@ export const PremiumScreen: React.FC<PremiumScreenProps> = ({
             </span>
           </div>
 
-          <div className="flex justify-between py-2.5">
+          {/* Real-time Dynamic Countdown Row */}
+          <div className="flex justify-between py-2.5 items-center">
             <span className={isDark ? 'text-[#8D9BB0]' : 'text-[#64748B]'}>{t.daysRemaining}</span>
-            <span className="text-[#39B9FF] font-bold font-mono">
-              {membership.daysRemaining} {t.days}
+            <span className="text-[#39B9FF] font-bold font-mono text-xs">
+              {isActive ? countdown.formattedString : `0 ${t.days}`}
             </span>
           </div>
         </div>

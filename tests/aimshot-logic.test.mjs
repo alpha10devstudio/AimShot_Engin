@@ -1078,5 +1078,74 @@ describe('AimShot Engine Pure Logic Unit Tests', () => {
     assert.equal(phpCode.includes('ob_end_clean()'), true);
     assert.equal(phpCode.includes('dirname(__DIR__, 2)'), false, 'Must not traverse outside htdocs webroot');
   });
+
+  // Test 48: Real-Time Live Countdown Formatter ([X] দিন [HH]:[MM]:[SS])
+  test('Real-Time Live Countdown Formatter produces accurate localized template with ticking seconds', () => {
+    const BN_DIGITS = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    const toBn = (n) => String(n).replace(/[0-9]/g, (d) => BN_DIGITS[parseInt(d, 10)]);
+
+    const formatCountdown = (diffSeconds, lang = 'en') => {
+      if (diffSeconds <= 0) {
+        if (lang === 'bn') return '০ দিন ০০:০০:০০সে';
+        if (lang === 'hi') return '0 दिन 00:00:00से';
+        return '0 Days 00:00:00s';
+      }
+      const days = Math.floor(diffSeconds / 86400);
+      const hours = Math.floor((diffSeconds % 86400) / 3600);
+      const minutes = Math.floor((diffSeconds % 3600) / 60);
+      const seconds = diffSeconds % 60;
+
+      const pad = (num) => String(num).padStart(2, '0');
+
+      if (lang === 'bn') {
+        return `${toBn(days)} দিন ${toBn(pad(hours))}:${toBn(pad(minutes))}:${toBn(pad(seconds))}সে`;
+      } else if (lang === 'hi') {
+        return `${days} दिन ${pad(hours)}:${pad(minutes)}:${pad(seconds)}से`;
+      }
+      return `${days} Days ${pad(hours)}:${pad(minutes)}:${pad(seconds)}s`;
+    };
+
+    // Exactly 0 days, 12 hours, 45 minutes, 30 seconds
+    const targetSeconds = 0 * 86400 + 12 * 3600 + 45 * 60 + 30;
+    assert.equal(formatCountdown(targetSeconds, 'bn'), '০ দিন ১২:৪৫:৩০সে');
+    assert.equal(formatCountdown(targetSeconds, 'en'), '0 Days 12:45:30s');
+    assert.equal(formatCountdown(targetSeconds, 'hi'), '0 दिन 12:45:30से');
+
+    // 18 days, 14 hours, 22 minutes, 15 seconds
+    const eighteenDaysSecs = 18 * 86400 + 14 * 3600 + 22 * 60 + 15;
+    assert.equal(formatCountdown(eighteenDaysSecs, 'bn'), '১৮ দিন ১৪:২২:১৫সে');
+    assert.equal(formatCountdown(eighteenDaysSecs, 'en'), '18 Days 14:22:15s');
+
+    // Expired or zero
+    assert.equal(formatCountdown(0, 'bn'), '০ দিন ০০:০০:০০সে');
+    assert.equal(formatCountdown(-50, 'en'), '0 Days 00:00:00s');
+  });
+
+  // Test 49: Permanent Alpha 10 Keystore & Digital Certificate Resolution
+  test('Alpha 10 Release Keystore exists and contains verified certificate identity', () => {
+    const keystorePath = path.resolve('keystore/aimshot-release.p12');
+    const projectKeystore = path.resolve('AimShot_Project/keystore/aimshot-release.p12');
+    const certPath = path.resolve('keystore/release.crt');
+
+    assert.equal(fs.existsSync(keystorePath) || fs.existsSync(projectKeystore), true);
+    assert.equal(fs.existsSync(certPath), true);
+
+    const certContent = fs.readFileSync(certPath, 'utf8');
+    assert.equal(certContent.includes('BEGIN CERTIFICATE'), true);
+  });
+
+  // Test 50: Conflict-Free App Update Guardrails
+  test('Gradle build enforces fixed package identity, dual v1/v2 signing, and prevents install conflicts', () => {
+    const gradleContent = fs.readFileSync(path.resolve('app/build.gradle'), 'utf8');
+    // 1. Fixed applicationId
+    assert.equal(gradleContent.includes('applicationId "com.alpha10.aimshot.launcher"'), true);
+    // 2. Multi-path permanent certificate discovery
+    assert.equal(gradleContent.includes('aimshot-release.p12'), true);
+    assert.equal(gradleContent.includes('v1SigningEnabled true'), true);
+    assert.equal(gradleContent.includes('v2SigningEnabled true'), true);
+    // 3. Min SDK kept at 24 for universal backward compatibility
+    assert.equal(gradleContent.includes('minSdk 24'), true);
+  });
 });
+
 

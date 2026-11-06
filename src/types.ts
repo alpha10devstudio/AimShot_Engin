@@ -22,6 +22,7 @@ export interface MembershipState {
   featuresUnlocked: boolean;
   boundDeviceId: string;
   key?: string;
+  expiryTimestamp?: number;
 }
 
 export interface Game {

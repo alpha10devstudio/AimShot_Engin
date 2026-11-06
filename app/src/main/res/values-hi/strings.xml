@@ -45,6 +45,9 @@
     <string name="start_date">प्रारंभ तिथि</string>
     <string name="expiry_date">समाप्ति तिथि</string>
     <string name="days_remaining">शेष दिन</string>
+    <string name="live_countdown">लाइव काउंटडाउन</string>
+    <string name="countdown_format">%1$s दिन %2$s:%3$s:%4$sसे</string>
+    <string name="countdown_zero">0 दिन 00:00:00से</string>
     <string name="btn_upgrade_renew">अपग्रेड / नवीनीकरण</string>
 
     <!-- Seller Contact -->

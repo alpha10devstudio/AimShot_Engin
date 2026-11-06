@@ -35,27 +35,44 @@ android {
 
     signingConfigs {
         debug {
+            // Default development debug keystore
             storeFile file("${rootDir}/debug.keystore")
             storePassword "android"
             keyAlias "androiddebugkey"
             keyPassword "android"
         }
         release {
-            def keystorePath = System.getenv("KEYSTORE_FILE") ?: "${rootDir}/keystore/aimshot-release.p12"
-            def releaseStoreFile = file(keystorePath)
-            if (releaseStoreFile.exists()) {
-                storeFile releaseStoreFile
+            // Alpha 10 Permanent Digital Certificate & Signing Identity
+            // Deterministic lookup across root and project keystore locations
+            def envKeystore = System.getenv("KEYSTORE_FILE")
+            def candidateFiles = [
+                envKeystore != null ? file(envKeystore) : null,
+                file("${rootDir}/keystore/aimshot-release.p12"),
+                file("${rootDir}/AimShot_Project/keystore/aimshot-release.p12"),
+                file("${projectDir}/keystore/aimshot-release.p12")
+            ].findAll { it != null && it.exists() }
+
+            if (!candidateFiles.isEmpty()) {
+                def releaseStore = candidateFiles.first()
+                storeFile releaseStore
                 storeType "PKCS12"
                 storePassword System.getenv("KEYSTORE_PASSWORD") ?: "aimshot2026pass"
                 keyAlias System.getenv("KEY_ALIAS") ?: "aimshot-release-key"
                 keyPassword System.getenv("KEY_PASSWORD") ?: "aimshot2026pass"
+                v1SigningEnabled true
+                v2SigningEnabled true
             }
         }
     }
 
     buildTypes {
         debug {
-            signingConfig signingConfigs.debug
+            // When release signing identity is present, debug builds can also inherit it to prevent update signature conflicts
+            if (signingConfigs.release.storeFile != null && signingConfigs.release.storeFile.exists()) {
+                signingConfig signingConfigs.release
+            } else {
+                signingConfig signingConfigs.debug
+            }
         }
         release {
             minifyEnabled false

@@ -85,7 +85,11 @@ export default function App() {
     const saved = localStorage.getItem('aimshot_membership');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (parsed.status === 'active' && (!parsed.expiryTimestamp || parsed.expiryTimestamp <= Date.now())) {
+          parsed.expiryTimestamp = Date.now() + (parsed.daysRemaining || 18) * 86400000 + 14 * 3600000 + 45 * 60000;
+        }
+        return parsed;
       } catch {
         // fallback
       }
@@ -97,6 +101,7 @@ export default function App() {
       startDate: '--',
       expiryDate: '--',
       daysRemaining: 0,
+      expiryTimestamp: 0,
       featuresUnlocked: false,
       boundDeviceId: 'AIM-8839-4491-BC99'
     };
@@ -306,18 +311,27 @@ export default function App() {
   };
 
   const handleLoginSuccess = (key: string) => {
+    const remainingDays = 18;
+    const now = Date.now();
+    const expiryTimestamp = now + (remainingDays * 86400000) + (14 * 3600000) + (45 * 60000) + (30 * 1000);
+    const expDateObj = new Date(expiryTimestamp);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const formattedDate = `${String(expDateObj.getDate()).padStart(2, '0')} ${months[expDateObj.getMonth()]} ${expDateObj.getFullYear()}`;
+
     const newMembership: MembershipState = {
       isLoggedIn: true,
       status: 'active',
       planType: 'AimShot Pro',
       startDate: 'Today',
-      expiryDate: 'Active',
-      daysRemaining: 3,
+      expiryDate: formattedDate,
+      daysRemaining: remainingDays,
+      expiryTimestamp: expiryTimestamp,
       featuresUnlocked: true,
       boundDeviceId: '9a7d3c8f1e2b4d5a',
       key: key.trim()
     };
     setMembership(newMembership);
+    localStorage.setItem('aimshot_membership', JSON.stringify(newMembership));
     showToast(t.keyVerified);
   };
 
@@ -578,6 +592,7 @@ export default function App() {
                 <PremiumScreen
                   membership={membership}
                   theme={theme}
+                  language={language}
                   t={t}
                   unreadNotificationsCount={unreadNotificationsCount}
                   onOpenNotifications={() => setCurrentScreen('notifications')}
@@ -906,6 +921,7 @@ export default function App() {
                   <PremiumScreen
                     membership={membership}
                     theme={theme}
+                    language={language}
                     t={t}
                     unreadNotificationsCount={unreadNotificationsCount}
                     onOpenNotifications={() => setCurrentScreen('notifications')}

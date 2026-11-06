@@ -62,6 +62,8 @@ export interface Translations {
   startDate: string;
   expiryDate: string;
   daysRemaining: string;
+  liveCountdown: string;
+  countdownSuffixSec: string;
   upgradeRenew: string;
 
   // Settings Screen
@@ -176,6 +178,8 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     startDate: 'Start Date',
     expiryDate: 'Expiry Date',
     daysRemaining: 'Days Remaining',
+    liveCountdown: 'Live Countdown',
+    countdownSuffixSec: 's',
     upgradeRenew: 'Upgrade / Renew',
 
     settingsTitle: 'Settings',
@@ -284,6 +288,8 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     startDate: 'শুরুর তারিখ',
     expiryDate: 'মেয়াদ শেষের তারিখ',
     daysRemaining: 'অবশিষ্ট দিন',
+    liveCountdown: 'লাইভ কাউন্টডাউন',
+    countdownSuffixSec: 'সে',
     upgradeRenew: 'আপগ্রেড / রিনিউ করুন',
 
     settingsTitle: 'সেটিংস',
@@ -392,6 +398,8 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     startDate: 'प्रारंभ तिथि',
     expiryDate: 'समाप्ति तिथि',
     daysRemaining: 'शेष दिन',
+    liveCountdown: 'लाइव काउंटडाउन',
+    countdownSuffixSec: 'से',
     upgradeRenew: 'अपग्रेड / नवीनीकरण',
 
     settingsTitle: 'सेटिंग्स',

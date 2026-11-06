@@ -45,6 +45,9 @@
     <string name="start_date">শুরুর তারিখ</string>
     <string name="expiry_date">সমাপ্তির তারিখ</string>
     <string name="days_remaining">বাকি দিন</string>
+    <string name="live_countdown">লাইভ কাউন্টডাউন</string>
+    <string name="countdown_format">%1$s দিন %2$s:%3$s:%4$sসে</string>
+    <string name="countdown_zero">০ দিন ০০:০০:০০সে</string>
     <string name="btn_upgrade_renew">আপগ্রেড / রিনিউ</string>
 
     <!-- Seller Contact -->

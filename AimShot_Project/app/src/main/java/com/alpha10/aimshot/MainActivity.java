@@ -69,6 +69,11 @@ public class MainActivity extends BaseActivity
 
     private Runnable carouselRunnable;
 
+    private final android.os.Handler liveCountdownHandler =
+            new android.os.Handler(android.os.Looper.getMainLooper());
+
+    private Runnable liveCountdownRunnable;
+
     private android.widget.ViewFlipper currentFlipper;
 
     private ImageView currentDot1, currentDot2, currentDot3;
@@ -109,6 +114,7 @@ public class MainActivity extends BaseActivity
         super.onDestroy();
 
         stopCarouselTimer();
+        stopLiveCountdownTimer();
         dismissVerifyingConnectionDialog();
         dismissLegacyCleanupDialog();
 
@@ -159,6 +165,7 @@ public class MainActivity extends BaseActivity
         currentTab = tab;
         updateNavUi();
         stopCarouselTimer();
+        stopLiveCountdownTimer();
         fragmentContainer.removeAllViews();
 
         if (tab == Tab.HOME) {
@@ -863,6 +870,8 @@ public class MainActivity extends BaseActivity
         TextView tvExpiry = premiumView.findViewById(R.id.tv_detail_expiry_date);
         TextView tvRemainingDaysRow = premiumView.findViewById(R.id.tv_detail_days_remaining);
 
+        stopLiveCountdownTimer();
+
         if (status.getState() == MembershipStatus.State.ACTIVE) {
             if (tvBadge != null) {
                 tvBadge.setText(R.string.status_active);
@@ -870,18 +879,8 @@ public class MainActivity extends BaseActivity
                 tvBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_active_text));
             }
 
-            int remainingDays = status.getRemainingDays();
-            if (tvDaysRemaining != null) {
-                tvDaysRemaining.setText(remainingDays + " Days");
-            }
             if (tvExpirySub != null) {
                 tvExpirySub.setText("( " + status.getFormattedExpiryDate() + " )");
-            }
-            if (tvRemainingDaysRow != null) {
-                tvRemainingDaysRow.setText(remainingDays + " Days");
-            }
-            if (progressBar != null) {
-                progressBar.setProgress(Math.max(10, Math.min(100, remainingDays * 3)));
             }
             if (layoutFeaturesUnlocked != null) {
                 layoutFeaturesUnlocked.setVisibility(View.VISIBLE);
@@ -895,6 +894,36 @@ public class MainActivity extends BaseActivity
             if (tvExpiry != null) {
                 tvExpiry.setText(status.getFormattedExpiryDate());
             }
+
+            // Real-time second-by-second live countdown ticker
+            liveCountdownRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    MembershipStatus currentStatus = membershipRepository.getCurrentStatus();
+                    if (currentStatus.getState() == MembershipStatus.State.ACTIVE) {
+                        String liveTime = currentStatus.getFormattedLiveCountdown(MainActivity.this);
+                        if (tvDaysRemaining != null) {
+                            tvDaysRemaining.setText(liveTime);
+                        }
+                        if (tvRemainingDaysRow != null) {
+                            tvRemainingDaysRow.setText(liveTime);
+                        }
+                        if (progressBar != null) {
+                            long remainingSecs = currentStatus.getRemainingSeconds();
+                            int totalSecs = 18 * 86400;
+                            int progressPct = (int) Math.max(8, Math.min(100, (remainingSecs * 100) / totalSecs));
+                            progressBar.setProgress(progressPct);
+                        }
+                        liveCountdownHandler.postDelayed(this, 1000);
+                    } else {
+                        String zeroStr = getString(R.string.countdown_zero);
+                        if (tvDaysRemaining != null) tvDaysRemaining.setText(zeroStr);
+                        if (tvRemainingDaysRow != null) tvRemainingDaysRow.setText(zeroStr);
+                        if (progressBar != null) progressBar.setProgress(0);
+                    }
+                }
+            };
+            liveCountdownHandler.post(liveCountdownRunnable);
         } else {
             if (tvBadge != null) {
                 tvBadge.setText(
@@ -905,14 +934,15 @@ public class MainActivity extends BaseActivity
                 tvBadge.setBackgroundResource(R.drawable.bg_badge_inactive);
                 tvBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_inactive_text));
             }
+            String zeroStr = getString(R.string.countdown_zero);
             if (tvDaysRemaining != null) {
-                tvDaysRemaining.setText("0 Days");
+                tvDaysRemaining.setText(zeroStr);
             }
             if (tvExpirySub != null) {
                 tvExpirySub.setText("( Not Activated )");
             }
             if (tvRemainingDaysRow != null) {
-                tvRemainingDaysRow.setText("0 Days");
+                tvRemainingDaysRow.setText(zeroStr);
             }
             if (progressBar != null) {
                 progressBar.setProgress(0);
@@ -929,6 +959,13 @@ public class MainActivity extends BaseActivity
             if (tvExpiry != null) {
                 tvExpiry.setText("--");
             }
+        }
+    }
+
+    private void stopLiveCountdownTimer() {
+        if (liveCountdownRunnable != null) {
+            liveCountdownHandler.removeCallbacks(liveCountdownRunnable);
+            liveCountdownRunnable = null;
         }
     }
 
@@ -980,5 +1017,6 @@ public class MainActivity extends BaseActivity
     protected void onPause() {
         super.onPause();
         stopCarouselTimer();
+        stopLiveCountdownTimer();
     }
 }

@@ -45,6 +45,9 @@
     <string name="start_date">Start Date</string>
     <string name="expiry_date">Expiry Date</string>
     <string name="days_remaining">Days Remaining</string>
+    <string name="live_countdown">Live Countdown</string>
+    <string name="countdown_format">%1$d Days %2$02d:%3$02d:%4$02ds</string>
+    <string name="countdown_zero">0 Days 00:00:00s</string>
     <string name="btn_upgrade_renew">Upgrade / Renew</string>
 
     <!-- Seller Contact -->
