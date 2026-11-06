@@ -35,7 +35,10 @@ export function getKeyVault(): CachedKeyVaultRecord[] {
 }
 
 /**
- * Saves or updates a license key in the local vault with expiry and usage metadata.
+ * Saves the latest active license key in the local vault with expiry and usage metadata.
+ * Strictly enforces single latest-active-key precedence: whenever a new key is activated,
+ * all older/prior keys in memory and storage are automatically deleted.
+ * The app retains ONLY this latest key locally until its server-assigned expiration.
  */
 export function saveKeyToVault(
   key: string,
@@ -44,7 +47,6 @@ export function saveKeyToVault(
   boundDeviceId = '9a7d3c8f1e2b4d5a'
 ): CachedKeyVaultRecord {
   const cleanKey = key.trim();
-  const vault = getKeyVault();
   const now = Date.now();
 
   const expiry = new Date(expiryTimestamp);
@@ -64,13 +66,8 @@ export function saveKeyToVault(
     lastUsedAt: now
   };
 
-  const existingIndex = vault.findIndex(k => k.key.toLowerCase() === cleanKey.toLowerCase());
-  if (existingIndex >= 0) {
-    vault[existingIndex] = record;
-  } else {
-    vault.unshift(record);
-  }
-
+  // Strictly retain ONLY the latest active key, purging older/prior keys
+  const vault = [record];
   localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(vault));
   return record;
 }

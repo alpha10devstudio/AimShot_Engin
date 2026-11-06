@@ -1147,25 +1147,26 @@ describe('AimShot Engine Pure Logic Unit Tests', () => {
     assert.equal(gradleContent.includes('minSdk 24'), true);
   });
 
-  // Test 51: Multi-Key Vault local storage & active key switching
-  test('Multi-Key Vault saves multiple keys, remembers expiry, and switches primary active key', () => {
-    const vault = new Map();
+  // Test 51: Latest Active Key Sole Precedence & Old Key Auto-Deletion
+  test('Latest active key takes sole precedence and purges any prior older keys from local storage', () => {
+    let vault = [];
     const saveKey = (key, expiryTimestamp, planType) => {
-      vault.set(key, { key, expiryTimestamp, planType, lastUsed: Date.now() });
+      // Requirement 6: Latest active key replaces previous keys; older keys deleted!
+      vault = [{ key, expiryTimestamp, planType, lastUsed: Date.now() }];
     };
 
     const now = Date.now();
-    saveKey('KEY-AAA-111', now + 86400000, 'AimShot Pro 1-Day');
-    saveKey('KEY-BBB-222', now + 86400000 * 7, 'AimShot Pro 7-Days');
+    saveKey('KEY-OLD-111', now + 86400000, 'AimShot Pro 1-Day');
+    assert.equal(vault.length, 1);
+    assert.equal(vault[0].key, 'KEY-OLD-111');
 
-    assert.equal(vault.size, 2);
-    assert.equal(vault.has('KEY-AAA-111'), true);
-    assert.equal(vault.has('KEY-BBB-222'), true);
-
-    // Switch active key to KEY-AAA-111
-    const activeKey = vault.get('KEY-AAA-111');
-    assert.equal(activeKey.planType, 'AimShot Pro 1-Day');
-    assert.ok(activeKey.expiryTimestamp > Date.now());
+    // New key is activated: older key is wiped, only latest active key is retained
+    saveKey('KEY-NEW-222', now + 86400000 * 7, 'AimShot Pro 7-Days');
+    assert.equal(vault.length, 1);
+    assert.equal(vault[0].key, 'KEY-NEW-222');
+    assert.equal(vault.some(k => k.key === 'KEY-OLD-111'), false);
+    assert.equal(vault[0].planType, 'AimShot Pro 7-Days');
+    assert.ok(vault[0].expiryTimestamp > Date.now());
   });
 
   // Test 52: Multi-Key Vault automatic purging of expired keys
@@ -1187,9 +1188,19 @@ describe('AimShot Engine Pure Logic Unit Tests', () => {
     assert.equal(cleaned.some(k => k.key.startsWith('EXPIRED')), false);
   });
 
-  // Test 53: Resilient offline launch authorization prevents false security verification rejection
-  test('Launch verification preserves local active session during transient network/parse errors if unexpired', () => {
-    const evaluateLaunchClearance = ({ isLocallyValid, errorCode }) => {
+  // Test 53: Mandatory Server Clearance Gate: Launch strictly blocks offline launch and requires server green signal
+  test('Strict Server Clearance Gate: Launch strictly blocks offline launch or server errors and mandates active online verification', () => {
+    const evaluateLaunchClearance = ({ isOnline, hasActiveData, isAuthoritativeActive, errorCode }) => {
+      // 1. Must have online connection
+      if (!isOnline) {
+        return { allowLaunch: false, clearSession: false, action: 'NO_NETWORK' };
+      }
+
+      // 2. Must have active data package (not 0 MB SIM balance or captive portal)
+      if (!hasActiveData) {
+        return { allowLaunch: false, clearSession: false, action: 'NO_INTERNET_ACCESS' };
+      }
+
       const isAuthoritativeRevocation = [
         'STATUS_INVALID',
         'STATUS_REVOKED',
@@ -1201,29 +1212,40 @@ describe('AimShot Engine Pure Logic Unit Tests', () => {
         return { allowLaunch: false, clearSession: true, action: 'DENIED' };
       }
 
-      // If network glitch (ERR_PARSE, ERR_NETWORK, TIMEOUT) and key is temporally valid locally
-      if (isLocallyValid) {
-        return { allowLaunch: true, clearSession: false, action: 'CACHED_LAUNCH' };
+      // If server unreachable or error: strictly block launch (no offline bypass!)
+      if (!isAuthoritativeActive) {
+        return { allowLaunch: false, clearSession: false, action: 'SERVER_UNREACHABLE_BLOCK' };
       }
 
-      return { allowLaunch: false, clearSession: false, action: 'ERROR_DIALOG' };
+      // Green signal from server!
+      return { allowLaunch: true, clearSession: false, action: 'SERVER_APPROVED_LAUNCH' };
     };
 
     // 1. Authoritative revocation MUST clear session and deny launch
-    const revoked = evaluateLaunchClearance({ isLocallyValid: true, errorCode: 'STATUS_REVOKED' });
+    const revoked = evaluateLaunchClearance({ isOnline: true, hasActiveData: true, isAuthoritativeActive: false, errorCode: 'STATUS_REVOKED' });
     assert.equal(revoked.allowLaunch, false);
     assert.equal(revoked.clearSession, true);
+    assert.equal(revoked.action, 'DENIED');
 
-    // 2. Network glitch (ERR_PARSE) with valid local key MUST NOT clear session and MUST allow launch!
-    const parseGlitch = evaluateLaunchClearance({ isLocallyValid: true, errorCode: 'ERR_PARSE' });
-    assert.equal(parseGlitch.allowLaunch, true);
-    assert.equal(parseGlitch.clearSession, false);
-    assert.equal(parseGlitch.action, 'CACHED_LAUNCH');
+    // 2. Offline attempt MUST be blocked completely (no offline bypass allowed)
+    const offline = evaluateLaunchClearance({ isOnline: false, hasActiveData: false, isAuthoritativeActive: false, errorCode: null });
+    assert.equal(offline.allowLaunch, false);
+    assert.equal(offline.action, 'NO_NETWORK');
 
-    // 3. Network glitch with expired local key
-    const expiredGlitch = evaluateLaunchClearance({ isLocallyValid: false, errorCode: 'ERR_NETWORK' });
-    assert.equal(expiredGlitch.allowLaunch, false);
-    assert.equal(expiredGlitch.action, 'ERROR_DIALOG');
+    // 3. SIM connected but data package expired / zero balance MUST be blocked
+    const zeroData = evaluateLaunchClearance({ isOnline: true, hasActiveData: false, isAuthoritativeActive: false, errorCode: null });
+    assert.equal(zeroData.allowLaunch, false);
+    assert.equal(zeroData.action, 'NO_INTERNET_ACCESS');
+
+    // 4. Server unreachable / network error MUST be blocked
+    const serverDown = evaluateLaunchClearance({ isOnline: true, hasActiveData: true, isAuthoritativeActive: false, errorCode: 'ERR_NETWORK' });
+    assert.equal(serverDown.allowLaunch, false);
+    assert.equal(serverDown.action, 'SERVER_UNREACHABLE_BLOCK');
+
+    // 5. Active connection + Valid Server Approval (Green Signal) -> Launch Allowed!
+    const approved = evaluateLaunchClearance({ isOnline: true, hasActiveData: true, isAuthoritativeActive: true, errorCode: null });
+    assert.equal(approved.allowLaunch, true);
+    assert.equal(approved.action, 'SERVER_APPROVED_LAUNCH');
   });
 
   // Test 54: Home screen Selected Game card layout matches user UI specification (Screenshot 1)
@@ -1250,6 +1272,42 @@ describe('AimShot Engine Pure Logic Unit Tests', () => {
     assert.equal(fontHelperJava.includes('fonts/versatylo.ttf'), true);
     assert.equal(fontHelperJava.includes('fonts/roboto.ttf'), true);
     assert.equal(fontHelperJava.includes('applyBrandFont'), true);
+  });
+
+  // Test 56: Page Transition Direction Resolver
+  test('Page Transition Direction Resolver computes accurate slide direction across all page transitions', () => {
+    const order = { home: 0, premium: 1, settings: 2 };
+    const resolveTabDirection = (fromTab, toTab) => {
+      return order[toTab] >= order[fromTab] ? 'right' : 'left';
+    };
+
+    // Home -> Premium: slides in from right
+    assert.equal(resolveTabDirection('home', 'premium'), 'right');
+    // Premium -> Home: slides in from left
+    assert.equal(resolveTabDirection('premium', 'home'), 'left');
+    // Home -> Settings: slides in from right
+    assert.equal(resolveTabDirection('home', 'settings'), 'right');
+    // Premium -> Settings: slides in from right
+    assert.equal(resolveTabDirection('premium', 'settings'), 'right');
+    // Settings -> Home: slides in from left
+    assert.equal(resolveTabDirection('settings', 'home'), 'left');
+    // Settings -> Premium: slides in from left
+    assert.equal(resolveTabDirection('settings', 'premium'), 'left');
+  });
+
+  // Test 57: Active Internet Data Validation
+  test('Active Internet Data Validation rejects expired data packs and captive portals', () => {
+    const validateDataPack = (hasTransport, probeStatus) => {
+      if (!hasTransport) return { valid: false, reason: 'NO_CONNECTION' };
+      if (probeStatus !== 200 && probeStatus !== 204) return { valid: false, reason: 'EXPIRED_OR_CAPTIVE' };
+      return { valid: true };
+    };
+
+    assert.equal(validateDataPack(false, 0).valid, false);
+    assert.equal(validateDataPack(true, 302).reason, 'EXPIRED_OR_CAPTIVE'); // Carrier redirect page
+    assert.equal(validateDataPack(true, 502).reason, 'EXPIRED_OR_CAPTIVE'); // Gateway timeout / server down
+    assert.equal(validateDataPack(true, 200).valid, true);
+    assert.equal(validateDataPack(true, 204).valid, true);
   });
 });
 

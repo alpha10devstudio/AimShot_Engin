@@ -132,6 +132,7 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
     }
 
     public void navigateToTab(Tab tab) {
+        Tab previousTab = currentTab;
         currentTab = tab;
         updateNavUi();
         fragmentContainer.removeAllViews();
@@ -139,6 +140,12 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
             renderHomeScreen();
         } else if (tab == Tab.PREMIUM) {
             renderPremiumScreen();
+        }
+        if (fragmentContainer.getChildCount() > 0 && previousTab != tab) {
+            View child = fragmentContainer.getChildAt(0);
+            int animRes = (previousTab == Tab.PREMIUM && tab == Tab.HOME)
+                    ? R.anim.slide_in_left : R.anim.slide_in_right;
+            child.startAnimation(AnimationUtils.loadAnimation(this, animRes));
         }
     }
     // ... Complete implementation available in project

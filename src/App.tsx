@@ -40,6 +40,7 @@ import {
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenId>('home');
   const [currentTab, setCurrentTab] = useState<BottomTab>('home');
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'phone' | 'split' | 'code' | 'mockup'>('phone');
   const [devicePreset, setDevicePreset] = useState<DevicePreset>('standard');
@@ -306,15 +307,19 @@ export default function App() {
     setTimeout(() => setToastMessage(null), 3200);
   };
 
-  const handleTabChange = (tab: BottomTab) => {
-    setCurrentTab(tab);
-    if (tab === 'home') {
-      setCurrentScreen('home');
-    } else if (tab === 'premium') {
-      setCurrentScreen('premium');
-    } else if (tab === 'settings') {
-      setCurrentScreen('settings');
+  const navigateTo = (screen: ScreenId, direction: 'left' | 'right' = 'right', tab?: BottomTab) => {
+    setSlideDirection(direction);
+    setCurrentScreen(screen);
+    if (tab) {
+      setCurrentTab(tab);
     }
+  };
+
+  const handleTabChange = (tab: BottomTab) => {
+    if (tab === currentTab && tab === (currentScreen as unknown as BottomTab)) return;
+    const order: Record<BottomTab, number> = { home: 0, premium: 1, settings: 2 };
+    const direction: 'left' | 'right' = order[tab] >= order[currentTab] ? 'right' : 'left';
+    navigateTo(tab as ScreenId, direction, tab);
   };
 
   const handleToggleTheme = () => {
@@ -334,6 +339,7 @@ export default function App() {
       : now + (durationDays * 86400000) + (14 * 3600000) + (45 * 60000) + (30 * 1000);
     const planType = planTypeOverride || 'AimShot Pro';
 
+    // Requirement 6: Latest active key takes sole precedence; old keys deleted
     const record = saveKeyToVault(cleanKey, expiryTimestamp, planType, '9a7d3c8f1e2b4d5a');
     const newMembership = createMembershipFromRecord(record);
 
@@ -343,6 +349,10 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    if (membership.key) {
+      removeKeyFromVault(membership.key);
+    }
+    localStorage.removeItem('aimshot_key_vault');
     const resetMembership: MembershipState = {
       isLoggedIn: false,
       status: 'free',
@@ -355,8 +365,7 @@ export default function App() {
       key: ''
     };
     setMembership(resetMembership);
-    setCurrentScreen('home');
-    setCurrentTab('home');
+    navigateTo('home', 'left', 'home');
     showToast(t.sessionCleared);
   };
 
@@ -365,25 +374,140 @@ export default function App() {
     showToast(`${game.name}: ${game.features}`);
   };
 
-  const handleLaunchGame = (game: Game) => {
-    // If user is logged in, initiate launch
-    if (!membership.isLoggedIn) {
+  /**
+   * Requirements 5 & 6:
+   * 1. Check device network connectivity.
+   * 2. Probe active data packet routing (catching 0 MB SIM balance, captive portals, disconnected WAN).
+   * 3. Send mandatory request to security server with the user's latest active key.
+   * 4. Only if server returns GREEN SIGNAL (valid: true, status: 'active') can launch proceed!
+   */
+  const verifyActiveDataAndServer = async (activeKey: string): Promise<{ valid: boolean; message?: string }> => {
+    // 1. Device internet connectivity
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      return {
+        valid: false,
+        message:
+          language === 'bn'
+            ? 'কোনো ইন্টারনেট সংযোগ নেই! সচল ডাটা প্যাক নিশ্চিত করে আবার চেষ্টা করুন।'
+            : language === 'hi'
+            ? 'कोई इंटरनेट कनेक्शन नहीं है! सक्रिय डेटा पैक सुनिश्चित करके पुनः प्रयास करें।'
+            : 'No active internet connection. Please verify your data package and try again.'
+      };
+    }
+
+    // 2. Active data package probe (detects captive portal / expired data balance)
+    try {
+      const probeRes = await fetch('/api/health', { signal: AbortSignal.timeout(3500) });
+      if (!probeRes.ok) {
+        return {
+          valid: false,
+          message:
+            language === 'bn'
+              ? 'সচল ইন্টারনেট ডাটা প্যাক পাওয়া যায়নি (ডাটা প্যাক শেষ বা লগইন পোর্টাল)।'
+              : 'Active internet data packet routing unavailable. Please check your data connection.'
+        };
+      }
+    } catch {
+      return {
+        valid: false,
+        message:
+          language === 'bn'
+            ? 'ইন্টারনেট ডাটা প্যাক সচল নেই অথবা সার্ভার সংযোগ পাওয়া যায়নি।'
+            : 'Active data package not detected or security server unreachable.'
+      };
+    }
+
+    // 3. MANDATORY Server-Side License Verification with latest active key
+    try {
+      const res = await fetch('/api/verify-license', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          license_key: activeKey,
+          device_id: membership.boundDeviceId || '9a7d3c8f1e2b4d5a',
+          device_model: 'Samsung Galaxy S23 Ultra',
+          app_version: '2.4.0'
+        }),
+        signal: AbortSignal.timeout(6000)
+      });
+
+      const data = await res.json().catch(() => null);
+      const status = (data?.status || '').toLowerCase();
+
+      if (data && data.valid && status === 'active') {
+        // Green signal from server! Refresh expiry if returned
+        if (data.expires_at) {
+          const parsed = new Date(data.expires_at).getTime();
+          if (!isNaN(parsed) && parsed > Date.now()) {
+            saveKeyToVault(activeKey, parsed, data.plan_type || membership.planType);
+          }
+        }
+        return { valid: true };
+      }
+
+      // Server denied the key! Delete from vault and force re-login
+      removeKeyFromVault(activeKey);
+      handleLogout();
+      const serverMsg =
+        data?.message ||
+        (language === 'bn'
+          ? 'সার্ভার লাইসেন্স কি অনুমোদন করেনি! অনুগ্রহ করে সঠিক কি দিয়ে আবার লগইন করুন।'
+          : 'Server rejected license key. Please log in again with a valid key.');
+      return { valid: false, message: serverMsg };
+    } catch {
+      return {
+        valid: false,
+        message:
+          language === 'bn'
+            ? 'সার্ভার ভাইয়ের সাথে সংযোগ বিচ্ছিন্ন! সচল ইন্টারনেট ও ডাটা প্যাক নিশ্চিত করুন।'
+            : 'Security server unreachable. Active internet connection required to launch.'
+      };
+    }
+  };
+
+  const handleLaunchGame = async (game: Game) => {
+    // A. Resolve user's latest active key
+    const vault = getKeyVault();
+    const activeKey = (membership.key && membership.key.trim()) || (vault.length > 0 ? vault[0].key : '');
+
+    if (!membership.isLoggedIn || !activeKey) {
+      showToast(
+        language === 'bn'
+          ? 'গেম লঞ্চ করতে লাইসেন্স কি আবশ্যক।'
+          : 'License key required to launch game.'
+      );
       setIsLoginModalOpen(true);
       return;
     }
 
-    // A. Mandatory Internet Check
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      showToast('No Internet Connection. Please connect to the internet and try again.');
+    // B. Strict Internet & Mandatory Server Verification
+    showToast(
+      language === 'bn'
+        ? 'সার্ভার ভ্যালিডেশন ও ইন্টারনেট ডাটা চেক করা হচ্ছে...'
+        : 'Verifying active data & license with security server...'
+    );
+
+    const check = await verifyActiveDataAndServer(activeKey);
+    if (!check.valid) {
+      showToast(check.message || 'Verification failed. Launch blocked.');
+      if (!membership.isLoggedIn) {
+        setIsLoginModalOpen(true);
+      }
       return;
     }
+
+    // C. Server Green Signal confirmed! Launch game session
+    showToast(
+      language === 'bn'
+        ? 'সার্ভার গ্রিন সিগন্যাল দিয়েছে! গেম চালু হচ্ছে...'
+        : 'Server clearance confirmed! Launching...'
+    );
 
     setLaunchingGameSession({
       game,
       status: 'initializing'
     });
 
-    // Step 1: Initialize touch guidelines
     setTimeout(() => {
       setLaunchingGameSession({
         game,
@@ -391,7 +515,6 @@ export default function App() {
       });
     }, 900);
 
-    // Step 2: Running state
     setTimeout(() => {
       setLaunchingGameSession({
         game,
@@ -402,78 +525,36 @@ export default function App() {
   };
 
   const handleLaunchEngine = async () => {
-    if (!membership.isLoggedIn || !membership.key) {
+    const vault = getKeyVault();
+    const activeKey = (membership.key && membership.key.trim()) || (vault.length > 0 ? vault[0].key : '');
+
+    if (!membership.isLoggedIn || !activeKey) {
+      showToast(
+        language === 'bn'
+          ? 'ইঞ্জিন চালু করতে লাইসেন্স কি প্রয়োজন।'
+          : 'License key required to launch engine.'
+      );
       setIsLoginModalOpen(true);
       return;
     }
 
-    const isTemporallyValid = !!(membership.expiryTimestamp && membership.expiryTimestamp > Date.now());
+    showToast(
+      language === 'bn'
+        ? 'সার্ভার ভ্যালিডেশন ও ইন্টারনেট ডাটা চেক করা হচ্ছে...'
+        : 'Verifying active data & license with security server...'
+    );
 
-    // 1. Connectivity & Authorization Gate
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      if (isTemporallyValid) {
-        showToast('Offline Mode: Authorized via cached license.');
-      } else {
-        showToast('No Internet Connection. Please connect to the internet and try again.');
-        return;
+    const check = await verifyActiveDataAndServer(activeKey);
+    if (!check.valid) {
+      showToast(check.message || 'Verification failed. Launch blocked.');
+      if (!membership.isLoggedIn) {
+        setIsLoginModalOpen(true);
       }
-    } else {
-      showToast('Verifying license authorization with security server...');
-
-      try {
-        const res = await fetch('/api/verify-license', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            license_key: membership.key,
-            device_id: '9a7d3c8f1e2b4d5a',
-            device_model: 'Samsung Galaxy S23 Ultra',
-            app_version: '2.4.0'
-          })
-        });
-
-        const data = await res.json();
-        const status = (data?.status || '').toLowerCase();
-
-        if (!data || !data.valid || status !== 'active') {
-          const isAuthoritativeDenied = ['invalid', 'expired', 'revoked', 'device_revoked', 'device_limit_reached'].includes(status);
-          if (isAuthoritativeDenied) {
-            removeKeyFromVault(membership.key);
-            handleLogout();
-            showToast(data?.message || 'License expired or revoked. Access denied.');
-            setIsLoginModalOpen(true);
-            return;
-          } else if (isTemporallyValid) {
-            // Transient server glitch - keep session from valid local cache!
-            showToast('Authorization preserved from valid local session.');
-          } else {
-            handleLogout();
-            showToast(data?.message || 'License verification failed.');
-            setIsLoginModalOpen(true);
-            return;
-          }
-        } else {
-          // Server returned active status: refresh expiry in vault if present
-          if (data.expires_at) {
-            const parsed = new Date(data.expires_at).getTime();
-            if (!isNaN(parsed) && parsed > Date.now()) {
-              saveKeyToVault(membership.key, parsed, data.plan_type || membership.planType);
-            }
-          }
-        }
-      } catch {
-        if (isTemporallyValid) {
-          showToast('Security server unreachable. Authorized via cached license.');
-        } else {
-          showToast('Security server unreachable. Please check connection.');
-          return;
-        }
-      }
+      return;
     }
 
-    // Situation A: Main APK is already installed
+    // Server Green Signal confirmed!
     if (isMainApkInstalled) {
-      // Launch Main APK
       setLaunchingEngineSession({
         packageName: 'com.alpha10.aimshot',
         versionName: '1.0.1',
@@ -599,10 +680,11 @@ export default function App() {
               devicePreset={devicePreset}
               theme={theme}
               t={t}
+              slideDirection={slideDirection}
               onTabChange={handleTabChange}
             >
               {currentScreen === 'splash' && (
-                <SplashScreen onFinish={() => setCurrentScreen('home')} />
+                <SplashScreen onFinish={() => navigateTo('home', 'right')} />
               )}
 
               {currentScreen === 'home' && (
@@ -614,12 +696,9 @@ export default function App() {
                   unreadNotificationsCount={unreadNotificationsCount}
                   onSelectGame={handleSelectGame}
                   onOpenLoginModal={() => setIsLoginModalOpen(true)}
-                  onViewAllGames={() => setCurrentScreen('supported_games')}
-                  onOpenNotifications={() => setCurrentScreen('notifications')}
-                  onNavigateToPremium={() => {
-                    setCurrentTab('premium');
-                    setCurrentScreen('premium');
-                  }}
+                  onViewAllGames={() => navigateTo('supported_games', 'right')}
+                  onOpenNotifications={() => navigateTo('notifications', 'right')}
+                  onNavigateToPremium={() => navigateTo('premium', 'right', 'premium')}
                   onLaunchGame={handleLaunchGame}
                   isMainApkInstalled={isMainApkInstalled}
                   onLaunchEngine={handleLaunchEngine}
@@ -633,8 +712,8 @@ export default function App() {
                   language={language}
                   t={t}
                   unreadNotificationsCount={unreadNotificationsCount}
-                  onOpenNotifications={() => setCurrentScreen('notifications')}
-                  onUpgradeRenew={() => setCurrentScreen('seller_contact')}
+                  onOpenNotifications={() => navigateTo('notifications', 'right')}
+                  onUpgradeRenew={() => navigateTo('seller_contact', 'right')}
                   onShowToast={showToast}
                 />
               )}
@@ -644,7 +723,7 @@ export default function App() {
                   theme={theme}
                   t={t}
                   notifications={notifications}
-                  onBack={() => setCurrentScreen(currentTab === 'settings' ? 'settings' : 'home')}
+                  onBack={() => navigateTo(currentTab === 'settings' ? 'settings' : 'home', 'left')}
                   onMarkAsRead={handleMarkAsRead}
                   onMarkAllAsRead={handleMarkAllAsRead}
                   onRefresh={fetchNotifications}
@@ -657,10 +736,10 @@ export default function App() {
                   theme={theme}
                   t={t}
                   selectedGame={selectedGame}
-                  onBack={() => setCurrentScreen('home')}
+                  onBack={() => navigateTo('home', 'left')}
                   onSelectGame={(game) => {
                     handleSelectGame(game);
-                    setCurrentScreen('home');
+                    navigateTo('home', 'left');
                   }}
                 />
               )}
@@ -669,7 +748,7 @@ export default function App() {
                 <SellerContactScreen
                   theme={theme}
                   t={t}
-                  onBack={() => setCurrentScreen(currentTab === 'settings' ? 'settings' : 'home')}
+                  onBack={() => navigateTo(currentTab === 'settings' ? 'settings' : 'home', 'left')}
                   onShowToast={showToast}
                 />
               )}
@@ -678,7 +757,7 @@ export default function App() {
                 <DeviceInfoScreen
                   theme={theme}
                   t={t}
-                  onBack={() => setCurrentScreen('settings')}
+                  onBack={() => navigateTo('settings', 'left')}
                   onShowToast={showToast}
                 />
               )}
@@ -690,13 +769,10 @@ export default function App() {
                   t={t}
                   onToggleTheme={handleToggleTheme}
                   onChangeLanguage={handleChangeLanguage}
-                  onBack={() => {
-                    setCurrentTab('home');
-                    setCurrentScreen('home');
-                  }}
+                  onBack={() => navigateTo('home', 'left', 'home')}
                   onLogout={handleLogout}
-                  onOpenDeviceInfo={() => setCurrentScreen('device_info')}
-                  onOpenSellerContact={() => setCurrentScreen('seller_contact')}
+                  onOpenDeviceInfo={() => navigateTo('device_info', 'right')}
+                  onOpenSellerContact={() => navigateTo('seller_contact', 'right')}
                   onShowToast={showToast}
                 />
               )}
@@ -928,10 +1004,11 @@ export default function App() {
                 devicePreset={devicePreset}
                 theme={theme}
                 t={t}
+                slideDirection={slideDirection}
                 onTabChange={handleTabChange}
               >
                 {currentScreen === 'splash' && (
-                  <SplashScreen onFinish={() => setCurrentScreen('home')} />
+                  <SplashScreen onFinish={() => navigateTo('home', 'right')} />
                 )}
 
                 {currentScreen === 'home' && (
@@ -943,12 +1020,9 @@ export default function App() {
                     unreadNotificationsCount={unreadNotificationsCount}
                     onSelectGame={handleSelectGame}
                     onOpenLoginModal={() => setIsLoginModalOpen(true)}
-                    onViewAllGames={() => setCurrentScreen('supported_games')}
-                    onOpenNotifications={() => setCurrentScreen('notifications')}
-                    onNavigateToPremium={() => {
-                      setCurrentTab('premium');
-                      setCurrentScreen('premium');
-                    }}
+                    onViewAllGames={() => navigateTo('supported_games', 'right')}
+                    onOpenNotifications={() => navigateTo('notifications', 'right')}
+                    onNavigateToPremium={() => navigateTo('premium', 'right', 'premium')}
                     onLaunchGame={handleLaunchGame}
                     isMainApkInstalled={isMainApkInstalled}
                     onLaunchEngine={handleLaunchEngine}
@@ -962,8 +1036,8 @@ export default function App() {
                     language={language}
                     t={t}
                     unreadNotificationsCount={unreadNotificationsCount}
-                    onOpenNotifications={() => setCurrentScreen('notifications')}
-                    onUpgradeRenew={() => setCurrentScreen('seller_contact')}
+                    onOpenNotifications={() => navigateTo('notifications', 'right')}
+                    onUpgradeRenew={() => navigateTo('seller_contact', 'right')}
                     onShowToast={showToast}
                   />
                 )}
@@ -973,7 +1047,7 @@ export default function App() {
                     theme={theme}
                     t={t}
                     notifications={notifications}
-                    onBack={() => setCurrentScreen(currentTab === 'settings' ? 'settings' : 'home')}
+                    onBack={() => navigateTo(currentTab === 'settings' ? 'settings' : 'home', 'left')}
                     onMarkAsRead={handleMarkAsRead}
                     onMarkAllAsRead={handleMarkAllAsRead}
                     onRefresh={fetchNotifications}
@@ -986,10 +1060,10 @@ export default function App() {
                     theme={theme}
                     t={t}
                     selectedGame={selectedGame}
-                    onBack={() => setCurrentScreen('home')}
+                    onBack={() => navigateTo('home', 'left')}
                     onSelectGame={(game) => {
                       handleSelectGame(game);
-                      setCurrentScreen('home');
+                      navigateTo('home', 'left');
                     }}
                   />
                 )}
@@ -998,7 +1072,7 @@ export default function App() {
                   <SellerContactScreen
                     theme={theme}
                     t={t}
-                    onBack={() => setCurrentScreen(currentTab === 'settings' ? 'settings' : 'home')}
+                    onBack={() => navigateTo(currentTab === 'settings' ? 'settings' : 'home', 'left')}
                     onShowToast={showToast}
                   />
                 )}
@@ -1007,7 +1081,7 @@ export default function App() {
                   <DeviceInfoScreen
                     theme={theme}
                     t={t}
-                    onBack={() => setCurrentScreen('settings')}
+                    onBack={() => navigateTo('settings', 'left')}
                     onShowToast={showToast}
                   />
                 )}
@@ -1019,13 +1093,10 @@ export default function App() {
                     t={t}
                     onToggleTheme={handleToggleTheme}
                     onChangeLanguage={handleChangeLanguage}
-                    onBack={() => {
-                      setCurrentTab('home');
-                      setCurrentScreen('home');
-                    }}
+                    onBack={() => navigateTo('home', 'left', 'home')}
                     onLogout={handleLogout}
-                    onOpenDeviceInfo={() => setCurrentScreen('device_info')}
-                    onOpenSellerContact={() => setCurrentScreen('seller_contact')}
+                    onOpenDeviceInfo={() => navigateTo('device_info', 'right')}
+                    onOpenSellerContact={() => navigateTo('seller_contact', 'right')}
                     onShowToast={showToast}
                   />
                 )}

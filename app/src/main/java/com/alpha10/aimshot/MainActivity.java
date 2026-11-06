@@ -162,6 +162,7 @@ public class MainActivity extends BaseActivity
     }
 
     public void navigateToTab(Tab tab) {
+        Tab previousTab = currentTab;
         currentTab = tab;
         updateNavUi();
         stopCarouselTimer();
@@ -172,6 +173,16 @@ public class MainActivity extends BaseActivity
             renderHomeScreen();
         } else if (tab == Tab.PREMIUM) {
             renderPremiumScreen();
+        }
+
+        if (fragmentContainer.getChildCount() > 0 && previousTab != tab) {
+            View child = fragmentContainer.getChildAt(0);
+            int animRes = (previousTab == Tab.PREMIUM && tab == Tab.HOME)
+                    ? R.anim.slide_in_left
+                    : R.anim.slide_in_right;
+            android.view.animation.Animation slideAnim =
+                    android.view.animation.AnimationUtils.loadAnimation(this, animRes);
+            child.startAnimation(slideAnim);
         }
     }
 
@@ -512,9 +523,9 @@ public class MainActivity extends BaseActivity
         isLaunching = true;
 
         MembershipStatus currentStatus = membershipRepository.getCurrentStatus();
-        String savedKey = membershipRepository.getSavedLicenseKey();
+        final String savedKey = membershipRepository.getSavedLicenseKey();
 
-        // Check if user has active session or valid cached key in vault
+        // 1. Check if user has active session and saved key
         if (currentStatus.getState() != MembershipStatus.State.ACTIVE || savedKey == null || savedKey.trim().isEmpty()) {
             isLaunching = false;
             Toast.makeText(this, R.string.license_required_to_launch, Toast.LENGTH_SHORT).show();
@@ -522,22 +533,17 @@ public class MainActivity extends BaseActivity
             return;
         }
 
-        // If network is offline, check if current key is valid locally
-        if (!NetworkUtil.isNetworkConnected(this)) {
-            if (membershipRepository.isCurrentKeyValidLocally()) {
-                executeMainApkLaunch();
-                return;
-            } else {
-                isLaunching = false;
-                showConnectivityErrorDialog(NetworkUtil.ConnectivityStatus.NO_NETWORK);
-                return;
-            }
+        // 2. Strict Internet & Active Data Package Verification (Zero-tolerance for offline bypass)
+        if (!NetworkUtil.isNetworkConnected(this) || NetworkUtil.hasCaptivePortal(this)) {
+            isLaunching = false;
+            showConnectivityErrorDialog(NetworkUtil.ConnectivityStatus.NO_INTERNET_ACCESS);
+            return;
         }
 
         // Show tactical verifying dialog
         showVerifyingConnectionDialog(R.string.verifying_license_title, R.string.verifying_license_msg);
 
-        // Perform live server verification
+        // 3. MANDATORY Server Verification before EVERY SINGLE LAUNCH:
         DeviceIdManager devIdMgr = new DeviceIdManager(this);
         String deviceId = devIdMgr.getRawAndroidId();
         String deviceModel = devIdMgr.getDeviceBrand() + " " + devIdMgr.getDeviceModel();
@@ -569,6 +575,7 @@ public class MainActivity extends BaseActivity
             @Override
             public void onVerificationError(String errorMessage, String errorCode) {
                 dismissVerifyingConnectionDialog();
+                isLaunching = false;
 
                 boolean isAuthoritativeRevocation = "STATUS_INVALID".equals(errorCode)
                         || "STATUS_REVOKED".equals(errorCode)
@@ -576,20 +583,13 @@ public class MainActivity extends BaseActivity
                         || "STATUS_DEVICE_REVOKED".equals(errorCode);
 
                 if (isAuthoritativeRevocation) {
-                    // Server authoritatively rejected/revoked the key
-                    isLaunching = false;
+                    // Server authoritatively rejected/revoked the key: wipe key & logout
                     membershipRepository.revokeKey(savedKey);
-                    showLicenseDeniedDialog(errorMessage);
+                    showLicenseDeniedDialog(errorMessage != null ? errorMessage : getString(R.string.key_invalid_or_expired));
+                    showVerificationDialog();
                 } else {
-                    // Transient network error, slow server response, or anti-bot challenge:
-                    // Check if the current cached license key is valid locally (unexpired)!
-                    if (membershipRepository.isCurrentKeyValidLocally()) {
-                        Toast.makeText(MainActivity.this, R.string.launching_aimshot_engine, Toast.LENGTH_SHORT).show();
-                        executeMainApkLaunch();
-                    } else {
-                        isLaunching = false;
-                        showLicenseDeniedDialog(errorMessage);
-                    }
+                    // Server unreachable or data routing failed: strict security blocks launch!
+                    showLicenseDeniedDialog(errorMessage != null ? errorMessage : getString(R.string.no_internet_access_msg));
                 }
             }
         });

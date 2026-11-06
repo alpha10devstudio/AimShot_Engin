@@ -11,6 +11,7 @@ interface PhoneFrameProps {
   devicePreset?: DevicePreset;
   theme?: AppTheme;
   t?: Translations;
+  slideDirection?: 'left' | 'right';
   onTabChange: (tab: BottomTab) => void;
   children: React.ReactNode;
 }
@@ -21,6 +22,7 @@ export const PhoneFrame: React.FC<PhoneFrameProps> = ({
   devicePreset = 'standard',
   theme = 'dark',
   t,
+  slideDirection = 'right',
   onTabChange,
   children
 }) => {
@@ -96,7 +98,12 @@ export const PhoneFrame: React.FC<PhoneFrameProps> = ({
             isDark ? 'bg-[#0B0F17]' : 'bg-[#F1F5F9]'
           }`}
         >
-          <div key={currentScreen} className="w-full h-full animate-slide-in-right">
+          <div
+            key={currentScreen}
+            className={`w-full h-full ${
+              slideDirection === 'left' ? 'animate-slide-in-left' : 'animate-slide-in-right'
+            }`}
+          >
             {children}
           </div>
         </div>

@@ -191,37 +191,17 @@ public class MembershipRepository {
         editor.putBoolean(KEY_UNLOCKED, status.isFeaturesUnlocked());
         editor.putString(KEY_DEVICE_ID, status.getBoundDeviceId());
 
-        // Upsert into multi-key vault
-        List<CachedKey> vault = loadVaultFromPrefs();
-        boolean found = false;
+        // Requirement 6: Latest active key takes sole precedence; purge all other/older keys from memory and prefs!
+        List<CachedKey> vault = new ArrayList<>();
         long now = System.currentTimeMillis();
-
-        for (int i = 0; i < vault.size(); i++) {
-            CachedKey existing = vault.get(i);
-            if (existing.getKey().equalsIgnoreCase(cleanKey)) {
-                vault.set(i, new CachedKey(
-                        cleanKey,
-                        status.getPlanType(),
-                        status.getStartTimestamp(),
-                        status.getExpiryTimestamp(),
-                        status.getBoundDeviceId(),
-                        now
-                ));
-                found = true;
-                break;
-            }
-        }
-
-        if (!found) {
-            vault.add(new CachedKey(
-                    cleanKey,
-                    status.getPlanType(),
-                    status.getStartTimestamp(),
-                    status.getExpiryTimestamp(),
-                    status.getBoundDeviceId(),
-                    now
-            ));
-        }
+        vault.add(new CachedKey(
+                cleanKey,
+                status.getPlanType(),
+                status.getStartTimestamp(),
+                status.getExpiryTimestamp(),
+                status.getBoundDeviceId(),
+                now
+        ));
 
         saveVaultToEditor(editor, vault);
         editor.apply();
