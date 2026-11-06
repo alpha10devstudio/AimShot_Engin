@@ -79,6 +79,22 @@ public class VerificationKeyDialog extends Dialog {
             btnPaste.setOnClickListener(v -> handlePasteFromClipboard());
         }
 
+        View btnGetFreeKey = findViewById(R.id.btn_get_free_key_portal);
+        if (btnGetFreeKey != null) {
+            btnGetFreeKey.setOnClickListener(v -> {
+                try {
+                    String url = getContext().getString(R.string.free_key_url);
+                    android.content.Intent browserIntent = new android.content.Intent(
+                            android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse(url)
+                    );
+                    getContext().startActivity(browserIntent);
+                } catch (Exception e) {
+                    Toast.makeText(getContext(), "Opening key generator portal...", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
         btnLogin.setOnClickListener(v -> attemptVerification());
 
         tvClose.setOnClickListener(v -> dismiss());
@@ -125,9 +141,11 @@ public class VerificationKeyDialog extends Dialog {
         tvError.setVisibility(View.GONE);
         setLoadingState(true);
 
-        String deviceId = deviceIdManager.getFormattedDeviceId();
+        String deviceId = deviceIdManager.getRawAndroidId();
+        String deviceModel = deviceIdManager.getDeviceBrand() + " " + deviceIdManager.getDeviceModel();
+        String appVersion = "2.4.0";
 
-        verificationService.verifyKey(key, deviceId, new VerificationCallback() {
+        verificationService.verifyKey(key, deviceId, deviceModel, appVersion, new VerificationCallback() {
             @Override
             public void onVerificationStarted() {
                 setLoadingState(true);

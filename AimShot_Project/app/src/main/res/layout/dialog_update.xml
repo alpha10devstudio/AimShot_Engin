@@ -52,7 +52,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:gravity="center"
-            android:text="PRIVATE VAULT ENGINE SETUP"
+            android:text="AIMSHOT CORE ENGINE"
             android:textColor="@color/accent_primary"
             android:textSize="11.5sp"
             android:textStyle="bold" />

@@ -275,12 +275,11 @@ public class SettingsActivity extends BaseActivity {
             rowAbout.setOnClickListener(v -> {
                 triggerHapticFeedback();
                 showCustomInfoDialog(
-                        "AimShot Engine v1.0.0",
-                        "Sharper Aim • Better Game • Higher You\n\n" +
-                                "Launcher Host: " + getPackageName() + "\n" +
-                                "Vault Engine: com.alpha10.aimshot (Private Container)\n" +
-                                "Version: 1.0.0\n" +
-                                "Architecture: Native Android Private Vault Runtime\n\n" +
+                        getString(R.string.app_name) + " " + getString(R.string.app_version),
+                        getString(R.string.slogan) + "\n\n" +
+                                "Engine: AimShot Core Engine\n" +
+                                "Version: " + getString(R.string.app_version) + "\n" +
+                                "Architecture: 120 FPS Tactical Precision Overlay\n\n" +
                                 "Designed for competitive accuracy, zero recoil simulation, and peak frame pacing.\n\n" +
                                 "© 2026 AimShot Studio. All rights reserved.",
                         R.drawable.ic_aimshot_logo

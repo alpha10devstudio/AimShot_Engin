@@ -25,6 +25,20 @@ public class DeviceIdManager {
     }
 
     /**
+     * Retrieves the device Android ID for server-authoritative license activation.
+     */
+    public String getRawAndroidId() {
+        try {
+            String rawId = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
+            if (rawId != null && !rawId.trim().isEmpty() && !"9774d56d682e549c".equalsIgnoreCase(rawId)) {
+                return rawId;
+            }
+        } catch (Exception ignored) {
+        }
+        return getFormattedDeviceId();
+    }
+
+    /**
      * Derives a consistent, readable, app-scoped Device ID formatted as AS-XXXX-XXXX-XXXX-XXXX.
      * Uses SHA-256 hash of Android ID combined with package salt.
      */

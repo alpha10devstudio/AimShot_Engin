@@ -163,17 +163,19 @@ import java.util.concurrent.Executors;
 
 public class LicenseVerificationService {
 
-    public static final String DEMO_TEST_KEY = "AIM-PRO-2025-X9";
+    public static final String PRODUCTION_ENDPOINT =
+            "https://alpha10.freedev.app/api/index.php?action=activate_license";
+
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private boolean isBusy = false;
 
-    public synchronized void verifyKey(final String rawKey, final String deviceId, final VerificationCallback callback) {
+    public synchronized void verifyKey(final String rawKey, final String deviceId, final String deviceModel, final String appVersion, final VerificationCallback callback) {
         if (rawKey == null || rawKey.trim().isEmpty()) {
             callback.onVerificationError("Verification key cannot be empty.", "ERR_EMPTY_KEY");
             return;
         }
-        // Background thread verification...
+        // Authoritative POST JSON verification to https://alpha10.freedev.app...
     }
 }`
   },

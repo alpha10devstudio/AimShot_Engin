@@ -465,7 +465,7 @@ export default function App() {
                 : 'bg-[#E0F2FE] border-[#39B9FF]/40 text-[#0284C7]'
             }`}
           >
-            com.alpha10.aimshot
+            AimShot Core Engine
           </span>
         </div>
 
@@ -653,7 +653,7 @@ export default function App() {
                       {language === 'bn' ? 'মেইন এইমশট ইঞ্জিন ইনস্টলার' : language === 'hi' ? 'मुख्य एमशॉट इंजन इंस्टालर' : 'Main AimShot Engine Installer'}
                     </h3>
                     <span className="text-[10px] text-[#39B9FF] font-mono tracking-wider block mt-0.5 mb-2">
-                      PACKAGE: com.alpha10.aimshot
+                      CORE ENGINE v1.0.0
                     </span>
 
                     {/* Pipeline Status Box */}
@@ -788,17 +788,17 @@ export default function App() {
 
                     <h3 className="text-base font-bold tracking-wide">AimShot Engine</h3>
                     <p className="text-xs text-[#39B9FF] font-mono mt-0.5 mb-3 font-semibold">
-                      Package: com.alpha10.aimshot
+                      Architecture: 120 FPS Tactical Overlay
                     </p>
 
                     <div className="w-full bg-[#080C12] rounded-xl p-3 border border-white/10 text-left text-xs space-y-1.5 mb-4 font-mono">
                       <div className="flex items-center justify-between text-[11px]">
                         <span className="text-slate-400">Application Identity:</span>
-                        <span className="text-[#39B9FF] font-bold">Main Engine APK</span>
+                        <span className="text-[#39B9FF] font-bold">AimShot Core Engine</span>
                       </div>
                       <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-slate-400">Package Verification:</span>
-                        <span className="text-[#49DCA0] font-bold">MATCHED (com.alpha10.aimshot)</span>
+                        <span className="text-slate-400">Security Signature:</span>
+                        <span className="text-[#49DCA0] font-bold">VERIFIED &amp; SECURE</span>
                       </div>
                       <div className="flex items-center justify-between text-[11px]">
                         <span className="text-slate-400">Guideline Core:</span>

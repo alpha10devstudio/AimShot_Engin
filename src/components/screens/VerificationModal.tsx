@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Key, AlertCircle, Loader2 } from 'lucide-react';
+import { Key, AlertCircle, Loader2, ExternalLink } from 'lucide-react';
 import { TacticalReticleLogo } from '../TacticalReticleLogo';
 
 interface VerificationModalProps {
@@ -19,7 +19,7 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e?: React.FormEvent) => {
+  const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const cleanKey = verificationKey.trim();
 
@@ -31,17 +31,50 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
     setErrorMessage('');
     setIsLoading(true);
 
-    // Simulate authoritative HTTPS verification call with realistic delay
-    setTimeout(() => {
+    try {
+      // Authoritative license verification request
+      const response = await fetch('/api/verify-license', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          license_key: cleanKey,
+          device_id: 'AS-7F3E-9C4D-2A8B-6E1F',
+          device_model: 'AimShot Android Client',
+          app_version: '2.4.0'
+        })
+      });
+
+      const data = await response.json();
       setIsLoading(false);
-      // Valid key or demo key
-      if (cleanKey.toUpperCase() === 'AIM-PRO-2025-X9' || cleanKey.startsWith('AIM-')) {
+
+      if (data && data.valid && data.status === 'active') {
         onSuccess(cleanKey);
         onClose();
       } else {
-        setErrorMessage('Verification service is not configured yet. (Use test key AIM-PRO-2025-X9)');
+        const status = (data?.status || '').toLowerCase();
+        let displayError = 'Verification failed. Please check your key and try again.';
+        if (status === 'invalid') {
+          displayError = 'Invalid license key. Please generate a real key from the website.';
+        } else if (status === 'expired') {
+          displayError = 'Your license has expired. Please generate a new key to continue.';
+        } else if (status === 'revoked') {
+          displayError = 'This key has been revoked by administration due to policy violation.';
+        } else if (status === 'device_limit_reached') {
+          displayError = 'Access Denied: This key is already registered to another device.';
+        } else if (status === 'device_revoked') {
+          displayError = 'This device has been suspended from accessing AimShot Engine.';
+        } else if (data?.message) {
+          displayError = data.message;
+        }
+        setErrorMessage(displayError);
       }
-    }, 1200);
+    } catch {
+      setIsLoading(false);
+      setErrorMessage('Unable to connect to security server. Please check your internet connection.');
+    }
   };
 
   const handlePasteKey = async () => {
@@ -54,11 +87,9 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
           return;
         }
       }
-      setVerificationKey('AIM-PRO-2025-X9');
-      setErrorMessage('');
+      setErrorMessage('Clipboard is empty. Please copy a key first.');
     } catch {
-      setVerificationKey('AIM-PRO-2025-X9');
-      setErrorMessage('');
+      setErrorMessage('Unable to read from clipboard.');
     }
   };
 
@@ -70,7 +101,7 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
           <TacticalReticleLogo size={46} />
         </div>
 
-        {/* Title & Subtitle matching Screen 3 */}
+        {/* Title & Subtitle */}
         <h2 className="text-center text-lg font-bold text-white tracking-wide">
           Login to AimShot Engine
         </h2>
@@ -133,12 +164,12 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
         </form>
 
         {/* How to get your key? */}
-        <div className="mt-6 pt-4 border-t border-[#1C2B42]/70 text-left">
+        <div className="mt-5 pt-4 border-t border-[#1C2B42]/70 text-left">
           <span className="text-xs font-bold text-white block mb-2">How to get your key?</span>
           <ol className="text-[11px] text-[#8D9BB0] space-y-1">
             <li className="flex gap-1.5">
               <span className="text-[#39B9FF] font-bold">1.</span>
-              <span>Purchase from authorized seller</span>
+              <span>Purchase or generate from official portal</span>
             </li>
             <li className="flex gap-1.5">
               <span className="text-[#39B9FF] font-bold">2.</span>
@@ -149,14 +180,25 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
               <span>Paste the key and login</span>
             </li>
           </ol>
+
+          {/* Direct Key Portal Button */}
+          <a
+            href="https://alpha10.freedev.app/index.php?p=generator"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 w-full py-2 px-3 rounded-xl border border-[#39B9FF]/50 text-xs font-bold text-[#39B9FF] hover:bg-[#39B9FF]/10 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <span>Get Free Key</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
         </div>
 
         {/* Close Button Link */}
-        <div className="text-center mt-5">
+        <div className="text-center mt-4">
           <button
             type="button"
             onClick={onClose}
-            className="text-xs font-semibold text-[#39B9FF] hover:underline"
+            className="text-xs font-semibold text-[#39B9FF] hover:underline cursor-pointer"
           >
             Close
           </button>

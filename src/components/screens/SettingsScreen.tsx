@@ -542,7 +542,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             <span className="text-xs text-[#39B9FF] font-mono block mt-0.5 mb-2">v1.0.0</span>
             <p className={`text-xs mb-2 ${isDark ? 'text-[#8D9BB0]' : 'text-[#64748B]'}`}>{t.appSlogan}</p>
             <p className={`text-[11px] mb-5 font-mono ${isDark ? 'text-[#55657E]' : 'text-[#94A3B8]'}`}>
-              Package: com.alpha10.aimshot<br />Native Android Java + Tactical UI Engine
+              Engine: AimShot Core Engine<br />Architecture: 120 FPS Tactical Precision Overlay
             </p>
             <button
               onClick={() => setActiveModal(null)}
@@ -592,8 +592,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             <p className={`text-xs mb-3 min-h-[32px] flex items-center justify-center ${
               isDark ? 'text-[#8D9BB0]' : 'text-[#64748B]'
             }`}>
-              {updatePhase === 'idle' && (language === 'bn' ? 'Alpha10 সার্ভার থেকে নিরাপদ রিলিজ ডাউনলোড করতে প্রস্তুত।' : 'Ready to authenticate and stream verified release from Alpha10 server.')}
-              {updatePhase === 'checking' && (language === 'bn' ? 'Alpha10 সার্ভারে প্রমাণীকরণ করা হচ্ছে...' : 'Authenticating with Alpha10 server (POST /api/auth.php)...')}
+              {updatePhase === 'idle' && (language === 'bn' ? 'সিকিউরিটি সার্ভার থেকে নিরাপদ রিলিজ ডাউনলোড করতে প্রস্তুত।' : 'Ready to authenticate and stream verified release from security server.')}
+              {updatePhase === 'checking' && (language === 'bn' ? 'সিকিউরিটি সার্ভারে প্রমাণীকরণ করা হচ্ছে...' : 'Authenticating with security server...')}
               {updatePhase === 'downloading' && (language === 'bn' ? `রিলিজ APK ডাউনলোড হচ্ছে... ${updateProgress}%` : `Streaming release APK: ${updateProgress}%`)}
               {updatePhase === 'verifying' && (language === 'bn' ? 'SHA-256 এবং সার্টিফিকেট ফিঙ্গারপ্রিন্ট যাচাই করা হচ্ছে...' : 'Verifying SHA-256 digest & permanent signing certificate...')}
               {updatePhase === 'ready' && (language === 'bn' ? 'যাচাইকরণ সফল! প্যাকেজ ইনস্টলারের জন্য প্রস্তুত।' : 'Cryptographic checks passed! Ready for Android PackageInstaller.')}

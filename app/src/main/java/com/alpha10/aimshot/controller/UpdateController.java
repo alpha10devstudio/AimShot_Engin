@@ -146,18 +146,18 @@ public class UpdateController {
                     return;
                 }
 
-                notifyStage(Stage.CONNECTING_SERVER, "Connecting to Alpha10 Website...", 10);
+                notifyStage(Stage.CONNECTING_SERVER, "Connecting to Security Server...", 10);
                 NetworkUtil.verifyServerReachability(context, NetworkUtil.ALPHA10_SERVER_CHECK_URL, new NetworkUtil.ConnectivityCallback() {
                     @Override
                     public void onResult(boolean isReachable) {
                         if (!isRunning) return;
                         if (!isReachable) {
                             isRunning = false;
-                            notifyError("Internet is connected, but https://alpha10.freedev.app could not be reached. Please retry.", true);
+                            notifyError("Internet is connected, but the security server could not be reached. Please retry.", true);
                             return;
                         }
 
-                        notifyStage(Stage.AUTHENTICATING, "Requesting download token from Alpha10 Server...", 15);
+                        notifyStage(Stage.AUTHENTICATING, "Verifying engine authorization...", 15);
                         authService.authenticate(context, new UpdateAuthService.AuthCallback() {
                             @Override
                             public void onAuthSuccess(UpdateAuthService.AuthSessionResult sessionResult) {

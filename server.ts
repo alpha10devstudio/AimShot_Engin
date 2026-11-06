@@ -111,6 +111,59 @@ async function startServer() {
     });
   });
 
+  // License Activation Proxy for web preview & authoritative verification
+  app.post('/api/verify-license', async (req: Request, res: Response) => {
+    try {
+      const { license_key, device_id, device_model, app_version } = req.body || {};
+      if (!license_key || !String(license_key).trim()) {
+        return res.status(400).json({
+          valid: false,
+          status: 'invalid',
+          message: 'Verification key cannot be empty.'
+        });
+      }
+
+      const upstreamRes = await fetch('https://alpha10.freedev.app/api/index.php?action=activate_license', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'User-Agent': 'AimShot-Engine-WebPreview/2.4.0'
+        },
+        body: JSON.stringify({
+          license_key: String(license_key).trim(),
+          device_id: device_id || 'WEB-PREVIEW-DEVICE-ID',
+          device_model: device_model || 'AimShot Web Client',
+          app_version: app_version || '2.4.0'
+        })
+      });
+
+      const rawText = await upstreamRes.text();
+      let parsed: any = null;
+      try {
+        parsed = JSON.parse(rawText.replace(/^\uFEFF/, '').trim());
+      } catch {
+        parsed = null;
+      }
+
+      if (!parsed) {
+        return res.status(502).json({
+          valid: false,
+          status: 'server_error',
+          message: 'Unexpected response from licensing server. Please try again.'
+        });
+      }
+
+      return res.status(upstreamRes.status).json(parsed);
+    } catch (err: any) {
+      return res.status(502).json({
+        valid: false,
+        status: 'network_error',
+        message: 'Unable to connect to security licensing server. Please check connection.'
+      });
+    }
+  });
+
   // Server-Side Token Broker Endpoint (optional Node/Cloud Run alternative to PHP launcher-auth.php)
   app.post('/api/launcher-auth', async (req: Request, res: Response) => {
     const secretAppKey = (process.env.ALPHA10_SECRET_APP_KEY || '').trim();

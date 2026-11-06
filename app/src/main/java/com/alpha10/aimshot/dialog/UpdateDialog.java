@@ -223,7 +223,7 @@ public class UpdateDialog extends Dialog implements UpdateController.UpdateListe
                     tvVersionInfo.setText(R.string.stage_9_open);
                     break;
                 default:
-                    tvVersionInfo.setText("PRIVATE ENGINE VAULT");
+                    tvVersionInfo.setText("AIMSHOT CORE ENGINE");
                     break;
             }
         }

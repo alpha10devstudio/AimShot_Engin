@@ -99,7 +99,7 @@
     <string name="get_activation_key">অ্যাক্টিভেশন কি সংগ্রহ করুন</string>
     <string name="btn_get_free_key">ফ্রি কি নিন</string>
     <string name="btn_get_paid_key">পেইড কি কিনুন</string>
-    <string name="free_key_url">https://aimshotengine.com/free-key</string>
+    <string name="free_key_url">https://alpha10.freedev.app/index.php?p=generator</string>
 
     <!-- Games -->
     <string name="game_carrom">Carrom Disc Pool</string>
@@ -116,9 +116,9 @@
     <string name="launch_the_game">▶  এইমশট ইঞ্জিন চালু করুন</string>
     <string name="launch_aimshot_engine">▶  এইমশট ইঞ্জিন চালু করুন</string>
     <string name="install_aimshot_engine">▶  এইমশট ইঞ্জিন ইনস্টল করুন</string>
-    <string name="launching_aimshot_engine">এইমশট ইঞ্জিন (com.alpha10.aimshot) চালু হচ্ছে...</string>
+    <string name="launching_aimshot_engine">এইমশট কোর ইঞ্জিন চালু হচ্ছে...</string>
     <string name="failed_to_launch_main_apk">এইমশট ইঞ্জিন চালু করা যায়নি। অনুগ্রহ করে পুনরায় ইনস্টলেশন যাচাই করুন।</string>
-    <string name="main_apk_not_installed">মেইন এইমশট ইঞ্জিন APK এখনো ইনস্টল করা নেই। ডাউনলোড শুরু হচ্ছে...</string>
+    <string name="main_apk_not_installed">এইমশট কোর ইঞ্জিন ইনস্টল করা নেই। সেটআপ শুরু হচ্ছে...</string>
     <string name="no_internet_title">কোনো ইন্টারনেট সংযোগ নেই</string>
     <string name="no_internet_msg">অনুগ্রহ করে ইন্টারনেটের সাথে সংযুক্ত হোন এবং পুনরায় চেষ্টা করুন।</string>
     <string name="launching_game">%1$s চালু হচ্ছে...</string>
@@ -140,30 +140,30 @@
     <string name="update_available_subtitle">AimShot Engine v%1$s ইনস্টল করার জন্য প্রস্তুত</string>
     <string name="update_btn_download">ডাউনলোড ও ইনস্টল</string>
     <string name="update_btn_check">আপডেট চেক</string>
-    <string name="update_status_network">ইন্টারনেট ও সার্ভার যাচাই করা হচ্ছে...</string>
-    <string name="update_status_auth">Alpha10 সার্ভারে প্রমাণীকরণ করা হচ্ছে...</string>
+    <string name="update_status_network">ইন্টারনেট ও সিকিউরিটি সার্ভার যাচাই করা হচ্ছে...</string>
+    <string name="update_status_auth">সিকিউরিটি সার্ভারে প্রমাণীকরণ করা হচ্ছে...</string>
     <string name="update_status_downloading">আপডেট ডাউনলোড হচ্ছে: %1$d%%</string>
     <string name="update_status_sha">SHA-256 প্যাকেজ সততা যাচাই করা হচ্ছে...</string>
     <string name="update_status_cert">রিলিজ সার্টিফিকেট যাচাই করা হচ্ছে...</string>
     <string name="update_status_installing">প্যাকেজ ইনস্টলার প্রস্তুত করা হচ্ছে...</string>
-    <string name="update_failed_auth">প্রমাণীকরণ ব্যর্থ হয়েছে। ডাউনলোড টোকেন পাওয়া যায়নি।</string>
+    <string name="update_failed_auth">প্রমাণীকরণ ব্যর্থ হয়েছে। ইন্টারনেট সংযোগ যাচাই করে আবার চেষ্টা করুন।</string>
     <string name="update_failed_sha">সততা যাচাই ব্যর্থ: SHA-256 হ্যাশ অমিল।</string>
     <string name="update_failed_cert">নিরাপত্তা যাচাই ব্যর্থ: স্বাক্ষরকারী সার্টিফিকেট অমিল।</string>
     <string name="update_failed_storage">ডিভাইসে পর্যাপ্ত ইন্টারনাল স্টোরেজ খালি নেই।</string>
-    <string name="update_failed_network">নেটওয়ার্ক ত্রুটি: Alpha10 সার্ভারের সাথে সংযোগ ব্যর্থ।</string>
+    <string name="update_failed_network">নেটওয়ার্ক ত্রুটি: সিকিউরিটি সার্ভারের সাথে সংযোগ ব্যর্থ।</string>
     <string name="update_permission_prompt">ইনস্টলেশন অনুমতি প্রয়োজন। অনুগ্রহ করে অজানা অ্যাপ ইনস্টল করার অনুমতি দিন।</string>
     <string name="btn_retry">পুনরায় চেষ্টা করুন</string>
     <string name="btn_cancel">বাতিল</string>
 
     <!-- 9 Distinct Tactical Pipeline Stages -->
     <string name="stage_1_internet">১. ইন্টারনেট সংযোগ যাচাই</string>
-    <string name="stage_2_server">২. Alpha10 সার্ভারের সাথে সংযোগ</string>
-    <string name="stage_3_auth">৩. সার্ভার প্রমাণীকরণ</string>
+    <string name="stage_2_server">২. সিকিউরিটি সার্ভারের সাথে সংযোগ</string>
+    <string name="stage_3_auth">৩. ইঞ্জিন অ্যাক্সেস যাচাই</string>
     <string name="stage_4_download">৪. AimShot Engine ডাউনলোড হচ্ছে</string>
     <string name="stage_5_verify">৫. APK নিরাপত্তা ও সার্টিফিকেট যাচাই</string>
-    <string name="stage_6_confirm">৬. প্রাইভেট ভল্ট প্রস্তুত করা হচ্ছে</string>
-    <string name="stage_7_install">৭. প্রাইভেট ভল্টে ইঞ্জিন সংরক্ষণ হচ্ছে</string>
-    <string name="stage_8_success">৮. প্রাইভেট ভল্ট সেটআপ সম্পন্ন</string>
+    <string name="stage_6_confirm">৬. ইনস্টলেশন প্রস্তুত করা হচ্ছে</string>
+    <string name="stage_7_install">৭. এইমশট ইঞ্জিন ইনস্টল হচ্ছে</string>
+    <string name="stage_8_success">৮. এইমশট ইঞ্জিন প্রস্তুত</string>
     <string name="stage_9_open">৯. AimShot Engine চালু করা হচ্ছে</string>
     <string name="btn_open_app">OPEN AIMSHOT ENGINE</string>
     <string name="auto_launching_countdown">%1$d সেকেন্ডে চালু হচ্ছে...</string>
@@ -171,12 +171,12 @@
     <string name="status_off">বন্ধ</string>
     <string name="select_language_subtitle">আপনার পছন্দের ভাষা নির্বাচন করুন</string>
     <string name="verifying_network_title">সংযোগ যাচাই করা হচ্ছে</string>
-    <string name="verifying_network_msg">সক্রিয় ইন্টারনেট ও Alpha10 সার্ভার পরীক্ষা করা হচ্ছে...</string>
+    <string name="verifying_network_msg">সুরক্ষিত সার্ভার সংযোগ পরীক্ষা করা হচ্ছে...</string>
     <string name="no_internet_access_msg">Wi-Fi বা Mobile Data চালু আছে, কিন্তু সক্রিয় ইন্টারনেট সংযোগ পাওয়া যাচ্ছে না (ডাটা প্যাক শেষ, ব্যালেন্স নেই বা লগইন পোর্টাল)। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।</string>
     <string name="server_connection_failed_title">সার্ভার সংযোগ ব্যর্থ</string>
-    <string name="server_connection_failed_msg">ইন্টারনেট সচল আছে, কিন্তু Alpha10 সার্ভারে সংযোগ করা যাচ্ছে না। অনুগ্রহ করে একটু পর আবার চেষ্টা করুন।</string>
+    <string name="server_connection_failed_msg">ইন্টারনেট সচল আছে, কিন্তু সিকিউরিটি সার্ভারে সংযোগ করা যাচ্ছে না। অনুগ্রহ করে একটু পর আবার চেষ্টা করুন।</string>
     <string name="btn_understood">ঠিক আছে</string>
     <string name="legacy_app_detected_title">পুরাতন আলাদা অ্যাপ সরান</string>
-    <string name="legacy_app_detected_msg">আপনার ফোনে আগের টেস্টের একটি আলাদা AimShot আইকন ইনস্টল করা আছে। ভেরিফিকেশন সুরক্ষা বজায় রাখতে পুরাতন অ্যাপটি আনইনস্টল করুন, যাতে মেইন ইঞ্জিন শুধুমাত্র লঞ্চারের প্রাইভেট ভল্ট থেকেই গোপনে চলে।</string>
+    <string name="legacy_app_detected_msg">আপনার ফোনে আগের একটি আলাদা ভার্সন পাওয়া গেছে। ভেরিফিকেশন ও নিরাপত্তা বজায় রাখতে অনুগ্রহ করে পুরাতন অ্যাপটি আনইনস্টল করুন।</string>
     <string name="btn_uninstall_legacy">আনইনস্টল করুন</string>
 </resources>
