@@ -68,7 +68,7 @@ export const PremiumScreen: React.FC<PremiumScreenProps> = ({
         <div className="flex items-center gap-2.5">
           <TacticalReticleLogo size={36} />
           <div className="flex flex-col">
-            <div className="flex items-baseline gap-1 leading-none">
+            <div className="flex items-baseline gap-1 leading-none font-brand tracking-wide">
               <span className={`text-base font-bold ${isDark ? 'text-white' : 'text-[#0F172A]'}`}>
                 {t.appTitle}
               </span>

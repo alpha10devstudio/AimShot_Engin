@@ -28,6 +28,14 @@ import { CodeExplorer } from './components/CodeExplorer';
 import { ScreenId, BottomTab, MembershipState, Game, AppTheme, AppNotification } from './types';
 import { SUPPORTED_GAMES } from './data/mockData';
 import { Language, TRANSLATIONS } from './data/translations';
+import {
+  saveKeyToVault,
+  getKeyVault,
+  findValidKeyInVault,
+  switchActiveKey,
+  removeKeyFromVault,
+  createMembershipFromRecord
+} from './utils/keyVault';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenId>('home');
@@ -80,20 +88,26 @@ export default function App() {
     status: 'initializing' | 'injecting' | 'running';
   } | null>(null);
 
-  // Active membership state starting as Free / Logged Out
+  // Active membership state starting from local vault or stored session
   const [membership, setMembership] = useState<MembershipState>(() => {
     const saved = localStorage.getItem('aimshot_membership');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed.status === 'active' && (!parsed.expiryTimestamp || parsed.expiryTimestamp <= Date.now())) {
-          parsed.expiryTimestamp = Date.now() + (parsed.daysRemaining || 18) * 86400000 + 14 * 3600000 + 45 * 60000;
+        if (parsed.status === 'active' && parsed.expiryTimestamp && parsed.expiryTimestamp > Date.now()) {
+          return parsed;
         }
-        return parsed;
       } catch {
         // fallback
       }
     }
+
+    // Check if there is an unexpired key stored in the local vault
+    const vault = getKeyVault();
+    if (vault.length > 0 && vault[0].expiryTimestamp > Date.now()) {
+      return createMembershipFromRecord(vault[0]);
+    }
+
     return {
       isLoggedIn: false,
       status: 'free',
@@ -103,7 +117,8 @@ export default function App() {
       daysRemaining: 0,
       expiryTimestamp: 0,
       featuresUnlocked: false,
-      boundDeviceId: 'AIM-8839-4491-BC99'
+      boundDeviceId: '9a7d3c8f1e2b4d5a',
+      key: ''
     };
   });
 
@@ -310,26 +325,18 @@ export default function App() {
     setLanguage(newLang);
   };
 
-  const handleLoginSuccess = (key: string) => {
-    const remainingDays = 18;
+  const handleLoginSuccess = (key: string, expiryTimestampOverride?: number, planTypeOverride?: string) => {
+    const cleanKey = key.trim();
+    const durationDays = 18;
     const now = Date.now();
-    const expiryTimestamp = now + (remainingDays * 86400000) + (14 * 3600000) + (45 * 60000) + (30 * 1000);
-    const expDateObj = new Date(expiryTimestamp);
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const formattedDate = `${String(expDateObj.getDate()).padStart(2, '0')} ${months[expDateObj.getMonth()]} ${expDateObj.getFullYear()}`;
+    const expiryTimestamp = expiryTimestampOverride && expiryTimestampOverride > now
+      ? expiryTimestampOverride
+      : now + (durationDays * 86400000) + (14 * 3600000) + (45 * 60000) + (30 * 1000);
+    const planType = planTypeOverride || 'AimShot Pro';
 
-    const newMembership: MembershipState = {
-      isLoggedIn: true,
-      status: 'active',
-      planType: 'AimShot Pro',
-      startDate: 'Today',
-      expiryDate: formattedDate,
-      daysRemaining: remainingDays,
-      expiryTimestamp: expiryTimestamp,
-      featuresUnlocked: true,
-      boundDeviceId: '9a7d3c8f1e2b4d5a',
-      key: key.trim()
-    };
+    const record = saveKeyToVault(cleanKey, expiryTimestamp, planType, '9a7d3c8f1e2b4d5a');
+    const newMembership = createMembershipFromRecord(record);
+
     setMembership(newMembership);
     localStorage.setItem('aimshot_membership', JSON.stringify(newMembership));
     showToast(t.keyVerified);
@@ -400,37 +407,68 @@ export default function App() {
       return;
     }
 
-    // 1. Mandatory Internet Check
+    const isTemporallyValid = !!(membership.expiryTimestamp && membership.expiryTimestamp > Date.now());
+
+    // 1. Connectivity & Authorization Gate
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      showToast('No Internet Connection. Please connect to the internet and try again.');
-      return;
-    }
-
-    showToast('Verifying license authorization with security server...');
-
-    try {
-      const res = await fetch('/api/verify-license', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          license_key: membership.key,
-          device_id: '9a7d3c8f1e2b4d5a',
-          device_model: 'Samsung Galaxy S23 Ultra',
-          app_version: '2.4.0'
-        })
-      });
-
-      const data = await res.json();
-      if (!data || !data.valid || data.status !== 'active') {
-        // Server denied authorization! Clear session
-        handleLogout();
-        showToast(data?.message || 'License expired or revoked. Access denied.');
-        setIsLoginModalOpen(true);
+      if (isTemporallyValid) {
+        showToast('Offline Mode: Authorized via cached license.');
+      } else {
+        showToast('No Internet Connection. Please connect to the internet and try again.');
         return;
       }
-    } catch {
-      showToast('Security server unreachable. Please check connection.');
-      return;
+    } else {
+      showToast('Verifying license authorization with security server...');
+
+      try {
+        const res = await fetch('/api/verify-license', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            license_key: membership.key,
+            device_id: '9a7d3c8f1e2b4d5a',
+            device_model: 'Samsung Galaxy S23 Ultra',
+            app_version: '2.4.0'
+          })
+        });
+
+        const data = await res.json();
+        const status = (data?.status || '').toLowerCase();
+
+        if (!data || !data.valid || status !== 'active') {
+          const isAuthoritativeDenied = ['invalid', 'expired', 'revoked', 'device_revoked', 'device_limit_reached'].includes(status);
+          if (isAuthoritativeDenied) {
+            removeKeyFromVault(membership.key);
+            handleLogout();
+            showToast(data?.message || 'License expired or revoked. Access denied.');
+            setIsLoginModalOpen(true);
+            return;
+          } else if (isTemporallyValid) {
+            // Transient server glitch - keep session from valid local cache!
+            showToast('Authorization preserved from valid local session.');
+          } else {
+            handleLogout();
+            showToast(data?.message || 'License verification failed.');
+            setIsLoginModalOpen(true);
+            return;
+          }
+        } else {
+          // Server returned active status: refresh expiry in vault if present
+          if (data.expires_at) {
+            const parsed = new Date(data.expires_at).getTime();
+            if (!isNaN(parsed) && parsed > Date.now()) {
+              saveKeyToVault(membership.key, parsed, data.plan_type || membership.planType);
+            }
+          }
+        }
+      } catch {
+        if (isTemporallyValid) {
+          showToast('Security server unreachable. Authorized via cached license.');
+        } else {
+          showToast('Security server unreachable. Please check connection.');
+          return;
+        }
+      }
     }
 
     // Situation A: Main APK is already installed

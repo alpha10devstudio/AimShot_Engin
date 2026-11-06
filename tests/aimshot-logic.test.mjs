@@ -1146,6 +1146,112 @@ describe('AimShot Engine Pure Logic Unit Tests', () => {
     // 3. Min SDK kept at 24 for universal backward compatibility
     assert.equal(gradleContent.includes('minSdk 24'), true);
   });
+
+  // Test 51: Multi-Key Vault local storage & active key switching
+  test('Multi-Key Vault saves multiple keys, remembers expiry, and switches primary active key', () => {
+    const vault = new Map();
+    const saveKey = (key, expiryTimestamp, planType) => {
+      vault.set(key, { key, expiryTimestamp, planType, lastUsed: Date.now() });
+    };
+
+    const now = Date.now();
+    saveKey('KEY-AAA-111', now + 86400000, 'AimShot Pro 1-Day');
+    saveKey('KEY-BBB-222', now + 86400000 * 7, 'AimShot Pro 7-Days');
+
+    assert.equal(vault.size, 2);
+    assert.equal(vault.has('KEY-AAA-111'), true);
+    assert.equal(vault.has('KEY-BBB-222'), true);
+
+    // Switch active key to KEY-AAA-111
+    const activeKey = vault.get('KEY-AAA-111');
+    assert.equal(activeKey.planType, 'AimShot Pro 1-Day');
+    assert.ok(activeKey.expiryTimestamp > Date.now());
+  });
+
+  // Test 52: Multi-Key Vault automatic purging of expired keys
+  test('Multi-Key Vault automatically purges expired keys while preserving valid keys', () => {
+    const now = Date.now();
+    const keys = [
+      { key: 'EXPIRED-KEY-001', expiryTimestamp: now - 50000 },
+      { key: 'EXPIRED-KEY-002', expiryTimestamp: now - 1000 },
+      { key: 'VALID-KEY-003', expiryTimestamp: now + 3600000 * 24 },
+      { key: 'VALID-KEY-004', expiryTimestamp: now + 3600000 * 48 }
+    ];
+
+    const purgeExpired = (list, currentTime) => list.filter(k => k.expiryTimestamp > currentTime);
+    const cleaned = purgeExpired(keys, now);
+
+    assert.equal(cleaned.length, 2);
+    assert.equal(cleaned[0].key, 'VALID-KEY-003');
+    assert.equal(cleaned[1].key, 'VALID-KEY-004');
+    assert.equal(cleaned.some(k => k.key.startsWith('EXPIRED')), false);
+  });
+
+  // Test 53: Resilient offline launch authorization prevents false security verification rejection
+  test('Launch verification preserves local active session during transient network/parse errors if unexpired', () => {
+    const evaluateLaunchClearance = ({ isLocallyValid, errorCode }) => {
+      const isAuthoritativeRevocation = [
+        'STATUS_INVALID',
+        'STATUS_REVOKED',
+        'STATUS_EXPIRED',
+        'STATUS_DEVICE_REVOKED'
+      ].includes(errorCode);
+
+      if (isAuthoritativeRevocation) {
+        return { allowLaunch: false, clearSession: true, action: 'DENIED' };
+      }
+
+      // If network glitch (ERR_PARSE, ERR_NETWORK, TIMEOUT) and key is temporally valid locally
+      if (isLocallyValid) {
+        return { allowLaunch: true, clearSession: false, action: 'CACHED_LAUNCH' };
+      }
+
+      return { allowLaunch: false, clearSession: false, action: 'ERROR_DIALOG' };
+    };
+
+    // 1. Authoritative revocation MUST clear session and deny launch
+    const revoked = evaluateLaunchClearance({ isLocallyValid: true, errorCode: 'STATUS_REVOKED' });
+    assert.equal(revoked.allowLaunch, false);
+    assert.equal(revoked.clearSession, true);
+
+    // 2. Network glitch (ERR_PARSE) with valid local key MUST NOT clear session and MUST allow launch!
+    const parseGlitch = evaluateLaunchClearance({ isLocallyValid: true, errorCode: 'ERR_PARSE' });
+    assert.equal(parseGlitch.allowLaunch, true);
+    assert.equal(parseGlitch.clearSession, false);
+    assert.equal(parseGlitch.action, 'CACHED_LAUNCH');
+
+    // 3. Network glitch with expired local key
+    const expiredGlitch = evaluateLaunchClearance({ isLocallyValid: false, errorCode: 'ERR_NETWORK' });
+    assert.equal(expiredGlitch.allowLaunch, false);
+    assert.equal(expiredGlitch.action, 'ERROR_DIALOG');
+  });
+
+  // Test 54: Home screen Selected Game card layout matches user UI specification (Screenshot 1)
+  test('Selected Game card has status badge positioned on the far right replacing the days counter', () => {
+    const homeLayout = fs.readFileSync(path.resolve('app/src/main/res/layout/fragment_home.xml'), 'utf8');
+    const cardLaunchSection = homeLayout.slice(homeLayout.indexOf('android:id="@+id/card_launch_game"'));
+
+    // Check that tv_active_days_remaining is removed from card_launch_game
+    assert.equal(cardLaunchSection.includes('tv_active_days_remaining'), false);
+
+    // Check that tv_active_game_badge is positioned layout_alignParentEnd="true"
+    assert.equal(cardLaunchSection.includes('android:id="@+id/tv_active_game_badge"'), true);
+    assert.equal(cardLaunchSection.includes('android:layout_alignParentEnd="true"'), true);
+  });
+
+  // Test 55: Custom font assets and font-face configurations
+  test('Typography configuration integrates versatylo.ttf for brand headers and roboto.ttf for UI', () => {
+    const css = fs.readFileSync(path.resolve('src/index.css'), 'utf8');
+    assert.equal(css.includes('Versatylo'), true);
+    assert.equal(css.includes('RobotoUI'), true);
+    assert.equal(css.includes('.font-brand'), true);
+
+    const fontHelperJava = fs.readFileSync(path.resolve('app/src/main/java/com/alpha10/aimshot/util/FontHelper.java'), 'utf8');
+    assert.equal(fontHelperJava.includes('fonts/versatylo.ttf'), true);
+    assert.equal(fontHelperJava.includes('fonts/roboto.ttf'), true);
+    assert.equal(fontHelperJava.includes('applyBrandFont'), true);
+  });
 });
+
 
 

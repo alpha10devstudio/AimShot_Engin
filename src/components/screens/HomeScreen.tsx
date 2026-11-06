@@ -90,7 +90,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         <div className="flex items-center gap-2.5">
           <TacticalReticleLogo size={36} />
           <div className="flex flex-col">
-            <div className="flex items-baseline gap-1 leading-none">
+            <div className="flex items-baseline gap-1 leading-none font-brand tracking-wide">
               <span className={`text-base font-bold ${isDark ? 'text-white' : 'text-[#0F172A]'}`}>
                 {t.appTitle}
               </span>
@@ -148,7 +148,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </div>
 
             <div className="flex flex-col">
-              <div className="flex items-baseline gap-1">
+              <div className="flex items-baseline gap-1 font-brand tracking-wide">
                 <span className={`text-base font-bold ${isDark ? 'text-white' : 'text-[#0F172A]'}`}>
                   {t.appTitle}
                 </span>
@@ -366,18 +366,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   />
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={`text-xs font-bold truncate ${
-                        isDark ? 'text-white' : 'text-[#0F172A]'
-                      }`}
-                    >
-                      {selectedGame.name}
-                    </span>
-                    <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-[#49DCA0]/20 text-[#49DCA0] border border-[#49DCA0]/30 shrink-0">
-                      {selectedGame.isActive ? t.activeStatus : t.lockedStatus}
-                    </span>
-                  </div>
+                  <span
+                    className={`text-xs font-bold truncate ${
+                      isDark ? 'text-white' : 'text-[#0F172A]'
+                    }`}
+                  >
+                    {selectedGame.name}
+                  </span>
                   <span
                     className={`text-[10px] truncate ${
                       isDark ? 'text-[#8D9BB0]' : 'text-[#64748B]'
@@ -388,12 +383,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 </div>
               </div>
 
-              <button
-                onClick={onNavigateToPremium}
-                className="shrink-0 text-[10px] text-[#39B9FF] hover:underline font-medium cursor-pointer ml-2"
+              {/* Status badge moved to far right replacing 0 Days per user instruction */}
+              <span
+                className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold shrink-0 uppercase tracking-wider border ml-2 ${
+                  selectedGame.isActive
+                    ? 'bg-[#49DCA0]/15 text-[#49DCA0] border-[#49DCA0]/40 shadow-[0_0_8px_rgba(73,220,160,0.25)]'
+                    : 'bg-[#FF4655]/15 text-[#FF4655] border-[#FF4655]/40'
+                }`}
               >
-                {membership.daysRemaining} {t.days}
-              </button>
+                {selectedGame.isActive ? t.activeStatus : t.lockedStatus}
+              </span>
             </div>
 
             {/* Prominent Launch AimShot Engine Action Button */}

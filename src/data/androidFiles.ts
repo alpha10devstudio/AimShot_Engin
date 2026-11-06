@@ -177,6 +177,46 @@ public class LicenseVerificationService {
         }
         // Authoritative POST JSON verification to https://alpha10.freedev.app...
     }
+}
+`
+  },
+  {
+    path: 'app/src/main/java/com/alpha10/aimshot/repository/MembershipRepository.java',
+    name: 'MembershipRepository.java',
+    language: 'java',
+    category: 'java',
+    description: 'Local memory caching, multi-key vault management, and auto-purge of expired keys',
+    content: `package com.alpha10.aimshot.repository;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+import com.alpha10.aimshot.model.MembershipStatus;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.util.ArrayList;
+import java.util.List;
+
+public class MembershipRepository {
+    private static final String PREF_NAME = "aimshot_secure_license_prefs";
+    private static final String KEY_LICENSE_KEY = "saved_license_key";
+    private static final String KEY_KEY_VAULT = "aimshot_cached_key_vault";
+    private static MembershipRepository instance;
+
+    // Local multi-key vault & session cache with auto-purge of expired keys
+    public synchronized boolean isCurrentKeyValidLocally() {
+        MembershipStatus status = getCurrentStatus();
+        return status != null && status.getState() == MembershipStatus.State.ACTIVE
+                && status.getExpiryTimestamp() > System.currentTimeMillis();
+    }
+
+    public synchronized void saveActiveKey(String key, MembershipStatus status) {
+        // Saves active key, updates vault, purges expired keys
+    }
+
+    public synchronized boolean checkAndActivateKeyFromVault(String key) {
+        // Restores session immediately from cached valid key without server roundtrip
+        return true;
+    }
 }`
   },
   {

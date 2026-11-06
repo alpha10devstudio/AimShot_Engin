@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { Key, AlertCircle, Loader2, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Key, AlertCircle, Loader2, ExternalLink, CheckCircle2, Trash2 } from 'lucide-react';
 import { TacticalReticleLogo } from '../TacticalReticleLogo';
+import { getKeyVault, findValidKeyInVault, removeKeyFromVault } from '../../utils/keyVault';
+import { CachedKeyVaultRecord } from '../../types';
 
 interface VerificationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (key: string) => void;
+  onSuccess: (key: string, expiryTimestamp?: number, planType?: string) => void;
 }
 
 export const VerificationModal: React.FC<VerificationModalProps> = ({
@@ -16,8 +18,26 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
   const [verificationKey, setVerificationKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [savedVaultKeys, setSavedVaultKeys] = useState<CachedKeyVaultRecord[]>([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSavedVaultKeys(getKeyVault());
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
+
+  const handleSelectVaultKey = (record: CachedKeyVaultRecord) => {
+    onSuccess(record.key, record.expiryTimestamp, record.planType);
+    onClose();
+  };
+
+  const handleRemoveVaultKey = (e: React.MouseEvent, keyToRemove: string) => {
+    e.stopPropagation();
+    removeKeyFromVault(keyToRemove);
+    setSavedVaultKeys(getKeyVault());
+  };
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -25,6 +45,14 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
 
     if (!cleanKey) {
       setErrorMessage('Verification key cannot be empty.');
+      return;
+    }
+
+    // 1. Instant local cache check
+    const cached = findValidKeyInVault(cleanKey);
+    if (cached) {
+      onSuccess(cached.key, cached.expiryTimestamp, cached.planType);
+      onClose();
       return;
     }
 
@@ -51,7 +79,14 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
       setIsLoading(false);
 
       if (data && data.valid && data.status === 'active') {
-        onSuccess(cleanKey);
+        let expiryTimestamp = Date.now() + (data.duration_hours || 72) * 3600 * 1000;
+        if (data.expires_at) {
+          const parsed = new Date(data.expires_at).getTime();
+          if (!isNaN(parsed) && parsed > Date.now()) {
+            expiryTimestamp = parsed;
+          }
+        }
+        onSuccess(cleanKey, expiryTimestamp, data.plan_type || 'AimShot Pro');
         onClose();
       } else {
         const status = (data?.status || '').toLowerCase();
@@ -73,6 +108,13 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
       }
     } catch {
       setIsLoading(false);
+      // Fallback check against valid vault record
+      const fallbackCached = findValidKeyInVault(cleanKey);
+      if (fallbackCached) {
+        onSuccess(fallbackCached.key, fallbackCached.expiryTimestamp, fallbackCached.planType);
+        onClose();
+        return;
+      }
       setErrorMessage('Unable to connect to security server. Please check your internet connection.');
     }
   };
@@ -94,8 +136,8 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
   };
 
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-sm bg-[#111B2A] rounded-2xl p-6 border border-[#39B9FF]/60 shadow-[0_0_30px_rgba(57,185,255,0.25)] relative">
+    <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in overflow-y-auto">
+      <div className="w-full max-w-sm bg-[#111B2A] rounded-2xl p-6 border border-[#39B9FF]/60 shadow-[0_0_30px_rgba(57,185,255,0.25)] relative my-auto">
         {/* Reticle Logo */}
         <div className="flex justify-center mb-3">
           <TacticalReticleLogo size={46} />
@@ -105,9 +147,53 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
         <h2 className="text-center text-lg font-bold text-white tracking-wide">
           Login to AimShot Engine
         </h2>
-        <p className="text-center text-xs text-[#8D9BB0] mt-1 mb-5">
-          Enter your verification key to continue
+        <p className="text-center text-xs text-[#8D9BB0] mt-1 mb-4">
+          Enter your verification key or switch active key
         </p>
+
+        {/* Saved Keys Multi-Key Quick Switcher if available */}
+        {savedVaultKeys.length > 0 && (
+          <div className="mb-4 p-2.5 rounded-xl bg-[#080C12] border border-[#39B9FF]/30">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold text-[#39B9FF] uppercase tracking-wider flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Saved Active Keys ({savedVaultKeys.length})
+              </span>
+              <span className="text-[10px] text-[#8D9BB0]">Click to switch</span>
+            </div>
+            <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+              {savedVaultKeys.map((item) => (
+                <div
+                  key={item.key}
+                  onClick={() => handleSelectVaultKey(item)}
+                  className="flex items-center justify-between p-2 rounded-lg bg-[#142032] hover:bg-[#1a2d47] border border-white/5 hover:border-[#39B9FF]/50 cursor-pointer transition-all group"
+                >
+                  <div className="min-w-0 pr-2">
+                    <p className="text-[11px] font-mono text-white truncate font-medium">
+                      {item.key}
+                    </p>
+                    <p className="text-[10px] text-[#39B9FF]">
+                      Valid until {item.expiryDate}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-[#39B9FF]/20 text-[#39B9FF] font-semibold group-hover:bg-[#39B9FF] group-hover:text-black transition-colors">
+                      Switch
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => handleRemoveVaultKey(e, item.key)}
+                      className="p-1 text-red-400/70 hover:text-red-400 hover:bg-red-950/40 rounded transition-colors"
+                      title="Remove key"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Key Input Field */}
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -164,8 +250,8 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
         </form>
 
         {/* How to get your key? */}
-        <div className="mt-5 pt-4 border-t border-[#1C2B42]/70 text-left">
-          <span className="text-xs font-bold text-white block mb-2">How to get your key?</span>
+        <div className="mt-4 pt-3 border-t border-[#1C2B42]/70 text-left">
+          <span className="text-xs font-bold text-white block mb-1.5">How to get your key?</span>
           <ol className="text-[11px] text-[#8D9BB0] space-y-1">
             <li className="flex gap-1.5">
               <span className="text-[#39B9FF] font-bold">1.</span>
@@ -194,7 +280,7 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
         </div>
 
         {/* Close Button Link */}
-        <div className="text-center mt-4">
+        <div className="text-center mt-3">
           <button
             type="button"
             onClick={onClose}

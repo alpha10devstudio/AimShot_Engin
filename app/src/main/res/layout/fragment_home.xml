@@ -42,6 +42,7 @@
                         android:orientation="horizontal">
 
                         <TextView
+                            android:id="@+id/tv_header_aimshot"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="AimShot "
@@ -50,6 +51,7 @@
                             android:textStyle="bold" />
 
                         <TextView
+                            android:id="@+id/tv_header_engine"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Engine"
@@ -133,6 +135,7 @@
                     android:orientation="horizontal">
 
                     <TextView
+                        android:id="@+id/tv_hero_aimshot"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="AimShot "
@@ -141,6 +144,7 @@
                         android:textStyle="bold" />
 
                     <TextView
+                        android:id="@+id/tv_hero_engine"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Engine"
@@ -611,38 +615,17 @@
                     android:layout_centerVertical="true"
                     android:layout_marginStart="12dp"
                     android:layout_toEndOf="@id/iv_active_game_icon"
+                    android:layout_toStartOf="@+id/tv_active_game_badge"
                     android:orientation="vertical">
 
-                    <LinearLayout
+                    <TextView
+                        android:id="@+id/tv_active_game_title"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:id="@+id/tv_active_game_title"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Carrom Disc Pool"
-                            android:textColor="@color/text_primary"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:id="@+id/tv_active_game_badge"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:background="@drawable/bg_badge_active"
-                            android:paddingStart="6dp"
-                            android:paddingTop="2dp"
-                            android:paddingEnd="6dp"
-                            android:paddingBottom="2dp"
-                            android:text="ACTIVE"
-                            android:textColor="@color/badge_active_text"
-                            android:textSize="9sp"
-                            android:textStyle="bold" />
-                    </LinearLayout>
+                        android:text="Carrom Disc Pool"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/tv_active_game_features"
@@ -654,15 +637,21 @@
                         android:textSize="11sp" />
                 </LinearLayout>
 
+                <!-- Status badge moved to far right replacing days counter per user instruction -->
                 <TextView
-                    android:id="@+id/tv_active_days_remaining"
+                    android:id="@+id/tv_active_game_badge"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"
-                    android:text="18 Days"
-                    android:textColor="@color/accent_primary"
-                    android:textSize="12sp"
+                    android:background="@drawable/bg_badge_active"
+                    android:paddingStart="8dp"
+                    android:paddingTop="3dp"
+                    android:paddingEnd="8dp"
+                    android:paddingBottom="3dp"
+                    android:text="ACTIVE"
+                    android:textColor="@color/badge_active_text"
+                    android:textSize="9sp"
                     android:textStyle="bold" />
             </RelativeLayout>
 

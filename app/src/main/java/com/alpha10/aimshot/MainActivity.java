@@ -406,6 +406,13 @@ public class MainActivity extends BaseActivity
 
         updateHomeLoginCard(homeView);
         FontHelper.applyRegularFont(homeView);
+
+        // Apply custom brand font (versatylo.ttf) to AimShot Engine brand headers
+        TextView tvHeaderAimshot = homeView.findViewById(R.id.tv_header_aimshot);
+        TextView tvHeaderEngine = homeView.findViewById(R.id.tv_header_engine);
+        TextView tvHeroAimshot = homeView.findViewById(R.id.tv_hero_aimshot);
+        TextView tvHeroEngine = homeView.findViewById(R.id.tv_hero_engine);
+        FontHelper.applyBrandFont(tvHeaderAimshot, tvHeaderEngine, tvHeroAimshot, tvHeroEngine);
     }
 
     private void updateCarouselIndicators(int index, ImageView d1, ImageView d2, ImageView d3) {
@@ -449,9 +456,10 @@ public class MainActivity extends BaseActivity
             }
             if (cardLaunchGame != null) {
                 cardLaunchGame.setVisibility(View.VISIBLE);
-                TextView tvDays = homeView.findViewById(R.id.tv_active_days_remaining);
-                if (tvDays != null) {
-                    tvDays.setText(status.getRemainingDays() + " Days");
+                TextView tvBadge = homeView.findViewById(R.id.tv_active_game_badge);
+                if (tvBadge != null) {
+                    tvBadge.setText("ACTIVE");
+                    tvBadge.setVisibility(View.VISIBLE);
                 }
                 updateLauncherButtonState(btnLaunchGame);
                 if (btnLaunchGame != null) {
@@ -503,15 +511,10 @@ public class MainActivity extends BaseActivity
         }
         isLaunching = true;
 
-        if (!NetworkUtil.isNetworkConnected(this)) {
-            isLaunching = false;
-            showConnectivityErrorDialog(NetworkUtil.ConnectivityStatus.NO_NETWORK);
-            return;
-        }
-
         MembershipStatus currentStatus = membershipRepository.getCurrentStatus();
         String savedKey = membershipRepository.getSavedLicenseKey();
 
+        // Check if user has active session or valid cached key in vault
         if (currentStatus.getState() != MembershipStatus.State.ACTIVE || savedKey == null || savedKey.trim().isEmpty()) {
             isLaunching = false;
             Toast.makeText(this, R.string.license_required_to_launch, Toast.LENGTH_SHORT).show();
@@ -519,10 +522,22 @@ public class MainActivity extends BaseActivity
             return;
         }
 
+        // If network is offline, check if current key is valid locally
+        if (!NetworkUtil.isNetworkConnected(this)) {
+            if (membershipRepository.isCurrentKeyValidLocally()) {
+                executeMainApkLaunch();
+                return;
+            } else {
+                isLaunching = false;
+                showConnectivityErrorDialog(NetworkUtil.ConnectivityStatus.NO_NETWORK);
+                return;
+            }
+        }
+
         // Show tactical verifying dialog
         showVerifyingConnectionDialog(R.string.verifying_license_title, R.string.verifying_license_msg);
 
-        // Perform authoritative live server verification
+        // Perform live server verification
         DeviceIdManager devIdMgr = new DeviceIdManager(this);
         String deviceId = devIdMgr.getRawAndroidId();
         String deviceModel = devIdMgr.getDeviceBrand() + " " + devIdMgr.getDeviceModel();
@@ -543,60 +558,79 @@ public class MainActivity extends BaseActivity
                     return;
                 }
 
-                // Authoritative server clearance confirmed! Refresh cached expiry
+                // Authoritative server clearance confirmed: update vault & local cache
                 if (result.getMembershipStatus() != null) {
-                    membershipRepository.updateStatus(result.getMembershipStatus());
+                    membershipRepository.saveActiveKey(savedKey.trim(), result.getMembershipStatus());
                 }
 
-                boolean isInstalled = PackageInstallerHelper.isMainApkInstalled(MainActivity.this);
-
-                if (isInstalled) {
-                    boolean launched = PackageInstallerHelper.launchInstalledApp(MainActivity.this);
-                    if (launched) {
-                        Toast.makeText(
-                                MainActivity.this,
-                                R.string.launching_aimshot_engine,
-                                Toast.LENGTH_SHORT
-                        ).show();
-                    } else {
-                        Toast.makeText(
-                                MainActivity.this,
-                                R.string.failed_to_launch_main_apk,
-                                Toast.LENGTH_LONG
-                        ).show();
-                    }
-                    isLaunching = false;
-                } else {
-                    isLaunching = false;
-                    Toast.makeText(
-                            MainActivity.this,
-                            R.string.main_apk_not_installed,
-                            Toast.LENGTH_SHORT
-                    ).show();
-
-                    activeUpdateDialog = new UpdateDialog(MainActivity.this, true);
-                    activeUpdateDialog.setOnInstallStateChangedListener(() -> {
-                        if (currentTab == Tab.HOME) {
-                            Button btnLaunchGame = findViewById(R.id.btn_launch_game);
-                            updateLauncherButtonState(btnLaunchGame);
-                        }
-                    });
-                    activeUpdateDialog.show();
-                }
+                executeMainApkLaunch();
             }
 
             @Override
             public void onVerificationError(String errorMessage, String errorCode) {
                 dismissVerifyingConnectionDialog();
-                isLaunching = false;
 
-                // Server rejected authorization: Key expired, revoked, or registered to another device.
-                // Clear local session immediately so user cannot bypass.
-                membershipRepository.clearSession();
+                boolean isAuthoritativeRevocation = "STATUS_INVALID".equals(errorCode)
+                        || "STATUS_REVOKED".equals(errorCode)
+                        || "STATUS_EXPIRED".equals(errorCode)
+                        || "STATUS_DEVICE_REVOKED".equals(errorCode);
 
-                showLicenseDeniedDialog(errorMessage);
+                if (isAuthoritativeRevocation) {
+                    // Server authoritatively rejected/revoked the key
+                    isLaunching = false;
+                    membershipRepository.revokeKey(savedKey);
+                    showLicenseDeniedDialog(errorMessage);
+                } else {
+                    // Transient network error, slow server response, or anti-bot challenge:
+                    // Check if the current cached license key is valid locally (unexpired)!
+                    if (membershipRepository.isCurrentKeyValidLocally()) {
+                        Toast.makeText(MainActivity.this, R.string.launching_aimshot_engine, Toast.LENGTH_SHORT).show();
+                        executeMainApkLaunch();
+                    } else {
+                        isLaunching = false;
+                        showLicenseDeniedDialog(errorMessage);
+                    }
+                }
             }
         });
+    }
+
+    private void executeMainApkLaunch() {
+        boolean isInstalled = PackageInstallerHelper.isMainApkInstalled(MainActivity.this);
+
+        if (isInstalled) {
+            boolean launched = PackageInstallerHelper.launchInstalledApp(MainActivity.this);
+            if (launched) {
+                Toast.makeText(
+                        MainActivity.this,
+                        R.string.launching_aimshot_engine,
+                        Toast.LENGTH_SHORT
+                ).show();
+            } else {
+                Toast.makeText(
+                        MainActivity.this,
+                        R.string.failed_to_launch_main_apk,
+                        Toast.LENGTH_LONG
+                ).show();
+            }
+            isLaunching = false;
+        } else {
+            isLaunching = false;
+            Toast.makeText(
+                    MainActivity.this,
+                    R.string.main_apk_not_installed,
+                    Toast.LENGTH_SHORT
+            ).show();
+
+            activeUpdateDialog = new UpdateDialog(MainActivity.this, true);
+            activeUpdateDialog.setOnInstallStateChangedListener(() -> {
+                if (currentTab == Tab.HOME) {
+                    Button btnLaunchGame = findViewById(R.id.btn_launch_game);
+                    updateLauncherButtonState(btnLaunchGame);
+                }
+            });
+            activeUpdateDialog.show();
+        }
     }
 
     /**

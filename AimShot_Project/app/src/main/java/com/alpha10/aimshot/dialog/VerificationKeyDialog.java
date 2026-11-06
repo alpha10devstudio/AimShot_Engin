@@ -138,6 +138,16 @@ public class VerificationKeyDialog extends Dialog {
             return;
         }
 
+        MembershipRepository repo = MembershipRepository.getInstance(getContext());
+        if (repo.checkAndActivateKeyFromVault(key)) {
+            Toast.makeText(getContext(), R.string.key_verified_success, Toast.LENGTH_SHORT).show();
+            if (successListener != null) {
+                successListener.onLoginSuccess();
+            }
+            dismiss();
+            return;
+        }
+
         tvError.setVisibility(View.GONE);
         setLoadingState(true);
 
@@ -155,8 +165,7 @@ public class VerificationKeyDialog extends Dialog {
             public void onVerificationSuccess(VerificationResult result) {
                 setLoadingState(false);
                 if (result.getMembershipStatus() != null) {
-                    MembershipRepository.getInstance(getContext()).saveLicenseKey(key);
-                    MembershipRepository.getInstance(getContext()).updateStatus(result.getMembershipStatus());
+                    MembershipRepository.getInstance(getContext()).saveActiveKey(key, result.getMembershipStatus());
                     Toast.makeText(getContext(), result.getMessage(), Toast.LENGTH_SHORT).show();
                     if (successListener != null) {
                         successListener.onLoginSuccess();
@@ -168,6 +177,15 @@ public class VerificationKeyDialog extends Dialog {
             @Override
             public void onVerificationError(String errorMessage, String errorCode) {
                 setLoadingState(false);
+                // Check if key is already locally valid in vault despite network glitch
+                if (MembershipRepository.getInstance(getContext()).checkAndActivateKeyFromVault(key)) {
+                    Toast.makeText(getContext(), "Session restored from valid cached key", Toast.LENGTH_SHORT).show();
+                    if (successListener != null) {
+                        successListener.onLoginSuccess();
+                    }
+                    dismiss();
+                    return;
+                }
                 showError(errorMessage);
             }
         });

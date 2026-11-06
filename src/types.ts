@@ -25,6 +25,16 @@ export interface MembershipState {
   expiryTimestamp?: number;
 }
 
+export interface CachedKeyVaultRecord {
+  key: string;
+  planType: string;
+  startDate: string;
+  expiryDate: string;
+  expiryTimestamp: number;
+  boundDeviceId: string;
+  lastUsedAt: number;
+}
+
 export interface Game {
   id: string;
   name: string;
