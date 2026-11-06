@@ -1,32 +1,38 @@
 package com.alpha10.aimshot.service;
 
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 
+import com.alpha10.aimshot.BuildConfig;
 import com.alpha10.aimshot.model.MembershipStatus;
 import com.alpha10.aimshot.model.VerificationResult;
 
+import org.json.JSONObject;
+
 import java.io.BufferedReader;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Service for verifying license keys against an authoritative backend server.
- * Operates on a background thread pool and posts callbacks to the main thread.
+ * Authoritative Server-Side License Verification Service.
+ * Communicates directly with https://alpha10.freedev.app/api/index.php?action=activate_license
+ * Automatically solves InfinityFree / ByetHost slowAES anti-bot challenges so Android clients
+ * receive clean JSON payloads and valid session state without third-party brokers.
  */
 public class LicenseVerificationService {
 
-    // Set to your authoritative production verification endpoint
-    // Example: "https://api.aimshot.io/v1/license/verify"
-    private static final String DEFAULT_SERVER_URL = ""; 
-
-    // Demo key strictly for UI testing & review mode - does NOT bypass production server
-    public static final String DEMO_TEST_KEY = "AIM-PRO-2025-X9";
+    public static final String PRODUCTION_ENDPOINT =
+            "https://alpha10.freedev.app/api/index.php?action=activate_license";
 
     private final ExecutorService executorService;
     private final Handler mainHandler;
@@ -34,11 +40,13 @@ public class LicenseVerificationService {
     private boolean isBusy = false;
 
     public LicenseVerificationService() {
-        this(DEFAULT_SERVER_URL);
+        this(PRODUCTION_ENDPOINT);
     }
 
     public LicenseVerificationService(String serverUrl) {
-        this.serverUrl = serverUrl;
+        this.serverUrl = (serverUrl != null && !serverUrl.trim().isEmpty())
+                ? serverUrl.trim()
+                : PRODUCTION_ENDPOINT;
         this.executorService = Executors.newSingleThreadExecutor();
         this.mainHandler = new Handler(Looper.getMainLooper());
     }
@@ -47,10 +55,21 @@ public class LicenseVerificationService {
         return isBusy;
     }
 
+    public void verifyKey(final String rawKey, final String deviceId, final VerificationCallback callback) {
+        String deviceModel = (Build.MANUFACTURER != null ? Build.MANUFACTURER : "Android")
+                + " " + (Build.MODEL != null ? Build.MODEL : "Device");
+        String appVersion = BuildConfig.VERSION_NAME != null ? BuildConfig.VERSION_NAME : "2.4.0";
+        verifyKey(rawKey, deviceId, deviceModel, appVersion, callback);
+    }
+
     /**
-     * Verifies the provided key against the backend service.
+     * Authoritative license verification against the official AimShot Engine licensing server.
      */
-    public synchronized void verifyKey(final String rawKey, final String deviceId, final VerificationCallback callback) {
+    public synchronized void verifyKey(final String rawKey,
+                                      final String deviceId,
+                                      final String deviceModel,
+                                      final String appVersion,
+                                      final VerificationCallback callback) {
         if (callback == null) return;
 
         if (isBusy) {
@@ -64,6 +83,16 @@ public class LicenseVerificationService {
         }
 
         final String cleanKey = rawKey.trim();
+        final String effectiveDeviceId = (deviceId != null && !deviceId.trim().isEmpty())
+                ? deviceId.trim()
+                : "UNKNOWN_DEVICE";
+        final String effectiveModel = (deviceModel != null && !deviceModel.trim().isEmpty())
+                ? deviceModel.trim()
+                : "Android Device";
+        final String effectiveVersion = (appVersion != null && !appVersion.trim().isEmpty())
+                ? appVersion.trim()
+                : "2.4.0";
+
         isBusy = true;
         callback.onVerificationStarted();
 
@@ -71,15 +100,11 @@ public class LicenseVerificationService {
             @Override
             public void run() {
                 try {
-                    // Check if a live server URL is configured
-                    if (serverUrl != null && !serverUrl.trim().isEmpty()) {
-                        performHttpVerification(cleanKey, deviceId, callback);
-                    } else {
-                        // Safe fallback handling when backend is not yet deployed
-                        performOfflineVerification(cleanKey, deviceId, callback);
-                    }
+                    performServerVerification(cleanKey, effectiveDeviceId, effectiveModel, effectiveVersion, callback);
                 } catch (Exception e) {
-                    postError(callback, "Network error: Unable to reach verification server.", "ERR_NETWORK");
+                    postError(callback,
+                            "Unable to connect to security server. Please check your internet connection.",
+                            "ERR_NETWORK");
                 } finally {
                     synchronized (LicenseVerificationService.this) {
                         isBusy = false;
@@ -89,78 +114,158 @@ public class LicenseVerificationService {
         });
     }
 
-    /**
-     * HTTPS verification according to standard schema.
-     */
-    private void performHttpVerification(String key, String deviceId, VerificationCallback callback) throws Exception {
-        URL url = new URL(serverUrl);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type", "application/json; utf-8");
-        conn.setRequestProperty("Accept", "application/json");
-        conn.setConnectTimeout(8000);
-        conn.setReadTimeout(8000);
-        conn.setDoOutput(true);
+    private void performServerVerification(String key,
+                                           String deviceId,
+                                           String deviceModel,
+                                           String appVersion,
+                                           VerificationCallback callback) throws Exception {
 
-        String jsonInput = String.format("{\"verification_key\":\"%s\",\"device_id\":\"%s\"}", key, deviceId);
-        try (OutputStream os = conn.getOutputStream()) {
-            byte[] input = jsonInput.getBytes(StandardCharsets.UTF_8);
-            os.write(input, 0, input.length);
+        String activeCookie = UpdateAuthService.getCachedSessionCookie();
+        String rawResponse = executeHttpVerificationRequest(key, deviceId, deviceModel, appVersion, activeCookie);
+
+        // Check if InfinityFree / ByetHost anti-bot challenge is triggered
+        if (UpdateAuthService.isAntiBotChallenge(rawResponse)) {
+            String solvedCookie = UpdateAuthService.solveAntiBotCookie(rawResponse);
+            if (solvedCookie != null && !solvedCookie.isEmpty()) {
+                UpdateAuthService.setCachedSessionCookie(solvedCookie);
+                // Retry request with the solved __test cookie
+                rawResponse = executeHttpVerificationRequest(key, deviceId, deviceModel, appVersion, solvedCookie);
+            }
         }
 
-        int code = conn.getResponseCode();
-        if (code == 200) {
-            StringBuilder response = new StringBuilder();
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = br.readLine()) != null) {
-                    response.append(line.trim());
+        if (rawResponse == null || rawResponse.trim().isEmpty()) {
+            postError(callback, "Empty response from security server. Please try again.", "ERR_EMPTY_RESPONSE");
+            return;
+        }
+
+        // Clean UTF-8 BOM if present
+        rawResponse = rawResponse.trim();
+        if (rawResponse.startsWith("\uFEFF")) {
+            rawResponse = rawResponse.substring(1).trim();
+        }
+
+        // Extract JSON if wrapped in any stray HTML tags
+        int firstBrace = rawResponse.indexOf('{');
+        int lastBrace = rawResponse.lastIndexOf('}');
+        if (firstBrace >= 0 && lastBrace > firstBrace) {
+            rawResponse = rawResponse.substring(firstBrace, lastBrace + 1);
+        }
+
+        try {
+            JSONObject responseJson = new JSONObject(rawResponse);
+            boolean isValid = responseJson.optBoolean("valid", false);
+            String status = responseJson.optString("status", "").trim().toLowerCase(Locale.US);
+            String serverMessage = responseJson.optString("message", "").trim();
+
+            if (isValid && "active".equals(status)) {
+                String expiresAtStr = responseJson.optString("expires_at", "");
+                int durationHours = responseJson.optInt("duration_hours", 72);
+                long now = System.currentTimeMillis();
+                long expiryMillis = 0;
+
+                if (!expiresAtStr.isEmpty()) {
+                    try {
+                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+                        Date parsedDate = sdf.parse(expiresAtStr);
+                        if (parsedDate != null) {
+                            expiryMillis = parsedDate.getTime();
+                        }
+                    } catch (Exception ignored) {
+                    }
                 }
+
+                if (expiryMillis <= 0) {
+                    expiryMillis = now + (durationHours * 3600L * 1000L);
+                }
+
+                MembershipStatus membershipStatus = new MembershipStatus(
+                        MembershipStatus.State.ACTIVE,
+                        "AimShot Pro License",
+                        now,
+                        expiryMillis,
+                        true,
+                        deviceId
+                );
+
+                String successMessage = !serverMessage.isEmpty()
+                        ? serverMessage
+                        : "License activated successfully.";
+                postSuccess(callback, VerificationResult.success(successMessage, membershipStatus));
+            } else {
+                String displayError;
+                if ("invalid".equals(status)) {
+                    displayError = "Invalid license key. Please generate a real key from the website.";
+                } else if ("expired".equals(status)) {
+                    displayError = "Your license has expired. Please generate a new key to continue.";
+                } else if ("revoked".equals(status)) {
+                    displayError = "This key has been revoked by administration due to policy violation.";
+                } else if ("device_limit_reached".equals(status)) {
+                    displayError = "Access Denied: This key is already registered to another device.";
+                } else if ("device_revoked".equals(status)) {
+                    displayError = "This device has been suspended from accessing AimShot Engine.";
+                } else if (!serverMessage.isEmpty()) {
+                    displayError = serverMessage;
+                } else {
+                    displayError = "Verification failed. Please check your key and try again.";
+                }
+
+                String code = !status.isEmpty() ? "STATUS_" + status.toUpperCase(Locale.US) : "ERR_VERIFICATION";
+                postError(callback, displayError, code);
             }
-            // Parse response payload and construct active membership
-            long now = System.currentTimeMillis();
-            long expiry = now + (18L * 24 * 60 * 60 * 1000); // sample duration from server
-            MembershipStatus status = new MembershipStatus(
-                    MembershipStatus.State.ACTIVE,
-                    "Monthly Premium",
-                    now,
-                    expiry,
-                    true,
-                    deviceId
-            );
-            postSuccess(callback, VerificationResult.success("Key successfully verified.", status));
-        } else {
-            postError(callback, "Invalid verification key or expired license.", "ERR_KEY_INVALID");
+        } catch (Exception parseEx) {
+            postError(callback, "Security verification failed. Please check your connection and try again.", "ERR_PARSE");
         }
     }
 
-    /**
-     * Demo / evaluation verification handler.
-     */
-    private void performOfflineVerification(String key, String deviceId, VerificationCallback callback) {
-        try {
-            Thread.sleep(1200); // Simulate network roundtrip latency
-        } catch (InterruptedException ignored) {}
+    private String executeHttpVerificationRequest(String key,
+                                                 String deviceId,
+                                                 String deviceModel,
+                                                 String appVersion,
+                                                 String cookieHeader) throws Exception {
+        URL url = new URL(serverUrl);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+        conn.setRequestProperty("Accept", "application/json");
+        conn.setRequestProperty("User-Agent", UpdateAuthService.BROWSER_USER_AGENT);
 
-        if (DEMO_TEST_KEY.equalsIgnoreCase(key)) {
-            // Activate the exact demo license matching reference mockup: 18 Days remaining
-            long now = System.currentTimeMillis();
-            long eighteenDaysMillis = 18L * 24 * 60 * 60 * 1000L;
-            long expiry = now + eighteenDaysMillis;
-            long startDate = now - (12L * 24 * 60 * 60 * 1000L); // started 12 days ago
-
-            MembershipStatus status = new MembershipStatus(
-                    MembershipStatus.State.ACTIVE,
-                    "Monthly Premium",
-                    startDate,
-                    expiry,
-                    true,
-                    deviceId
-            );
-            postSuccess(callback, VerificationResult.success("Demo license verified successfully.", status));
-        } else {
-            postError(callback, "Verification service is not configured yet. (Use demo key " + DEMO_TEST_KEY + " to test UI)", "ERR_NOT_CONFIGURED");
+        if (cookieHeader != null && !cookieHeader.trim().isEmpty()) {
+            conn.setRequestProperty("Cookie", cookieHeader.trim());
         }
+
+        conn.setConnectTimeout(14000);
+        conn.setReadTimeout(14000);
+        conn.setDoOutput(true);
+        conn.setDoInput(true);
+
+        JSONObject requestJson = new JSONObject();
+        requestJson.put("license_key", key);
+        requestJson.put("device_id", deviceId);
+        requestJson.put("device_model", deviceModel);
+        requestJson.put("app_version", appVersion);
+
+        byte[] inputBytes = requestJson.toString().getBytes(StandardCharsets.UTF_8);
+        try (OutputStream os = conn.getOutputStream()) {
+            os.write(inputBytes, 0, inputBytes.length);
+            os.flush();
+        }
+
+        int responseCode = conn.getResponseCode();
+        InputStream stream = (responseCode >= 200 && responseCode < 400)
+                ? conn.getInputStream()
+                : conn.getErrorStream();
+
+        StringBuilder sb = new StringBuilder();
+        if (stream != null) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line);
+                }
+            }
+        }
+
+        return sb.toString().trim();
     }
 
     private void postSuccess(final VerificationCallback callback, final VerificationResult result) {

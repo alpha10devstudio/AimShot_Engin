@@ -26,7 +26,8 @@ import java.util.concurrent.Executors;
 /**
  * Authoritative Server-Side License Verification Service.
  * Communicates directly with https://alpha10.freedev.app/api/index.php?action=activate_license
- * Strict server-authoritative HWID validation - zero offline or demo bypasses.
+ * Automatically solves InfinityFree / ByetHost slowAES anti-bot challenges so Android clients
+ * receive clean JSON payloads and valid session state without third-party brokers.
  */
 public class LicenseVerificationService {
 
@@ -118,53 +119,36 @@ public class LicenseVerificationService {
                                            String deviceModel,
                                            String appVersion,
                                            VerificationCallback callback) throws Exception {
-        URL url = new URL(serverUrl);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-        conn.setRequestProperty("Accept", "application/json");
-        conn.setRequestProperty("User-Agent", "AimShot-Engine-Android/" + appVersion);
-        conn.setConnectTimeout(12000);
-        conn.setReadTimeout(12000);
-        conn.setDoOutput(true);
-        conn.setDoInput(true);
 
-        JSONObject requestJson = new JSONObject();
-        requestJson.put("license_key", key);
-        requestJson.put("device_id", deviceId);
-        requestJson.put("device_model", deviceModel);
-        requestJson.put("app_version", appVersion);
+        String activeCookie = UpdateAuthService.getCachedSessionCookie();
+        String rawResponse = executeHttpVerificationRequest(key, deviceId, deviceModel, appVersion, activeCookie);
 
-        byte[] inputBytes = requestJson.toString().getBytes(StandardCharsets.UTF_8);
-        try (OutputStream os = conn.getOutputStream()) {
-            os.write(inputBytes, 0, inputBytes.length);
-            os.flush();
-        }
-
-        int responseCode = conn.getResponseCode();
-        InputStream stream = (responseCode >= 200 && responseCode < 400)
-                ? conn.getInputStream()
-                : conn.getErrorStream();
-
-        StringBuilder sb = new StringBuilder();
-        if (stream != null) {
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    sb.append(line);
-                }
+        // Check if InfinityFree / ByetHost anti-bot challenge is triggered
+        if (UpdateAuthService.isAntiBotChallenge(rawResponse)) {
+            String solvedCookie = UpdateAuthService.solveAntiBotCookie(rawResponse);
+            if (solvedCookie != null && !solvedCookie.isEmpty()) {
+                UpdateAuthService.setCachedSessionCookie(solvedCookie);
+                // Retry request with the solved __test cookie
+                rawResponse = executeHttpVerificationRequest(key, deviceId, deviceModel, appVersion, solvedCookie);
             }
         }
 
-        String rawResponse = sb.toString().trim();
-        // Remove UTF-8 BOM if present
-        if (rawResponse.startsWith("\uFEFF")) {
-            rawResponse = rawResponse.substring(1);
-        }
-
-        if (rawResponse.isEmpty()) {
+        if (rawResponse == null || rawResponse.trim().isEmpty()) {
             postError(callback, "Empty response from security server. Please try again.", "ERR_EMPTY_RESPONSE");
             return;
+        }
+
+        // Clean UTF-8 BOM if present
+        rawResponse = rawResponse.trim();
+        if (rawResponse.startsWith("\uFEFF")) {
+            rawResponse = rawResponse.substring(1).trim();
+        }
+
+        // Extract JSON if wrapped in any stray HTML tags
+        int firstBrace = rawResponse.indexOf('{');
+        int lastBrace = rawResponse.lastIndexOf('}');
+        if (firstBrace >= 0 && lastBrace > firstBrace) {
+            rawResponse = rawResponse.substring(firstBrace, lastBrace + 1);
         }
 
         try {
@@ -229,8 +213,59 @@ public class LicenseVerificationService {
                 postError(callback, displayError, code);
             }
         } catch (Exception parseEx) {
-            postError(callback, "Invalid response from security server. Please try again later.", "ERR_PARSE");
+            postError(callback, "Security verification failed. Please check your connection and try again.", "ERR_PARSE");
         }
+    }
+
+    private String executeHttpVerificationRequest(String key,
+                                                 String deviceId,
+                                                 String deviceModel,
+                                                 String appVersion,
+                                                 String cookieHeader) throws Exception {
+        URL url = new URL(serverUrl);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+        conn.setRequestProperty("Accept", "application/json");
+        conn.setRequestProperty("User-Agent", UpdateAuthService.BROWSER_USER_AGENT);
+
+        if (cookieHeader != null && !cookieHeader.trim().isEmpty()) {
+            conn.setRequestProperty("Cookie", cookieHeader.trim());
+        }
+
+        conn.setConnectTimeout(14000);
+        conn.setReadTimeout(14000);
+        conn.setDoOutput(true);
+        conn.setDoInput(true);
+
+        JSONObject requestJson = new JSONObject();
+        requestJson.put("license_key", key);
+        requestJson.put("device_id", deviceId);
+        requestJson.put("device_model", deviceModel);
+        requestJson.put("app_version", appVersion);
+
+        byte[] inputBytes = requestJson.toString().getBytes(StandardCharsets.UTF_8);
+        try (OutputStream os = conn.getOutputStream()) {
+            os.write(inputBytes, 0, inputBytes.length);
+            os.flush();
+        }
+
+        int responseCode = conn.getResponseCode();
+        InputStream stream = (responseCode >= 200 && responseCode < 400)
+                ? conn.getInputStream()
+                : conn.getErrorStream();
+
+        StringBuilder sb = new StringBuilder();
+        if (stream != null) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line);
+                }
+            }
+        }
+
+        return sb.toString().trim();
     }
 
     private void postSuccess(final VerificationCallback callback, final VerificationResult result) {

@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -112,6 +113,24 @@ async function startServer() {
   });
 
   // License Activation Proxy for web preview & authoritative verification
+  let cachedAntiBotCookie: string | null = null;
+
+  function solveAntiBot(html: string): string | null {
+    try {
+      const matches = [...html.matchAll(/toNumbers\(\s*\"([0-9a-fA-F]{32})\"\s*\)/g)].map(m => m[1]);
+      if (matches.length < 3) return null;
+      const key = Buffer.from(matches[0], 'hex');
+      const iv = Buffer.from(matches[1], 'hex');
+      const cipherText = Buffer.from(matches[2], 'hex');
+      const decipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
+      decipher.setAutoPadding(false);
+      const decrypted = Buffer.concat([decipher.update(cipherText), decipher.final()]);
+      return '__test=' + decrypted.toString('hex');
+    } catch {
+      return null;
+    }
+  }
+
   app.post('/api/verify-license', async (req: Request, res: Response) => {
     try {
       const { license_key, device_id, device_model, app_version } = req.body || {};
@@ -123,25 +142,51 @@ async function startServer() {
         });
       }
 
-      const upstreamRes = await fetch('https://alpha10.freedev.app/api/index.php?action=activate_license', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'User-Agent': 'AimShot-Engine-WebPreview/2.4.0'
-        },
-        body: JSON.stringify({
-          license_key: String(license_key).trim(),
-          device_id: device_id || 'WEB-PREVIEW-DEVICE-ID',
-          device_model: device_model || 'AimShot Web Client',
-          app_version: app_version || '2.4.0'
-        })
+      const postBody = JSON.stringify({
+        license_key: String(license_key).trim(),
+        device_id: device_id || '9a7d3c8f1e2b4d5a',
+        device_model: device_model || 'Samsung Galaxy S23 Ultra',
+        app_version: app_version || '2.4.0'
       });
 
-      const rawText = await upstreamRes.text();
+      const makeRequest = async (cookie?: string | null) => {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36'
+        };
+        if (cookie) {
+          headers['Cookie'] = cookie;
+        }
+        return await fetch('https://alpha10.freedev.app/api/index.php?action=activate_license', {
+          method: 'POST',
+          headers,
+          body: postBody
+        });
+      };
+
+      let upstreamRes = await makeRequest(cachedAntiBotCookie);
+      let rawText = await upstreamRes.text();
+
+      // Check if anti-bot challenge was returned
+      if (rawText.includes('aes.js') || rawText.includes('slowAES') || rawText.includes('toNumbers(')) {
+        const solved = solveAntiBot(rawText);
+        if (solved) {
+          cachedAntiBotCookie = solved;
+          upstreamRes = await makeRequest(solved);
+          rawText = await upstreamRes.text();
+        }
+      }
+
       let parsed: any = null;
       try {
-        parsed = JSON.parse(rawText.replace(/^\uFEFF/, '').trim());
+        let cleanText = rawText.replace(/^\uFEFF/, '').trim();
+        const first = cleanText.indexOf('{');
+        const last = cleanText.lastIndexOf('}');
+        if (first >= 0 && last > first) {
+          cleanText = cleanText.substring(first, last + 1);
+        }
+        parsed = JSON.parse(cleanText);
       } catch {
         parsed = null;
       }
