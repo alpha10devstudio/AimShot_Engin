@@ -179,4 +179,9 @@
     <string name="legacy_app_detected_title">Remove Exposed App Copy</string>
     <string name="legacy_app_detected_msg">A previous standalone version of the engine was detected. Please uninstall it to ensure seamless and secure launcher operation.</string>
     <string name="btn_uninstall_legacy">Uninstall Copy</string>
+    <string name="verifying_license_title">Verifying License Security</string>
+    <string name="verifying_license_msg">Verifying authorization with security server...</string>
+    <string name="license_required_to_launch">Active license required to launch AimShot Engine.</string>
+    <string name="license_check_failed_title">Launch Permission Denied</string>
+    <string name="license_check_failed_msg">Security server rejected license authorization. Please verify your key.</string>
 </resources>

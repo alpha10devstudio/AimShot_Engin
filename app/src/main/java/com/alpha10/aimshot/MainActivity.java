@@ -24,6 +24,10 @@ import com.alpha10.aimshot.model.MembershipStatus;
 import com.alpha10.aimshot.repository.GameRepository;
 import com.alpha10.aimshot.repository.MembershipRepository;
 import com.alpha10.aimshot.repository.NotificationsRepository;
+import com.alpha10.aimshot.model.VerificationResult;
+import com.alpha10.aimshot.service.DeviceIdManager;
+import com.alpha10.aimshot.service.LicenseVerificationService;
+import com.alpha10.aimshot.service.VerificationCallback;
 import com.alpha10.aimshot.util.DialogUiHelper;
 import com.alpha10.aimshot.util.FontHelper;
 import com.alpha10.aimshot.util.NetworkUtil;
@@ -478,6 +482,14 @@ public class MainActivity extends BaseActivity
      * 2 & 3. Live internet + Alpha10 Server reachability probe
      * 4. Private Vault Engine launch inside AimShot Launcher (or Private Vault download/setup)
      */
+    /**
+     * Enforces Authoritative Security Gate:
+     * 1. Active network connectivity check.
+     * 2. Active license session presence.
+     * 3. Real-time HTTPS license re-validation against https://alpha10.freedev.app before every single launch.
+     * 4. If server denies or revokes license: instantly clear local session and block launch.
+     * 5. If server approves license: proceed to engine execution.
+     */
     private void handleLauncherButtonClick() {
         if (isLaunching) {
             return;
@@ -490,56 +502,92 @@ public class MainActivity extends BaseActivity
             return;
         }
 
-        showVerifyingConnectionDialog();
+        MembershipStatus currentStatus = membershipRepository.getCurrentStatus();
+        String savedKey = membershipRepository.getSavedLicenseKey();
 
-        NetworkUtil.verifyFullLaunchConnectivity(this, status -> {
-            dismissVerifyingConnectionDialog();
+        if (currentStatus.getState() != MembershipStatus.State.ACTIVE || savedKey == null || savedKey.trim().isEmpty()) {
+            isLaunching = false;
+            Toast.makeText(this, R.string.license_required_to_launch, Toast.LENGTH_SHORT).show();
+            showVerificationDialog();
+            return;
+        }
 
-            if (isFinishing() || isDestroyed()) {
-                isLaunching = false;
-                return;
+        // Show tactical verifying dialog
+        showVerifyingConnectionDialog(R.string.verifying_license_title, R.string.verifying_license_msg);
+
+        // Perform authoritative live server verification
+        DeviceIdManager devIdMgr = new DeviceIdManager(this);
+        String deviceId = devIdMgr.getRawAndroidId();
+        String deviceModel = devIdMgr.getDeviceBrand() + " " + devIdMgr.getDeviceModel();
+        String appVersion = "2.4.0";
+
+        LicenseVerificationService licenseService = new LicenseVerificationService();
+        licenseService.verifyKey(savedKey.trim(), deviceId, deviceModel, appVersion, new VerificationCallback() {
+            @Override
+            public void onVerificationStarted() {
             }
 
-            if (status != NetworkUtil.ConnectivityStatus.CONNECTED) {
-                isLaunching = false;
-                showConnectivityErrorDialog(status);
-                return;
-            }
+            @Override
+            public void onVerificationSuccess(VerificationResult result) {
+                dismissVerifyingConnectionDialog();
 
-            boolean isInstalledInVault = PackageInstallerHelper.isMainApkInstalled(MainActivity.this);
+                if (isFinishing() || isDestroyed()) {
+                    isLaunching = false;
+                    return;
+                }
 
-            if (isInstalledInVault) {
-                boolean launched = PackageInstallerHelper.launchInstalledApp(MainActivity.this);
-                if (launched) {
+                // Authoritative server clearance confirmed! Refresh cached expiry
+                if (result.getMembershipStatus() != null) {
+                    membershipRepository.updateStatus(result.getMembershipStatus());
+                }
+
+                boolean isInstalled = PackageInstallerHelper.isMainApkInstalled(MainActivity.this);
+
+                if (isInstalled) {
+                    boolean launched = PackageInstallerHelper.launchInstalledApp(MainActivity.this);
+                    if (launched) {
+                        Toast.makeText(
+                                MainActivity.this,
+                                R.string.launching_aimshot_engine,
+                                Toast.LENGTH_SHORT
+                        ).show();
+                    } else {
+                        Toast.makeText(
+                                MainActivity.this,
+                                R.string.failed_to_launch_main_apk,
+                                Toast.LENGTH_LONG
+                        ).show();
+                    }
+                    isLaunching = false;
+                } else {
+                    isLaunching = false;
                     Toast.makeText(
                             MainActivity.this,
-                            R.string.launching_aimshot_engine,
+                            R.string.main_apk_not_installed,
                             Toast.LENGTH_SHORT
                     ).show();
-                } else {
-                    Toast.makeText(
-                            MainActivity.this,
-                            R.string.failed_to_launch_main_apk,
-                            Toast.LENGTH_LONG
-                    ).show();
-                }
-                isLaunching = false;
-            } else {
-                isLaunching = false;
-                Toast.makeText(
-                        MainActivity.this,
-                        R.string.main_apk_not_installed,
-                        Toast.LENGTH_SHORT
-                ).show();
 
-                activeUpdateDialog = new UpdateDialog(MainActivity.this, true);
-                activeUpdateDialog.setOnInstallStateChangedListener(() -> {
-                    if (currentTab == Tab.HOME) {
-                        Button btnLaunchGame = findViewById(R.id.btn_launch_game);
-                        updateLauncherButtonState(btnLaunchGame);
-                    }
-                });
-                activeUpdateDialog.show();
+                    activeUpdateDialog = new UpdateDialog(MainActivity.this, true);
+                    activeUpdateDialog.setOnInstallStateChangedListener(() -> {
+                        if (currentTab == Tab.HOME) {
+                            Button btnLaunchGame = findViewById(R.id.btn_launch_game);
+                            updateLauncherButtonState(btnLaunchGame);
+                        }
+                    });
+                    activeUpdateDialog.show();
+                }
+            }
+
+            @Override
+            public void onVerificationError(String errorMessage, String errorCode) {
+                dismissVerifyingConnectionDialog();
+                isLaunching = false;
+
+                // Server rejected authorization: Key expired, revoked, or registered to another device.
+                // Clear local session immediately so user cannot bypass.
+                membershipRepository.clearSession();
+
+                showLicenseDeniedDialog(errorMessage);
             }
         });
     }
@@ -615,6 +663,10 @@ public class MainActivity extends BaseActivity
     }
 
     private void showVerifyingConnectionDialog() {
+        showVerifyingConnectionDialog(R.string.verifying_network_title, R.string.verifying_network_msg);
+    }
+
+    private void showVerifyingConnectionDialog(int titleRes, int msgRes) {
         dismissVerifyingConnectionDialog();
         if (isFinishing() || isDestroyed()) return;
 
@@ -629,13 +681,57 @@ public class MainActivity extends BaseActivity
 
         if (ivIcon != null) ivIcon.setVisibility(View.GONE);
         if (pbLoading != null) pbLoading.setVisibility(View.VISIBLE);
-        if (tvTitle != null) tvTitle.setText(R.string.verifying_network_title);
-        if (tvMsg != null) tvMsg.setText(R.string.verifying_network_msg);
+        if (tvTitle != null) tvTitle.setText(titleRes);
+        if (tvMsg != null) tvMsg.setText(msgRes);
         if (layoutButtons != null) layoutButtons.setVisibility(View.GONE);
 
         activeNetworkCheckDialog.setCancelable(false);
         activeNetworkCheckDialog.setCanceledOnTouchOutside(false);
         DialogUiHelper.showStyledDialog(activeNetworkCheckDialog);
+    }
+
+    private void showLicenseDeniedDialog(String message) {
+        if (isFinishing() || isDestroyed()) return;
+
+        View dialogView = DialogUiHelper.inflateDialogView(this, R.layout.dialog_tactical_confirm);
+        final AlertDialog dialog = DialogUiHelper.createTacticalAlertDialog(this, dialogView);
+
+        ImageView ivIcon = dialogView.findViewById(R.id.iv_confirm_icon);
+        View pbLoading = dialogView.findViewById(R.id.pb_confirm_loading);
+        TextView tvTitle = dialogView.findViewById(R.id.tv_confirm_title);
+        TextView tvMsg = dialogView.findViewById(R.id.tv_confirm_message);
+        Button btnClose = dialogView.findViewById(R.id.btn_confirm_negative);
+        Button btnLogin = dialogView.findViewById(R.id.btn_confirm_positive);
+
+        if (ivIcon != null) {
+            ivIcon.setVisibility(View.VISIBLE);
+            ivIcon.setImageResource(R.drawable.ic_shield);
+            ivIcon.setColorFilter(ContextCompat.getColor(this, R.color.color_error));
+        }
+        if (pbLoading != null) {
+            pbLoading.setVisibility(View.GONE);
+        }
+
+        if (tvTitle != null) {
+            tvTitle.setText(R.string.license_check_failed_title);
+        }
+        if (tvMsg != null) {
+            tvMsg.setText(message != null && !message.isEmpty() ? message : getString(R.string.license_check_failed_msg));
+        }
+
+        if (btnClose != null) {
+            btnClose.setText(R.string.action_close);
+            btnClose.setOnClickListener(v -> dialog.dismiss());
+        }
+        if (btnLogin != null) {
+            btnLogin.setText(R.string.login_now);
+            btnLogin.setOnClickListener(v -> {
+                dialog.dismiss();
+                showVerificationDialog();
+            });
+        }
+
+        DialogUiHelper.showStyledDialog(dialog);
     }
 
     private void dismissVerifyingConnectionDialog() {

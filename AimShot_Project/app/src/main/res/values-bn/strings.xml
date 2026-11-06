@@ -179,4 +179,9 @@
     <string name="legacy_app_detected_title">পুরাতন আলাদা অ্যাপ সরান</string>
     <string name="legacy_app_detected_msg">আপনার ফোনে আগের একটি আলাদা ভার্সন পাওয়া গেছে। ভেরিফিকেশন ও নিরাপত্তা বজায় রাখতে অনুগ্রহ করে পুরাতন অ্যাপটি আনইনস্টল করুন।</string>
     <string name="btn_uninstall_legacy">আনইনস্টল করুন</string>
+    <string name="verifying_license_title">লাইসেন্স সুরক্ষা যাচাই</string>
+    <string name="verifying_license_msg">সিকিউরিটি সার্ভারের সাথে অনুমোদন যাচাই করা হচ্ছে...</string>
+    <string name="license_required_to_launch">এইমশট ইঞ্জিন চালু করতে সক্রিয় লাইসেন্স প্রয়োজন।</string>
+    <string name="license_check_failed_title">ইঞ্জিন চালু করার অনুমতি বাতিল</string>
+    <string name="license_check_failed_msg">সিকিউরিটি সার্ভার থেকে লাইসেন্স অনুমোদন মেলেনি। অনুগ্রহ করে আপনার কি পুনরায় যাচাই করুন।</string>
 </resources>

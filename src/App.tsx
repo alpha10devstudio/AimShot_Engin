@@ -309,12 +309,13 @@ export default function App() {
     const newMembership: MembershipState = {
       isLoggedIn: true,
       status: 'active',
-      planType: 'Monthly Premium',
-      startDate: '07 Apr 2025',
-      expiryDate: '25 Apr 2025',
-      daysRemaining: 18,
+      planType: 'AimShot Pro',
+      startDate: 'Today',
+      expiryDate: 'Active',
+      daysRemaining: 3,
       featuresUnlocked: true,
-      boundDeviceId: 'AIM-8839-4491-BC99'
+      boundDeviceId: '9a7d3c8f1e2b4d5a',
+      key: key.trim()
     };
     setMembership(newMembership);
     showToast(t.keyVerified);
@@ -329,7 +330,8 @@ export default function App() {
       expiryDate: '--',
       daysRemaining: 0,
       featuresUnlocked: false,
-      boundDeviceId: 'AIM-8839-4491-BC99'
+      boundDeviceId: '9a7d3c8f1e2b4d5a',
+      key: ''
     };
     setMembership(resetMembership);
     setCurrentScreen('home');
@@ -378,8 +380,8 @@ export default function App() {
     }, 2000);
   };
 
-  const handleLaunchEngine = () => {
-    if (!membership.isLoggedIn) {
+  const handleLaunchEngine = async () => {
+    if (!membership.isLoggedIn || !membership.key) {
       setIsLoginModalOpen(true);
       return;
     }
@@ -390,9 +392,36 @@ export default function App() {
       return;
     }
 
+    showToast('Verifying license authorization with security server...');
+
+    try {
+      const res = await fetch('/api/verify-license', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          license_key: membership.key,
+          device_id: '9a7d3c8f1e2b4d5a',
+          device_model: 'Samsung Galaxy S23 Ultra',
+          app_version: '2.4.0'
+        })
+      });
+
+      const data = await res.json();
+      if (!data || !data.valid || data.status !== 'active') {
+        // Server denied authorization! Clear session
+        handleLogout();
+        showToast(data?.message || 'License expired or revoked. Access denied.');
+        setIsLoginModalOpen(true);
+        return;
+      }
+    } catch {
+      showToast('Security server unreachable. Please check connection.');
+      return;
+    }
+
     // Situation A: Main APK is already installed
     if (isMainApkInstalled) {
-      // Launch Main APK: com.alpha10.aimshot (Under NO circumstances launch Carrom Pool!)
+      // Launch Main APK
       setLaunchingEngineSession({
         packageName: 'com.alpha10.aimshot',
         versionName: '1.0.1',
@@ -410,7 +439,7 @@ export default function App() {
       return;
     }
 
-    // Situation B: Main APK is not installed yet -> Open Alpha10 download & verification pipeline
+    // Situation B: Main APK is not installed yet -> Open download pipeline
     showToast(t.mainApkNotInstalledToast);
     setIsLauncherUpdateOpen(true);
     setLauncherUpdateStage('idle');

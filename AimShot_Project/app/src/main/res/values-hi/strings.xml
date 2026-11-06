@@ -179,4 +179,9 @@
     <string name="legacy_app_detected_title">पुराना अलग ऐप हटाएं</string>
     <string name="legacy_app_detected_msg">आपके फोन में पुराना अलग संस्करण पाया गया है। सुरक्षा सुनिश्चित करने के लिए कृपया उसे अनइंस्टॉल करें।</string>
     <string name="btn_uninstall_legacy">अनइंस्टॉल करें</string>
+    <string name="verifying_license_title">लाइसेंस सुरक्षा सत्यापन</string>
+    <string name="verifying_license_msg">सुरक्षा सर्वर से प्राधिकरण सत्यापित किया जा रहा है...</string>
+    <string name="license_required_to_launch">एमशॉट इंजन शुरू करने के लिए सक्रिय लाइसेंस आवश्यक है।</string>
+    <string name="license_check_failed_title">इंजन शुरू करने की अनुमति अस्वीकृत</string>
+    <string name="license_check_failed_msg">सुरक्षा सर्वर ने लाइसेंस प्राधिकरण अस्वीकार कर दिया। कृपया अपनी कुंजी की जांच करें।</string>
 </resources>

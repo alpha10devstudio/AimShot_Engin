@@ -21,6 +21,7 @@ public class MembershipRepository {
     private static final String KEY_EXPIRY_TS = "expiry_ts";
     private static final String KEY_UNLOCKED = "features_unlocked";
     private static final String KEY_DEVICE_ID = "bound_device_id";
+    private static final String KEY_LICENSE_KEY = "saved_license_key";
 
     private static MembershipRepository instance;
     private final SharedPreferences prefs;
@@ -89,6 +90,16 @@ public class MembershipRepository {
                 .apply();
 
         notifyListeners(newStatus);
+    }
+
+    public synchronized String getSavedLicenseKey() {
+        return prefs.getString(KEY_LICENSE_KEY, "");
+    }
+
+    public synchronized void saveLicenseKey(String key) {
+        if (key != null) {
+            prefs.edit().putString(KEY_LICENSE_KEY, key.trim()).apply();
+        }
     }
 
     public synchronized void clearSession() {

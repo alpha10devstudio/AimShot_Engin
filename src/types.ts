@@ -21,6 +21,7 @@ export interface MembershipState {
   daysRemaining: number;
   featuresUnlocked: boolean;
   boundDeviceId: string;
+  key?: string;
 }
 
 export interface Game {

@@ -155,6 +155,7 @@ public class VerificationKeyDialog extends Dialog {
             public void onVerificationSuccess(VerificationResult result) {
                 setLoadingState(false);
                 if (result.getMembershipStatus() != null) {
+                    MembershipRepository.getInstance(getContext()).saveLicenseKey(key);
                     MembershipRepository.getInstance(getContext()).updateStatus(result.getMembershipStatus());
                     Toast.makeText(getContext(), result.getMessage(), Toast.LENGTH_SHORT).show();
                     if (successListener != null) {
