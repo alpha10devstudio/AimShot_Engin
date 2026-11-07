@@ -47,16 +47,89 @@ public class UpdateAuthService {
     private static final Pattern AES_HEX_PATTERN =
             Pattern.compile("toNumbers\\(\\s*\"([0-9a-fA-F]{32})\"\\s*\\)");
 
+    private static final String PREF_SECURITY = "aimshot_security_session";
+    private static final String KEY_CACHED_COOKIE = "cached_antibot_cookie";
+
     private static volatile String cachedSessionCookie = null;
 
     public static String getCachedSessionCookie() {
+        if (cachedSessionCookie == null || cachedSessionCookie.isEmpty()) {
+            try {
+                Context ctx = com.alpha10.aimshot.AimShotApp.getAppContext();
+                if (ctx != null) {
+                    cachedSessionCookie = ctx.getSharedPreferences(PREF_SECURITY, Context.MODE_PRIVATE)
+                            .getString(KEY_CACHED_COOKIE, null);
+                }
+            } catch (Throwable ignored) {
+            }
+        }
         return cachedSessionCookie;
     }
 
     public static void setCachedSessionCookie(String cookie) {
         if (cookie != null && !cookie.trim().isEmpty()) {
             cachedSessionCookie = cookie.trim();
+            try {
+                Context ctx = com.alpha10.aimshot.AimShotApp.getAppContext();
+                if (ctx != null) {
+                    ctx.getSharedPreferences(PREF_SECURITY, Context.MODE_PRIVATE)
+                            .edit()
+                            .putString(KEY_CACHED_COOKIE, cachedSessionCookie)
+                            .apply();
+                }
+            } catch (Throwable ignored) {
+            }
         }
+    }
+
+    /**
+     * Proactively resolves the InfinityFree __test anti-bot cookie via a lightweight GET request.
+     */
+    public static String solveCookieFromGet(String targetUrl) {
+        if (targetUrl == null || targetUrl.trim().isEmpty()) {
+            targetUrl = AUTH_ENDPOINT;
+        }
+        HttpURLConnection conn = null;
+        try {
+            URL url = new URL(targetUrl);
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("User-Agent", BROWSER_USER_AGENT);
+            conn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+            conn.setConnectTimeout(8000);
+            conn.setReadTimeout(8000);
+            conn.setInstanceFollowRedirects(true);
+
+            String existing = getCachedSessionCookie();
+            if (existing != null && !existing.isEmpty()) {
+                conn.setRequestProperty("Cookie", existing);
+            }
+
+            int code = conn.getResponseCode();
+            InputStream is = (code >= 200 && code < 400) ? conn.getInputStream() : conn.getErrorStream();
+            if (is != null) {
+                BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line).append('\n');
+                }
+                String body = sb.toString();
+                if (isAntiBotChallenge(body)) {
+                    String solved = solveAntiBotCookie(body);
+                    if (solved != null && !solved.isEmpty()) {
+                        setCachedSessionCookie(solved);
+                        return solved;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        } finally {
+            if (conn != null) {
+                try { conn.disconnect(); } catch (Exception ignored) {}
+            }
+        }
+        return getCachedSessionCookie();
     }
 
     public static class AuthSessionResult {

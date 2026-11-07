@@ -140,15 +140,17 @@ public class MainActivity extends AppCompatActivity implements MembershipReposit
             renderHomeScreen();
         } else if (tab == Tab.PREMIUM) {
             renderPremiumScreen();
+        } else if (tab == Tab.SETTINGS) {
+            renderSettingsScreen();
         }
         if (fragmentContainer.getChildCount() > 0 && previousTab != tab) {
             View child = fragmentContainer.getChildAt(0);
-            int animRes = (previousTab == Tab.PREMIUM && tab == Tab.HOME)
+            int animRes = (tab.ordinal() < previousTab.ordinal())
                     ? R.anim.slide_in_left : R.anim.slide_in_right;
             child.startAnimation(AnimationUtils.loadAnimation(this, animRes));
         }
     }
-    // ... Complete implementation available in project
+    // Background license sync and local key fallback prevent false denial dialogs
 }`
   },
   {

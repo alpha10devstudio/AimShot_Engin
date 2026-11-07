@@ -150,7 +150,17 @@ public class MembershipRepository {
     }
 
     public synchronized String getSavedLicenseKey() {
-        return prefs.getString(KEY_LICENSE_KEY, "");
+        String key = prefs.getString(KEY_LICENSE_KEY, "");
+        if (key == null || key.trim().isEmpty()) {
+            List<CachedKey> vault = getValidVaultKeys();
+            if (!vault.isEmpty() && vault.get(0) != null) {
+                key = vault.get(0).getKey();
+                if (key != null && !key.trim().isEmpty()) {
+                    saveLicenseKey(key);
+                }
+            }
+        }
+        return key != null ? key.trim() : "";
     }
 
     public synchronized void saveLicenseKey(String key) {

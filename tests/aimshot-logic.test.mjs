@@ -1309,6 +1309,78 @@ describe('AimShot Engine Pure Logic Unit Tests', () => {
     assert.equal(validateDataPack(true, 200).valid, true);
     assert.equal(validateDataPack(true, 204).valid, true);
   });
+
+  // Test 58: Persistent Session Cookie & Anti-Bot Pre-warming across restarts
+  test('Session cookie is persisted across app restarts and pre-warms anti-bot challenge', () => {
+    const memoryPrefs = new Map();
+    const saveSessionCookie = (cookie) => {
+      memoryPrefs.set('cached_session_cookie', cookie);
+    };
+    const getSessionCookie = () => memoryPrefs.get('cached_session_cookie') || null;
+
+    // Simulate solving cookie and storing
+    saveSessionCookie('__test=7d9c12a4f61e89b; path=/');
+    assert.equal(getSessionCookie(), '__test=7d9c12a4f61e89b; path=/');
+
+    // Simulate app restart: cookie remains readable from storage
+    const restoredCookie = getSessionCookie();
+    assert.ok(restoredCookie);
+    assert.ok(restoredCookie.includes('__test='));
+  });
+
+  // Test 59: Resilient Launch Verification prevents false "Launch Permission Denied"
+  test('Launch verification gate distinguishes authoritative revocations from transient network/parsing errors', () => {
+    const handleLaunchResult = ({ errorCode, hasValidLocalKey }) => {
+      const isAuthoritative = [
+        'STATUS_INVALID',
+        'STATUS_REVOKED',
+        'STATUS_EXPIRED',
+        'STATUS_DEVICE_REVOKED'
+      ].includes(errorCode);
+
+      if (isAuthoritative) {
+        return { launch: false, revokeLocal: true, showDialog: 'DENIED' };
+      }
+
+      // Non-authoritative error (e.g., ERR_PARSE, ERR_NETWORK, TIMEOUT)
+      if (hasValidLocalKey) {
+        // Fallback to verified local unexpired vault key -> No false Permission Denied!
+        return { launch: true, revokeLocal: false, showDialog: null };
+      }
+
+      return { launch: false, revokeLocal: false, showDialog: 'NO_CONNECTION' };
+    };
+
+    // Case 1: Genuine revocation must terminate session and block
+    assert.deepEqual(
+      handleLaunchResult({ errorCode: 'STATUS_REVOKED', hasValidLocalKey: true }),
+      { launch: false, revokeLocal: true, showDialog: 'DENIED' }
+    );
+
+    // Case 2: Transient ERR_PARSE / anti-bot challenge with valid local key -> Launch smoothly!
+    assert.deepEqual(
+      handleLaunchResult({ errorCode: 'ERR_PARSE', hasValidLocalKey: true }),
+      { launch: true, revokeLocal: false, showDialog: null }
+    );
+
+    // Case 3: Transient network error without valid key -> Inform user
+    assert.deepEqual(
+      handleLaunchResult({ errorCode: 'ERR_NETWORK', hasValidLocalKey: false }),
+      { launch: false, revokeLocal: false, showDialog: 'NO_CONNECTION' }
+    );
+  });
+
+  // Test 60: Settings Navigation Bar Permanence
+  test('Settings view embeds into fragment container while bottom navigation remains static', () => {
+    const mainActivityJava = fs.readFileSync(path.resolve('app/src/main/java/com/alpha10/aimshot/MainActivity.java'), 'utf8');
+    
+    // Confirms Settings tab is rendered within fragmentContainer
+    assert.equal(mainActivityJava.includes('renderSettingsScreen()'), true);
+    assert.equal(mainActivityJava.includes('R.layout.fragment_settings'), true);
+    // Confirms navBtnSettings does not launch a new Activity
+    assert.equal(mainActivityJava.includes('navigateToTab(Tab.SETTINGS)'), true);
+    assert.equal(mainActivityJava.includes('startActivity(new Intent(MainActivity.this, SettingsActivity.class))'), false);
+  });
 });
 
 

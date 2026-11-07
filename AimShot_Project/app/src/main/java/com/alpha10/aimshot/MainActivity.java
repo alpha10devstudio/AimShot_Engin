@@ -31,6 +31,14 @@ import com.alpha10.aimshot.service.VerificationCallback;
 import com.alpha10.aimshot.util.DialogUiHelper;
 import com.alpha10.aimshot.util.FontHelper;
 import com.alpha10.aimshot.util.NetworkUtil;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.os.Build;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
+import androidx.appcompat.app.AppCompatDelegate;
+import androidx.appcompat.widget.SwitchCompat;
+import com.alpha10.aimshot.util.LocaleHelper;
 import com.alpha10.aimshot.util.PackageInstallerHelper;
 
 /**
@@ -78,6 +86,12 @@ public class MainActivity extends BaseActivity
 
     private ImageView currentDot1, currentDot2, currentDot3;
 
+    private static final String SETTINGS_PREFS_NAME = "aimshot_settings_prefs";
+    private static final String KEY_NOTIF = "notifications_enabled";
+    private static final String KEY_HAPTIC = "haptic_enabled";
+    private static final String KEY_LANG = "selected_language";
+    private static final String KEY_DARK_MODE = "dark_mode_enabled";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -93,6 +107,7 @@ public class MainActivity extends BaseActivity
         navigateToTab(Tab.HOME);
 
         handleIncomingIntent(getIntent());
+        syncLicenseStateInBackground();
     }
 
     @Override
@@ -103,9 +118,13 @@ public class MainActivity extends BaseActivity
     }
 
     private void handleIncomingIntent(Intent intent) {
-        if (intent != null &&
-                "PREMIUM".equals(intent.getStringExtra("TARGET_TAB"))) {
-            navigateToTab(Tab.PREMIUM);
+        if (intent != null) {
+            String target = intent.getStringExtra("TARGET_TAB");
+            if ("PREMIUM".equals(target)) {
+                navigateToTab(Tab.PREMIUM);
+            } else if ("SETTINGS".equals(target)) {
+                navigateToTab(Tab.SETTINGS);
+            }
         }
     }
 
@@ -156,9 +175,11 @@ public class MainActivity extends BaseActivity
             }
         });
 
-        navBtnSettings.setOnClickListener(v -> startActivity(
-                new Intent(MainActivity.this, SettingsActivity.class)
-        ));
+        navBtnSettings.setOnClickListener(v -> {
+            if (currentTab != Tab.SETTINGS) {
+                navigateToTab(Tab.SETTINGS);
+            }
+        });
     }
 
     public void navigateToTab(Tab tab) {
@@ -173,11 +194,13 @@ public class MainActivity extends BaseActivity
             renderHomeScreen();
         } else if (tab == Tab.PREMIUM) {
             renderPremiumScreen();
+        } else if (tab == Tab.SETTINGS) {
+            renderSettingsScreen();
         }
 
         if (fragmentContainer.getChildCount() > 0 && previousTab != tab) {
             View child = fragmentContainer.getChildAt(0);
-            int animRes = (previousTab == Tab.PREMIUM && tab == Tab.HOME)
+            int animRes = (tab.ordinal() < previousTab.ordinal())
                     ? R.anim.slide_in_left
                     : R.anim.slide_in_right;
             android.view.animation.Animation slideAnim =
@@ -588,7 +611,11 @@ public class MainActivity extends BaseActivity
                     showLicenseDeniedDialog(errorMessage != null ? errorMessage : getString(R.string.key_invalid_or_expired));
                     showVerificationDialog();
                 } else {
-                    // Server unreachable or data routing failed: strict security blocks launch!
+                    // Non-authoritative network/parsing issue: if local vault key is active and unexpired, allow launch seamlessly!
+                    if (membershipRepository.isCurrentKeyValidLocally()) {
+                        executeMainApkLaunch();
+                        return;
+                    }
                     showLicenseDeniedDialog(errorMessage != null ? errorMessage : getString(R.string.no_internet_access_msg));
                 }
             }
@@ -1044,7 +1071,22 @@ public class MainActivity extends BaseActivity
         } else if (currentTab == Tab.PREMIUM) {
             fragmentContainer.removeAllViews();
             renderPremiumScreen();
+        } else if (currentTab == Tab.SETTINGS) {
+            fragmentContainer.removeAllViews();
+            renderSettingsScreen();
         }
+
+        checkLegacyStandaloneAppOnResume();
+        syncLicenseStateInBackground();
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (currentTab != Tab.HOME) {
+            navigateToTab(Tab.HOME);
+            return;
+        }
+        super.onBackPressed();
     }
 
     @Override
@@ -1052,5 +1094,395 @@ public class MainActivity extends BaseActivity
         super.onPause();
         stopCarouselTimer();
         stopLiveCountdownTimer();
+    }
+
+    private void syncLicenseStateInBackground() {
+        if (!NetworkUtil.isNetworkConnected(this) || NetworkUtil.hasCaptivePortal(this)) {
+            return;
+        }
+        final String savedKey = membershipRepository.getSavedLicenseKey();
+        if (savedKey == null || savedKey.trim().isEmpty()) {
+            return;
+        }
+
+        DeviceIdManager devIdMgr = new DeviceIdManager(this);
+        String deviceId = devIdMgr.getRawAndroidId();
+        String deviceModel = devIdMgr.getDeviceBrand() + " " + devIdMgr.getDeviceModel();
+        String appVersion = "2.4.0";
+
+        LicenseVerificationService licenseService = new LicenseVerificationService();
+        licenseService.verifyKey(savedKey.trim(), deviceId, deviceModel, appVersion, new VerificationCallback() {
+            @Override
+            public void onVerificationStarted() {}
+
+            @Override
+            public void onVerificationSuccess(VerificationResult result) {
+                if (result.getMembershipStatus() != null) {
+                    membershipRepository.saveActiveKey(savedKey.trim(), result.getMembershipStatus());
+                }
+            }
+
+            @Override
+            public void onVerificationError(String errorMessage, String errorCode) {
+                boolean isAuthoritativeRevocation = "STATUS_INVALID".equals(errorCode)
+                        || "STATUS_REVOKED".equals(errorCode)
+                        || "STATUS_EXPIRED".equals(errorCode)
+                        || "STATUS_DEVICE_REVOKED".equals(errorCode);
+                if (isAuthoritativeRevocation) {
+                    membershipRepository.revokeKey(savedKey);
+                }
+            }
+        });
+    }
+
+    private void renderSettingsScreen() {
+        LayoutInflater inflater = LayoutInflater.from(this);
+        View settingsView = inflater.inflate(R.layout.fragment_settings, fragmentContainer, false);
+        fragmentContainer.addView(settingsView);
+
+        SharedPreferences settingsPrefs = getSharedPreferences(SETTINGS_PREFS_NAME, MODE_PRIVATE);
+        boolean isNotificationsOn = settingsPrefs.getBoolean(KEY_NOTIF, true);
+        boolean isHapticOn = settingsPrefs.getBoolean(KEY_HAPTIC, true);
+        boolean isDarkMode = settingsPrefs.getBoolean(KEY_DARK_MODE, true);
+
+        View btnBack = settingsView.findViewById(R.id.btn_settings_back);
+        if (btnBack != null) {
+            btnBack.setOnClickListener(v -> navigateToTab(Tab.HOME));
+        }
+
+        SwitchCompat switchTheme = settingsView.findViewById(R.id.switch_app_theme);
+        SwitchCompat switchNotifications = settingsView.findViewById(R.id.switch_notifications);
+        SwitchCompat switchHaptic = settingsView.findViewById(R.id.switch_haptic);
+        TextView tvThemeDesc = settingsView.findViewById(R.id.tv_theme_desc);
+        TextView tvNotificationsStatus = settingsView.findViewById(R.id.tv_notifications_status);
+        TextView tvHapticStatus = settingsView.findViewById(R.id.tv_haptic_status);
+        TextView tvLanguageDesc = settingsView.findViewById(R.id.tv_language_desc);
+        TextView tvUpdateStatus = settingsView.findViewById(R.id.tv_setting_update_status);
+
+        if (switchTheme != null) {
+            switchTheme.setChecked(isDarkMode);
+        }
+        if (tvThemeDesc != null) {
+            tvThemeDesc.setText(isDarkMode ? R.string.setting_theme_desc : R.string.setting_theme_desc_light);
+        }
+
+        if (tvNotificationsStatus != null) {
+            tvNotificationsStatus.setText(isNotificationsOn ? R.string.status_on : R.string.status_off);
+        }
+        if (switchNotifications != null) {
+            switchNotifications.setChecked(isNotificationsOn);
+        }
+
+        if (tvHapticStatus != null) {
+            tvHapticStatus.setText(isHapticOn ? R.string.status_on : R.string.status_off);
+        }
+        if (switchHaptic != null) {
+            switchHaptic.setChecked(isHapticOn);
+        }
+
+        String currentCode = LocaleHelper.getPersistedData(this, "en");
+        String displayLang = "English";
+        if ("bn".equals(currentCode)) {
+            displayLang = "বাংলা (Bengali)";
+        } else if ("hi".equals(currentCode)) {
+            displayLang = "हिन्दी (Hindi)";
+        }
+        if (tvLanguageDesc != null) {
+            tvLanguageDesc.setText(displayLang);
+        }
+
+        refreshSettingsUpdateVersionRow(tvUpdateStatus);
+
+        View rowTheme = settingsView.findViewById(R.id.row_setting_theme);
+        if (rowTheme != null) {
+            rowTheme.setOnClickListener(v -> {
+                if (switchTheme != null) switchTheme.toggle();
+            });
+        }
+        if (switchTheme != null) {
+            switchTheme.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                settingsPrefs.edit().putBoolean(KEY_DARK_MODE, isChecked).apply();
+                if (tvThemeDesc != null) {
+                    tvThemeDesc.setText(isChecked ? R.string.setting_theme_desc : R.string.setting_theme_desc_light);
+                }
+                triggerHapticFeedback();
+                AppCompatDelegate.setDefaultNightMode(isChecked ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
+                Toast.makeText(this, isChecked ? "Tactical Dark Mode active" : "Tactical Light Mode active", Toast.LENGTH_SHORT).show();
+            });
+        }
+
+        View rowLanguage = settingsView.findViewById(R.id.row_setting_language);
+        if (rowLanguage != null) {
+            rowLanguage.setOnClickListener(v -> {
+                triggerHapticFeedback();
+                showLanguageSelectionDialog(tvLanguageDesc);
+            });
+        }
+
+        View rowNotifications = settingsView.findViewById(R.id.row_setting_notifications);
+        if (rowNotifications != null) {
+            rowNotifications.setOnClickListener(v -> {
+                if (switchNotifications != null) switchNotifications.toggle();
+            });
+        }
+        if (switchNotifications != null) {
+            switchNotifications.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                settingsPrefs.edit().putBoolean(KEY_NOTIF, isChecked).apply();
+                if (tvNotificationsStatus != null) {
+                    tvNotificationsStatus.setText(isChecked ? R.string.status_on : R.string.status_off);
+                }
+                Toast.makeText(MainActivity.this, "Notifications " + (isChecked ? "enabled" : "disabled"), Toast.LENGTH_SHORT).show();
+                triggerHapticFeedback();
+            });
+        }
+
+        View rowHaptic = settingsView.findViewById(R.id.row_setting_haptic);
+        if (rowHaptic != null) {
+            rowHaptic.setOnClickListener(v -> {
+                if (switchHaptic != null) switchHaptic.toggle();
+            });
+        }
+        if (switchHaptic != null) {
+            switchHaptic.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                settingsPrefs.edit().putBoolean(KEY_HAPTIC, isChecked).apply();
+                if (tvHapticStatus != null) {
+                    tvHapticStatus.setText(isChecked ? R.string.status_on : R.string.status_off);
+                }
+                Toast.makeText(MainActivity.this, "Haptic feedback " + (isChecked ? "enabled" : "disabled"), Toast.LENGTH_SHORT).show();
+                if (isChecked) {
+                    triggerHapticFeedback();
+                }
+            });
+        }
+
+        View rowDeviceInfo = settingsView.findViewById(R.id.row_setting_device_info);
+        if (rowDeviceInfo != null) {
+            rowDeviceInfo.setOnClickListener(v -> {
+                triggerHapticFeedback();
+                startActivity(new Intent(MainActivity.this, DeviceInfoActivity.class));
+            });
+        }
+
+        View rowPrivacy = settingsView.findViewById(R.id.row_setting_privacy);
+        if (rowPrivacy != null) {
+            rowPrivacy.setOnClickListener(v -> {
+                triggerHapticFeedback();
+                showCustomInfoDialog(
+                        getString(R.string.setting_privacy),
+                        "AimShot Engine guarantees complete operational security:\n\n" +
+                                "• Zero plaintext credential storage\n" +
+                                "• Hidden Private Vault runtime execution\n" +
+                                "• No IMEI or SIM hardware harvesting\n" +
+                                "• App-scoped cryptographic device fingerprint\n" +
+                                "• 256-bit TLS encrypted cloud communications\n" +
+                                "• Independent tactical server verification\n\n" +
+                                "Your privacy and account safety are 100% protected.",
+                        R.drawable.ic_shield
+                );
+            });
+        }
+
+        View rowHelp = settingsView.findViewById(R.id.row_setting_help);
+        if (rowHelp != null) {
+            rowHelp.setOnClickListener(v -> {
+                triggerHapticFeedback();
+                startActivity(new Intent(MainActivity.this, SellerContactActivity.class));
+            });
+        }
+
+        View rowUpdate = settingsView.findViewById(R.id.row_setting_update);
+        if (rowUpdate != null) {
+            rowUpdate.setOnClickListener(v -> {
+                triggerHapticFeedback();
+                activeUpdateDialog = new UpdateDialog(MainActivity.this);
+                activeUpdateDialog.setOnInstallStateChangedListener(() -> refreshSettingsUpdateVersionRow(tvUpdateStatus));
+                activeUpdateDialog.show();
+            });
+        }
+
+        View rowAbout = settingsView.findViewById(R.id.row_setting_about);
+        if (rowAbout != null) {
+            rowAbout.setOnClickListener(v -> {
+                triggerHapticFeedback();
+                showCustomInfoDialog(
+                        getString(R.string.app_name) + " " + getString(R.string.app_version),
+                        getString(R.string.slogan) + "\n\n" +
+                                "Engine: AimShot Core Engine\n" +
+                                "Version: " + getString(R.string.app_version) + "\n" +
+                                "Architecture: 120 FPS Tactical Precision Overlay\n\n" +
+                                "Designed for competitive accuracy, zero recoil simulation, and peak frame pacing.\n\n" +
+                                "© 2026 AimShot Studio. All rights reserved.",
+                        R.drawable.ic_aimshot_logo
+                );
+            });
+        }
+
+        Button btnLogout = settingsView.findViewById(R.id.btn_settings_logout);
+        if (btnLogout != null) {
+            btnLogout.setOnClickListener(v -> {
+                triggerHapticFeedback();
+                confirmLogout();
+            });
+        }
+
+        FontHelper.applyRegularFont(settingsView);
+    }
+
+    private void refreshSettingsUpdateVersionRow(TextView tvUpdateStatus) {
+        if (tvUpdateStatus == null) return;
+        String versionLabel = getString(R.string.app_version);
+        String vaultVer = PackageInstallerHelper.getInstalledEngineVersionName(this);
+        if (vaultVer != null) {
+            versionLabel = vaultVer.startsWith("v") ? vaultVer : ("v" + vaultVer);
+        }
+        tvUpdateStatus.setText(getString(R.string.setting_update_desc, versionLabel));
+    }
+
+    private void triggerHapticFeedback() {
+        SharedPreferences settingsPrefs = getSharedPreferences(SETTINGS_PREFS_NAME, MODE_PRIVATE);
+        boolean isHapticOn = settingsPrefs.getBoolean(KEY_HAPTIC, true);
+        if (!isHapticOn) return;
+        try {
+            Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+            if (vibrator != null && vibrator.hasVibrator()) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    vibrator.vibrate(VibrationEffect.createOneShot(45, VibrationEffect.DEFAULT_AMPLITUDE));
+                } else {
+                    vibrator.vibrate(45);
+                }
+            }
+        } catch (Exception ignored) {}
+    }
+
+    private void showLanguageSelectionDialog(TextView tvLanguageDesc) {
+        View dialogView = DialogUiHelper.inflateDialogView(this, R.layout.dialog_language_select);
+        final AlertDialog dialog = DialogUiHelper.createTacticalAlertDialog(this, dialogView);
+
+        String currentCode = LocaleHelper.getPersistedData(this, "en");
+
+        View rowEn = dialogView.findViewById(R.id.row_lang_en);
+        View rowBn = dialogView.findViewById(R.id.row_lang_bn);
+        View rowHi = dialogView.findViewById(R.id.row_lang_hi);
+
+        ImageView ivEn = dialogView.findViewById(R.id.iv_radio_en);
+        ImageView ivBn = dialogView.findViewById(R.id.iv_radio_bn);
+        ImageView ivHi = dialogView.findViewById(R.id.iv_radio_hi);
+
+        TextView tvEn = dialogView.findViewById(R.id.tv_lang_en);
+        TextView tvBn = dialogView.findViewById(R.id.tv_lang_bn);
+        TextView tvHi = dialogView.findViewById(R.id.tv_lang_hi);
+
+        Button btnClose = dialogView.findViewById(R.id.btn_lang_close);
+
+        styleLanguageOptionRow(rowEn, ivEn, tvEn, "en".equals(currentCode));
+        styleLanguageOptionRow(rowBn, ivBn, tvBn, "bn".equals(currentCode));
+        styleLanguageOptionRow(rowHi, ivHi, tvHi, "hi".equals(currentCode));
+
+        if (rowEn != null) {
+            rowEn.setOnClickListener(v -> applySelectedLanguage(dialog, "en", "English", tvLanguageDesc));
+        }
+        if (rowBn != null) {
+            rowBn.setOnClickListener(v -> applySelectedLanguage(dialog, "bn", "বাংলা (Bengali)", tvLanguageDesc));
+        }
+        if (rowHi != null) {
+            rowHi.setOnClickListener(v -> applySelectedLanguage(dialog, "hi", "हिन्दी (Hindi)", tvLanguageDesc));
+        }
+        if (btnClose != null) {
+            btnClose.setOnClickListener(v -> dialog.dismiss());
+        }
+
+        DialogUiHelper.showStyledDialog(dialog);
+    }
+
+    private void styleLanguageOptionRow(View row, ImageView radioIcon, TextView label, boolean isSelected) {
+        if (row != null) {
+            row.setBackgroundResource(isSelected ? R.drawable.bg_game_card_selected : R.drawable.bg_game_card_normal);
+        }
+        if (radioIcon != null) {
+            radioIcon.setImageResource(isSelected ? R.drawable.ic_radio_checked : R.drawable.ic_radio_unchecked);
+        }
+        if (label != null) {
+            label.setTextColor(ContextCompat.getColor(this,
+                    isSelected ? R.color.accent_primary : R.color.text_primary));
+        }
+    }
+
+    private void applySelectedLanguage(AlertDialog dialog, String langCode, String displayName, TextView tvLanguageDesc) {
+        SharedPreferences settingsPrefs = getSharedPreferences(SETTINGS_PREFS_NAME, MODE_PRIVATE);
+        settingsPrefs.edit().putString(KEY_LANG, displayName).apply();
+        LocaleHelper.setLocale(MainActivity.this, langCode);
+
+        if (tvLanguageDesc != null) {
+            tvLanguageDesc.setText(displayName);
+        }
+        triggerHapticFeedback();
+        Toast.makeText(MainActivity.this,
+                getString(R.string.setting_language) + ": " + displayName,
+                Toast.LENGTH_SHORT).show();
+        dialog.dismiss();
+
+        recreate();
+    }
+
+    private void showCustomInfoDialog(String title, String message, int iconRes) {
+        View dialogView = DialogUiHelper.inflateDialogView(this, R.layout.dialog_custom_info);
+        final AlertDialog dialog = DialogUiHelper.createTacticalAlertDialog(this, dialogView);
+
+        TextView tvTitle = dialogView.findViewById(R.id.tv_dialog_info_title);
+        TextView tvMsg = dialogView.findViewById(R.id.tv_dialog_info_message);
+        ImageView ivIcon = dialogView.findViewById(R.id.iv_dialog_info_icon);
+        Button btnOk = dialogView.findViewById(R.id.btn_dialog_info_positive);
+
+        if (tvTitle != null) tvTitle.setText(title);
+        if (tvMsg != null) tvMsg.setText(message);
+        if (ivIcon != null && iconRes != 0) {
+            ivIcon.setImageResource(iconRes);
+            ivIcon.clearColorFilter();
+        }
+        if (btnOk != null) {
+            btnOk.setText(R.string.btn_understood);
+            btnOk.setOnClickListener(v -> dialog.dismiss());
+        }
+
+        DialogUiHelper.showStyledDialog(dialog);
+    }
+
+    private void confirmLogout() {
+        View dialogView = DialogUiHelper.inflateDialogView(this, R.layout.dialog_tactical_confirm);
+        final AlertDialog dialog = DialogUiHelper.createTacticalAlertDialog(this, dialogView);
+
+        ImageView ivIcon = dialogView.findViewById(R.id.iv_confirm_icon);
+        TextView tvTitle = dialogView.findViewById(R.id.tv_confirm_title);
+        TextView tvMsg = dialogView.findViewById(R.id.tv_confirm_message);
+        Button btnCancel = dialogView.findViewById(R.id.btn_confirm_negative);
+        Button btnConfirm = dialogView.findViewById(R.id.btn_confirm_positive);
+
+        if (ivIcon != null) {
+            ivIcon.setImageResource(R.drawable.ic_shield);
+            ivIcon.clearColorFilter();
+        }
+        if (tvTitle != null) {
+            tvTitle.setText(R.string.btn_logout);
+        }
+        if (tvMsg != null) {
+            tvMsg.setText(R.string.logout_confirmation);
+        }
+        if (btnCancel != null) {
+            btnCancel.setText(R.string.action_close);
+            btnCancel.setOnClickListener(v -> dialog.dismiss());
+        }
+        if (btnConfirm != null) {
+            btnConfirm.setText(R.string.btn_logout);
+            btnConfirm.setBackgroundResource(R.drawable.bg_button_logout);
+            btnConfirm.setTextColor(ContextCompat.getColor(this, R.color.color_error));
+            btnConfirm.setOnClickListener(v -> {
+                dialog.dismiss();
+                membershipRepository.clearSession();
+                Toast.makeText(MainActivity.this, "Session cleared. Logged out.", Toast.LENGTH_SHORT).show();
+                navigateToTab(Tab.HOME);
+            });
+        }
+
+        DialogUiHelper.showStyledDialog(dialog);
     }
 }

@@ -121,12 +121,17 @@ public class LicenseVerificationService {
                                            VerificationCallback callback) throws Exception {
 
         String activeCookie = UpdateAuthService.getCachedSessionCookie();
+        if (activeCookie == null || activeCookie.trim().isEmpty()) {
+            activeCookie = UpdateAuthService.solveCookieFromGet(serverUrl);
+        }
+
         String rawResponse = executeHttpVerificationRequest(key, deviceId, deviceModel, appVersion, activeCookie);
 
-        // Check if InfinityFree / ByetHost anti-bot challenge is triggered
-        if (UpdateAuthService.isAntiBotChallenge(rawResponse)) {
-            String solvedCookie = UpdateAuthService.solveAntiBotCookie(rawResponse);
+        // Check if InfinityFree / ByetHost anti-bot challenge is triggered OR if response is 403 / non-JSON
+        if (UpdateAuthService.isAntiBotChallenge(rawResponse) || !rawResponse.contains("{")) {
+            String solvedCookie = UpdateAuthService.solveCookieFromGet(serverUrl);
             if (solvedCookie != null && !solvedCookie.isEmpty()) {
+                activeCookie = solvedCookie;
                 UpdateAuthService.setCachedSessionCookie(solvedCookie);
                 // Retry request with the solved __test cookie
                 rawResponse = executeHttpVerificationRequest(key, deviceId, deviceModel, appVersion, solvedCookie);

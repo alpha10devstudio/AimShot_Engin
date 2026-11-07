@@ -18,16 +18,23 @@ public class AimShotApp extends Application {
 
     private static final String PREFS_NAME = "aimshot_settings_prefs";
     private static final String KEY_DARK_MODE = "dark_mode_enabled";
+    private static Context appContext;
+
+    public static Context getAppContext() {
+        return appContext;
+    }
 
     @Override
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(LocaleHelper.onAttach(base));
+        appContext = this;
         PrivateEngineRuntime.installInstrumentationHook(this);
     }
 
     @Override
     public void onCreate() {
         super.onCreate();
+        appContext = this;
 
         // 1. Ensure Private Engine Instrumentation hook is active
         PrivateEngineRuntime.installInstrumentationHook(this);
